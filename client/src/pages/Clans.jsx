@@ -146,9 +146,9 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
       {/* Two columns: Notice Board + Members */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Notice Board */}
-        <div className="xl:col-span-1">
-          <Card>
-            <h3 className="text-section-title font-bold flex items-center gap-2 mb-4">
+        <div className="xl:col-span-1 h-full">
+          <Card className="h-full flex flex-col">
+            <h3 className="text-section-title font-bold flex items-center gap-2 mb-4 shrink-0">
               <FiMessageSquare className="text-accent" />
               Notice Board
             </h3>
