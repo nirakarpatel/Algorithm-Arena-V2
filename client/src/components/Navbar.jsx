@@ -5,6 +5,7 @@ import {
   FiGrid,
   FiAward,
   FiUser,
+  FiUsers,
   FiLogOut,
   FiMenu,
   FiX,
@@ -22,6 +23,7 @@ const Navbar = ({ onLogout }) => {
   const navItems = [
     { name: "Mission Control", path: "/dashboard", icon: FiGrid },
     { name: "Leaderboard", path: "/leaderboard", icon: FiAward },
+    { name: "Clan", path: "/clans", icon: FiUsers },
     { name: "Profile", path: "/profile", icon: FiUser },
   ];
 

@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ChallengeDetails = lazy(() => import('./pages/ChallengeDetails'));
 const SubmissionDetails = lazy(() => import('./pages/SubmissionDetails'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Clans = lazy(() => import('./pages/Clans'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -50,6 +51,7 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/clans" element={<Clans />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/challenge/:id" element={<ChallengeDetails />} />
             <Route path="/submission/:id" element={<SubmissionDetails />} />
