@@ -137,8 +137,20 @@ const Leaderboard = () => {
     },
   });
 
+  const clanLeaderboardQuery = useQuery({
+    queryKey: ['clan-leaderboard'],
+    enabled: leaderType === 'clans',
+    queryFn: async () => {
+      const res = await api.get('/api/clans/leaderboard');
+      return res.data.data || [];
+    },
+  });
+
   const rows = useMemo(() => {
-    if (leaderType === 'clans') return mockClanData;
+    if (leaderType === 'clans') {
+      const apiClans = clanLeaderboardQuery.data || [];
+      return apiClans.length > 0 ? apiClans : mockClanData;
+    }
     
     // Merge API data with mock data for a populated "frontend-first" feel
     const apiData = leaderboardQuery.data?.data || [];
@@ -146,7 +158,7 @@ const Leaderboard = () => {
     const filteredMock = mockIndividualData.filter(m => !existingUsernames.has(m.username));
     
     return [...apiData, ...filteredMock].sort((a, b) => b.totalPoints - a.totalPoints).map((u, i) => ({ ...u, rank: i + 1 }));
-  }, [leaderboardQuery.data, leaderType]);
+  }, [leaderboardQuery.data, clanLeaderboardQuery.data, leaderType]);
 
   const meta = leaderType === 'clans' ? { page: 1, totalPages: 1 } : (leaderboardQuery.data?.meta || {});
   
@@ -232,7 +244,7 @@ const Leaderboard = () => {
       )}
 
       <Card className="p-0 overflow-hidden">
-        {leaderboardQuery.isLoading && leaderType === 'individual' ? (
+        {(leaderboardQuery.isLoading && leaderType === 'individual') || (clanLeaderboardQuery.isLoading && leaderType === 'clans') ? (
           <div className="p-4 space-y-3">
             <SkeletonCard />
             <SkeletonCard />

@@ -7,6 +7,8 @@ import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
 
+const defaultClanForm = { name: '', tag: '', description: '' };
+
 const defaultChallengeForm = {
   title: '',
   description: '',
@@ -21,6 +23,11 @@ const AdminPanel = () => {
   const [createForm, setCreateForm] = useState(defaultChallengeForm);
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // --- Clan state ---
+  const [clanForm, setClanForm] = useState(defaultClanForm);
+  const [editingClan, setEditingClan] = useState(null);
+  const [deleteClanTarget, setDeleteClanTarget] = useState(null);
 
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
@@ -59,6 +66,15 @@ const AdminPanel = () => {
     enabled: activeTab === 'manage' || activeTab === 'review',
     queryFn: async () => {
       const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
+      return res.data.data || [];
+    },
+  });
+
+  const clansQuery = useQuery({
+    queryKey: ['admin-clans'],
+    enabled: activeTab === 'clans',
+    queryFn: async () => {
+      const res = await api.get('/api/clans');
       return res.data.data || [];
     },
   });
@@ -116,6 +132,67 @@ const AdminPanel = () => {
     }
   };
 
+  // --- Clan handlers ---
+  const onCreateClan = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/api/clans', clanForm);
+      toast.success('Clan created');
+      setClanForm(defaultClanForm);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create clan');
+    }
+  };
+
+  const onUpdateClan = async () => {
+    if (!editingClan) return;
+    try {
+      await api.put(`/api/clans/${editingClan._id}`, {
+        name: editingClan.name,
+        tag: editingClan.tag,
+        description: editingClan.description,
+      });
+      toast.success('Clan updated');
+      setEditingClan(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update clan');
+    }
+  };
+
+  const onDeleteClan = async () => {
+    if (!deleteClanTarget) return;
+    try {
+      await api.delete(`/api/clans/${deleteClanTarget._id}`);
+      toast.success('Clan deleted');
+      setDeleteClanTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete clan');
+    }
+  };
+
+  const onAssignChief = async (clanId, userId) => {
+    try {
+      await api.put(`/api/clans/${clanId}/chief`, { userId });
+      toast.success('Chief assigned');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to assign chief');
+    }
+  };
+
+  const onRemoveMember = async (clanId, userId) => {
+    try {
+      await api.delete(`/api/clans/${clanId}/members/${userId}`);
+      toast.success('Member removed');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
   const submissions = submissionsQuery.data?.data || [];
   const reviewMeta = submissionsQuery.data?.meta || {};
 
@@ -139,6 +216,9 @@ const AdminPanel = () => {
         </button>
         <button className={`px-4 py-2 rounded-lg ${activeTab === 'manage' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('manage')}>
           Manage Challenges
+        </button>
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'clans' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('clans')}>
+          Clans
         </button>
       </div>
 
@@ -379,6 +459,77 @@ const AdminPanel = () => {
         </Card>
       )}
 
+      {activeTab === 'clans' && (
+        <div className="space-y-6">
+          <Card>
+            <form onSubmit={onCreateClan} className="space-y-4 max-w-2xl">
+              <h2 className="text-section-title font-bold">Create Clan</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="field-label">Clan Name</label>
+                  <input className="field-input" value={clanForm.name} onChange={(e) => setClanForm((p) => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="field-label">Tag (2-5 chars)</label>
+                  <input className="field-input" value={clanForm.tag} maxLength={5} onChange={(e) => setClanForm((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} required />
+                </div>
+                <div>
+                  <label className="field-label">Description</label>
+                  <input className="field-input" value={clanForm.description} onChange={(e) => setClanForm((p) => ({ ...p, description: e.target.value }))} />
+                </div>
+              </div>
+              <button className="btn-primary" type="submit">Create Clan</button>
+            </form>
+          </Card>
+
+          <Card>
+            <h2 className="text-section-title font-bold mb-4">Manage Clans</h2>
+            {clansQuery.isLoading ? (
+              <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
+            ) : (clansQuery.data || []).length === 0 ? (
+              <EmptyState title="No clans yet" description="Create your first clan above." />
+            ) : (
+              <div className="space-y-4">
+                {(clansQuery.data || []).map((clan) => (
+                  <div key={clan._id} className="border border-glass-border rounded-xl p-5 space-y-4">
+                    <div className="flex flex-wrap gap-3 justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-lg">{clan.name} <span className="text-accent text-sm font-mono">[{clan.tag}]</span></h3>
+                        <p className="text-secondary text-sm">{clan.description || 'No description'}</p>
+                        <p className="text-xs text-tertiary mt-1">Chief: {clan.chief?.username || 'None'} · {clan.members?.length || 0} members</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="btn-secondary" onClick={() => setEditingClan({ ...clan })}>Edit</button>
+                        <button className="btn-secondary" onClick={() => setDeleteClanTarget(clan)}>Delete</button>
+                      </div>
+                    </div>
+                    {clan.members && clan.members.length > 0 && (
+                      <div className="border-t border-glass-border/40 pt-3">
+                        <p className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Roster</p>
+                        <div className="flex flex-wrap gap-2">
+                          {clan.members.map((member) => (
+                            <div key={member._id} className="flex items-center gap-2 bg-glass-surface px-3 py-1.5 rounded-lg text-sm">
+                              <span className="font-medium">{member.username}</span>
+                              {clan.chief?._id !== member._id && (
+                                <button className="text-[10px] text-accent hover:underline" onClick={() => onAssignChief(clan._id, member._id)}>Make Chief</button>
+                              )}
+                              {clan.chief?._id === member._id && (
+                                <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded font-bold">CHIEF</span>
+                              )}
+                              <button className="text-[10px] text-red-400 hover:underline" onClick={() => onRemoveMember(clan._id, member._id)}>×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete challenge"
@@ -388,55 +539,63 @@ const AdminPanel = () => {
         onConfirm={onDeleteChallenge}
       />
 
+      <ConfirmDialog
+        open={Boolean(deleteClanTarget)}
+        title="Delete clan"
+        description={`This will permanently remove clan "${deleteClanTarget?.name || ''}". All members will be unassigned.`}
+        confirmLabel="Delete"
+        onCancel={() => setDeleteClanTarget(null)}
+        onConfirm={onDeleteClan}
+      />
+
       {editingChallenge && (
         <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="macos-glass w-full max-w-3xl p-6 space-y-4">
             <h3 className="text-section-title font-bold">Edit Challenge</h3>
             <div>
               <label className="field-label">Title</label>
-              <input
-                className="field-input"
-                value={editingChallenge.title}
-                onChange={(e) => setEditingChallenge((p) => ({ ...p, title: e.target.value }))}
-              />
+              <input className="field-input" value={editingChallenge.title} onChange={(e) => setEditingChallenge((p) => ({ ...p, title: e.target.value }))} />
             </div>
             <div>
               <label className="field-label">Description</label>
-              <textarea
-                className="field-textarea"
-                value={editingChallenge.description}
-                onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))}
-              />
+              <textarea className="field-textarea" value={editingChallenge.description} onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <select
-                className="field-select"
-                value={editingChallenge.difficulty}
-                onChange={(e) => setEditingChallenge((p) => ({ ...p, difficulty: e.target.value }))}
-              >
-                <option>Easy</option>
-                <option>Medium</option>
-                <option>Hard</option>
+              <select className="field-select" value={editingChallenge.difficulty} onChange={(e) => setEditingChallenge((p) => ({ ...p, difficulty: e.target.value }))}>
+                <option>Easy</option><option>Medium</option><option>Hard</option>
               </select>
-              <input
-                className="field-input"
-                type="number"
-                value={editingChallenge.points}
-                onChange={(e) => setEditingChallenge((p) => ({ ...p, points: Number(e.target.value) }))}
-              />
-              <input
-                className="field-input"
-                value={editingChallenge.category}
-                onChange={(e) => setEditingChallenge((p) => ({ ...p, category: e.target.value }))}
-              />
+              <input className="field-input" type="number" value={editingChallenge.points} onChange={(e) => setEditingChallenge((p) => ({ ...p, points: Number(e.target.value) }))} />
+              <input className="field-input" value={editingChallenge.category} onChange={(e) => setEditingChallenge((p) => ({ ...p, category: e.target.value }))} />
             </div>
             <div className="flex justify-end gap-2">
-              <button className="btn-secondary" onClick={() => setEditingChallenge(null)}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={onUpdateChallenge}>
-                Save Changes
-              </button>
+              <button className="btn-secondary" onClick={() => setEditingChallenge(null)}>Cancel</button>
+              <button className="btn-primary" onClick={onUpdateChallenge}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingClan && (
+        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="macos-glass w-full max-w-3xl p-6 space-y-4">
+            <h3 className="text-section-title font-bold">Edit Clan</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="field-label">Name</label>
+                <input className="field-input" value={editingClan.name} onChange={(e) => setEditingClan((p) => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="field-label">Tag</label>
+                <input className="field-input" value={editingClan.tag} maxLength={5} onChange={(e) => setEditingClan((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} />
+              </div>
+              <div>
+                <label className="field-label">Description</label>
+                <input className="field-input" value={editingClan.description || ''} onChange={(e) => setEditingClan((p) => ({ ...p, description: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button className="btn-secondary" onClick={() => setEditingClan(null)}>Cancel</button>
+              <button className="btn-primary" onClick={onUpdateClan}>Save Changes</button>
             </div>
           </div>
         </div>

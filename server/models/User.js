@@ -31,6 +31,15 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  clan: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Clan',
+    default: null,
+  },
+  profilePicture: {
+    type: String,
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

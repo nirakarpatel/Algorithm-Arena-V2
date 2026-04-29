@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FiCalendar, FiMapPin, FiLink, FiGithub, FiTwitter, FiAward, FiActivity, FiZap, FiSearch } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiLink, FiGithub, FiTwitter, FiAward, FiActivity, FiZap, FiSearch, FiUsers } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -263,6 +263,15 @@ const Profile = () => {
              </div>
              <p className="text-4xl font-black text-primary">#142</p>
              <p className="text-xs text-secondary mt-2">Top 5% of all developers</p>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+             <div className="flex items-center justify-between mb-4">
+               <span className="text-xs font-bold uppercase tracking-widest text-purple-400">Clan</span>
+               <FiUsers className="text-purple-400" />
+             </div>
+             <p className="text-xl font-black text-primary">{user?.clanName || 'No Clan'}</p>
+             <p className="text-xs text-secondary mt-2">{user?.clanTag ? `[${user.clanTag}]` : 'Join a clan from the leaderboard'}</p>
           </Card>
 
           <div className="flex-grow">

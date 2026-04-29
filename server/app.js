@@ -18,6 +18,7 @@ const challengeRoutes = require('./routes/challengeRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const clanRoutes = require('./routes/clanRoutes');
 
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -60,6 +61,7 @@ const createApp = () => {
   app.use('/api/submissions', submissionRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/profile', profileRoutes);
+  app.use('/api/clans', clanRoutes);
   app.use('/api/docs', express.static(path.join(__dirname, 'docs')));
 
   app.get('/', (req, res) => {
