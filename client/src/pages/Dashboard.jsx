@@ -260,7 +260,7 @@ const Dashboard = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {pendingTasksPreview.map((task) => (
-              <div key={task.id} onClick={() => navigate('/pending-tasks')} className="group macos-glass p-5 hover:border-accent transition-all cursor-pointer bg-white/[0.02]">
+              <div key={task.id} onClick={() => navigate(`/challenge/${task.id}`)} className="group macos-glass p-5 hover:border-accent transition-all cursor-pointer bg-white/[0.02]">
                 <div className="flex justify-between items-start mb-4">
                   <span className="text-[10px] text-tertiary uppercase font-black tracking-widest">{task.category}</span>
                   <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${

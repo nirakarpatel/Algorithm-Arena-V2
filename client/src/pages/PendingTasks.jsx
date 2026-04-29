@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiClock, FiPlay } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import { mockChallenges } from '../lib/mockData';
 
 const PendingTasks = () => {
+  const navigate = useNavigate();
   const mockTasks = mockChallenges.slice(0, 5).map((ch, index) => ({
     id: ch._id,
     title: ch.title,
@@ -27,6 +29,7 @@ const PendingTasks = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
+            onClick={() => navigate(`/challenge/${task.id}`)}
             className="group macos-glass p-6 hover:border-accent transition-all cursor-pointer bg-white/[0.02]"
           >
             <div className="flex justify-between items-start mb-4">
