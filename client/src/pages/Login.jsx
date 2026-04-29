@@ -147,6 +147,17 @@ const Login = ({ onLoginSuccess }) => {
           </div>
         </Card>
       </div>
+
+      {/* Footer */}
+      <footer className="absolute bottom-0 w-full z-10 border-t border-glass-border/40 py-6 text-center bg-black/5">
+        <p className="text-sm text-secondary">
+          Copyright 2026 Algorithm Arena. Built for{" "}
+          <span className="text-primary font-semibold">
+            GDG On Campus - SOA ITER
+          </span>
+          .
+        </p>
+      </footer>
     </div>
   );
 };

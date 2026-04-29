@@ -285,7 +285,7 @@ const Home = () => {
       </div> */}
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 py-10 text-center">
+      <footer className="relative z-10 border-t border-glass-border/40 py-8 text-center w-full mt-auto bg-black/5">
         <p className="text-sm text-secondary">
           Copyright 2026 Algorithm Arena. Built for{" "}
           <span className="text-primary font-semibold">
