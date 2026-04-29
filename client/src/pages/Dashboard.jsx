@@ -201,6 +201,12 @@ const Dashboard = () => {
               ))}
             </div>
           )}
+          
+          <div className="pt-2">
+            <Link to="/missions" className="btn-secondary w-full flex items-center justify-center gap-2 hover:bg-white/5 hover:border-accent/40 transition-all py-3">
+              Explore More Missions <FiArrowRight />
+            </Link>
+          </div>
         </div>
 
         {/* Recent Activity - Right side (takes 1 col) */}
