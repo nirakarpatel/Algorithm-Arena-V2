@@ -1,15 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser } from 'react-icons/fi';
 import Card from '../components/Card';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
+import { USE_MOCK, mockChallenges, mockClanMembers, filterSubmissions } from '../lib/mockData';
 
 const defaultChallengeForm = {
   title: '',
   description: '',
+  link: '',
   difficulty: 'Easy',
   points: 100,
   category: 'Logic',
@@ -21,6 +24,11 @@ const AdminPanel = () => {
   const [createForm, setCreateForm] = useState(defaultChallengeForm);
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // Members tab state
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberRole, setMemberRole] = useState('member');
+  const [addingMember, setAddingMember] = useState(false);
 
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
@@ -36,6 +44,7 @@ const AdminPanel = () => {
     queryKey: ['admin-submissions', reviewFilters],
     enabled: activeTab === 'review',
     queryFn: async () => {
+      if (USE_MOCK) return filterSubmissions(reviewFilters);
       const params = new URLSearchParams();
 
       params.set('page', String(reviewFilters.page));
@@ -58,10 +67,64 @@ const AdminPanel = () => {
     queryKey: ['admin-challenges'],
     enabled: activeTab === 'manage' || activeTab === 'review',
     queryFn: async () => {
+      if (USE_MOCK) return mockChallenges;
       const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
       return res.data.data || [];
     },
   });
+
+  // Members query
+  const membersQuery = useQuery({
+    queryKey: ['clan-members'],
+    enabled: activeTab === 'members',
+    queryFn: async () => {
+      if (USE_MOCK) return mockClanMembers;
+      const res = await api.get('/api/clan/members');
+      return res.data.data || [];
+    },
+  });
+
+  const handleAddMember = async () => {
+    if (!memberSearch.trim()) {
+      toast.error('Please enter a username or email');
+      return;
+    }
+    setAddingMember(true);
+    try {
+      await api.post('/api/clan/members', {
+        identifier: memberSearch.trim(),
+        role: memberRole,
+      });
+      toast.success('Member added successfully');
+      setMemberSearch('');
+      setMemberRole('member');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to add member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    try {
+      await api.delete(`/api/clan/members/${memberId}`);
+      toast.success('Member removed');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to remove member');
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId, newRole) => {
+    try {
+      await api.put(`/api/clan/members/${memberId}`, { role: newRole });
+      toast.success('Role updated');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to update role');
+    }
+  };
 
   const onCreateChallenge = async (e) => {
     e.preventDefault();
@@ -81,6 +144,7 @@ const AdminPanel = () => {
       await api.put(`/api/challenges/${editingChallenge._id}`, {
         title: editingChallenge.title,
         description: editingChallenge.description,
+        link: editingChallenge.link || '',
         difficulty: editingChallenge.difficulty,
         points: Number(editingChallenge.points),
         category: editingChallenge.category,
@@ -140,6 +204,9 @@ const AdminPanel = () => {
         <button className={`px-4 py-2 rounded-lg ${activeTab === 'manage' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('manage')}>
           Manage Challenges
         </button>
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'members' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('members')}>
+          Members
+        </button>
       </div>
 
       {activeTab === 'create' && (
@@ -157,6 +224,16 @@ const AdminPanel = () => {
                 value={createForm.description}
                 onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
                 required
+              />
+            </div>
+            <div>
+              <label className="field-label">Original Question Link</label>
+              <input
+                className="field-input"
+                type="url"
+                placeholder="https://leetcode.com/problems/..."
+                value={createForm.link}
+                onChange={(e) => setCreateForm((p) => ({ ...p, link: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -408,6 +485,16 @@ const AdminPanel = () => {
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))}
               />
             </div>
+            <div>
+              <label className="field-label">Original Question Link</label>
+              <input
+                className="field-input"
+                type="url"
+                placeholder="https://leetcode.com/problems/..."
+                value={editingChallenge.link || ''}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, link: e.target.value }))}
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <select
                 className="field-select"
@@ -440,6 +527,105 @@ const AdminPanel = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'members' && (
+        <Card>
+          <div className="space-y-6">
+            <h2 className="text-section-title font-bold">Clan Members</h2>
+
+            {/* Add Member Section */}
+            <div className="border border-glass-border rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <FiUserPlus size={16} className="text-accent" />
+                Add New Member
+              </h3>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                  <input
+                    className="field-input pl-9"
+                    placeholder="Username or email"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="field-select sm:w-40"
+                  value={memberRole}
+                  onChange={(e) => setMemberRole(e.target.value)}
+                >
+                  <option value="member">Member</option>
+                  <option value="moderator">Moderator</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button
+                  className="btn-primary flex items-center justify-center gap-2 sm:w-auto"
+                  onClick={handleAddMember}
+                  disabled={addingMember}
+                >
+                  <FiUserPlus size={14} />
+                  {addingMember ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </div>
+
+            {/* Members List */}
+            {membersQuery.isLoading ? (
+              <div className="space-y-3">
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
+            ) : !membersQuery.data?.length ? (
+              <EmptyState
+                title="No members yet"
+                description="Add members to your clan using the form above."
+              />
+            ) : (
+              <div className="space-y-2">
+                {membersQuery.data.map((member) => (
+                  <div
+                    key={member._id}
+                    className="border border-glass-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center">
+                        {member.role === 'admin' ? (
+                          <FiShield size={16} className="text-accent" />
+                        ) : (
+                          <FiUser size={16} className="text-secondary" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{member.username || member.email}</p>
+                        <p className="text-secondary text-xs">{member.email || ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
+                        value={member.role}
+                        onChange={(e) => handleUpdateMemberRole(member._id, e.target.value)}
+                      >
+                        <option value="member">Member</option>
+                        <option value="moderator">Moderator</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button
+                        className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors"
+                        onClick={() => handleRemoveMember(member._id)}
+                        title="Remove member"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
       )}
     </div>
   );

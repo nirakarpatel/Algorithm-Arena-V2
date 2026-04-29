@@ -6,10 +6,10 @@ import EmptyState from '../components/EmptyState';
 import SkeletonCard from '../components/SkeletonCard';
 import PageHeader from '../components/PageHeader';
 import { api } from '../lib/api';
+import { USE_MOCK, mockProfileStats } from '../lib/mockData';
 import { useAuth } from '../context/useAuth';
 
 const activityFilters = ['All', 'Accepted', 'Rejected', 'Pending'];
-const NOW_MS = Date.now();
 
 const Profile = () => {
   const { user } = useAuth();
@@ -19,6 +19,7 @@ const Profile = () => {
   const profileQuery = useQuery({
     queryKey: ['profile-stats'],
     queryFn: async () => {
+      if (USE_MOCK) return mockProfileStats;
       const res = await api.get('/api/profile/stats');
       return res.data.data;
     },
@@ -30,6 +31,7 @@ const Profile = () => {
   const acceptedPct = total ? Math.round(((stats.acceptedCount || 0) / total) * 100) : 0;
 
   const acceptedInLastWeek = useMemo(() => {
+    const NOW_MS = Date.now();
     const sevenDaysAgo = NOW_MS - 7 * 24 * 60 * 60 * 1000;
     return submissions.filter((sub) => sub.status === 'Accepted' && new Date(sub.submittedAt).getTime() >= sevenDaysAgo).length;
   }, [submissions]);

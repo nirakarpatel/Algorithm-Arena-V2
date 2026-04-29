@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, setUnauthorizedHandler } from '../lib/api';
+import { USE_MOCK, mockCurrentUser } from '../lib/mockData';
 import AuthContext from './context';
 
 const getStoredUser = () => {
@@ -24,6 +25,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshMe = useCallback(async () => {
+    if (USE_MOCK) {
+      localStorage.setItem('user', JSON.stringify(mockCurrentUser));
+      setUser(mockCurrentUser);
+      setLoading(false);
+      return mockCurrentUser;
+    }
     try {
       const existingToken = localStorage.getItem('token');
       if (!existingToken) {

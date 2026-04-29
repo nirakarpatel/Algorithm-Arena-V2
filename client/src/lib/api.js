@@ -21,9 +21,10 @@ const isAuthFlowRequest = (url = '') => {
 };
 
 const normalizeUser = (payload) => ({
-  id: payload?._id,
-  username: payload?.username,
-  role: payload?.role,
+  id: payload?._id ||'mock_id', //remove mock id
+  username: payload?.username ||'mock_user',//remove mock user
+  role: payload?.role || 'user'
+
 });
 
 const updateSessionFromPayload = (payload) => {
@@ -95,6 +96,8 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${nextToken}`;
         return api(originalRequest);
       } catch (refreshError) {
+          // console.log("Blocking logout for UI work");
+
         if (typeof unauthorizedHandler === 'function') {
           unauthorizedHandler(refreshError);
         }

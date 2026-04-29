@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Card from '../components/Card';
 import SkeletonCard from '../components/SkeletonCard';
 import { api } from '../lib/api';
+import { USE_MOCK, mockSubmissions } from '../lib/mockData';
 
 const StatusBadge = ({ status }) => {
   const colorClass =
@@ -13,7 +14,7 @@ const StatusBadge = ({ status }) => {
         ? 'bg-red-500/20 text-red-400'
         : 'bg-yellow-500/20 text-yellow-400';
 
-  return <span className={`px-3 py-1 rounded-full text-xs font-bold ${colorClass}`}>{status}</span>;
+  return <span className={`px-3 py-1 mt-8 rounded-full text-xs font-bold ${colorClass}`}>{status}</span>;
 };
 
 const SubmissionDetails = () => {
@@ -23,6 +24,11 @@ const SubmissionDetails = () => {
   const submissionQuery = useQuery({
     queryKey: ['submission', id],
     queryFn: async () => {
+      if (USE_MOCK) {
+        const found = mockSubmissions.find((s) => s._id === id);
+        if (!found) throw new Error('Submission not found');
+        return found;
+      }
       const res = await api.get(`/api/submissions/${id}`);
       return res.data.data;
     },

@@ -4,7 +4,6 @@ import { useAuth } from "../context/useAuth";
 import LoadingScreen from "./LoadingScreen";
 
 const ProtectedRoute = ({ children }) => {
-  return children;
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -14,6 +13,7 @@ const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
+  return children;
 };
 
 export default ProtectedRoute;
