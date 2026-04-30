@@ -1,9 +1,3 @@
-require('dotenv').config();
-const dns = require('dns');
-
-// 🔧 FIX: Force Google DNS here too
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-
 const mongoose = require('mongoose');
 const Challenge = require('./models/Challenge');
 
@@ -45,9 +39,9 @@ const challenges = [
   }
 ];
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log('🌱 Connected to MongoDB (via Google DNS)...');
+async function seedDatabase() {
+  try {
+    console.log('🌱 Seeding database...');
     
     // Clear existing challenges
     await Challenge.deleteMany({});
@@ -56,10 +50,27 @@ mongoose.connect(process.env.MONGO_URI)
     // Insert new ones
     await Challenge.insertMany(challenges);
     console.log('✅ Database Seeded with 5 Pro Challenges!');
-    
-    process.exit();
-  })
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+  } catch (err) {
+    console.error('❌ Seeding failed:', err);
+    throw err;
+  }
+}
+
+if (require.main === module) {
+  require('dotenv').config();
+  const dns = require('dns');
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+  mongoose.connect(process.env.MONGO_URI)
+    .then(async () => {
+      console.log('🌱 Connected to MongoDB (via Google DNS)...');
+      await seedDatabase();
+      process.exit(0);
+    })
+    .catch(err => {
+      console.error(err);
+      process.exit(1);
+    });
+}
+
+module.exports = { seedDatabase };

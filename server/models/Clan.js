@@ -32,6 +32,13 @@ const clanSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+  requests: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
+  notices: [{
+    type: String,
+  }],
   status: {
     type: String,
     enum: ['active', 'archived'],

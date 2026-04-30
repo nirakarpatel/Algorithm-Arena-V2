@@ -9,6 +9,7 @@ const getClans = async (req, res, next) => {
     const clans = await Clan.find({ status: 'active' })
       .populate('chief', 'username email')
       .populate('members', 'username email')
+      .populate('requests', 'username email')
       .sort({ createdAt: -1 });
 
     return sendSuccess(res, { data: clans });
@@ -22,7 +23,8 @@ const getClan = async (req, res, next) => {
   try {
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email');
+      .populate('members', 'username email')
+      .populate('requests', 'username email');
 
     if (!clan) {
       return res.status(404).json({ success: false, message: 'Clan not found' });
@@ -162,23 +164,15 @@ const joinClan = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Already a member of this clan' });
     }
 
-    // Remove user from any other clan first
-    await Clan.updateMany(
-      { members: req.user._id },
-      { $pull: { members: req.user._id } }
-    );
+    if (clan.requests.includes(req.user._id)) {
+      return res.status(400).json({ success: false, message: 'Already requested to join this clan' });
+    }
 
-    clan.members.push(req.user._id);
+    // Push to requests instead of members
+    clan.requests.push(req.user._id);
     await clan.save();
 
-    // Update user's clan reference
-    await User.findByIdAndUpdate(req.user._id, { clan: clan._id });
-
-    const populated = await Clan.findById(clan._id)
-      .populate('chief', 'username email')
-      .populate('members', 'username email');
-
-    return sendSuccess(res, { data: populated, message: `Joined clan ${clan.name}` });
+    return sendSuccess(res, { message: `Request sent to join clan ${clan.name}` });
   } catch (err) {
     return next(err);
   }
@@ -273,7 +267,7 @@ const addMember = async (req, res, next) => {
   }
 };
 
-// DELETE /api/clans/:id/members/:userId — admin removes a member
+// DELETE /api/clans/:id/members/:userId — remove a member
 const removeMember = async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -281,6 +275,11 @@ const removeMember = async (req, res, next) => {
 
     if (!clan) {
       return res.status(404).json({ success: false, message: 'Clan not found' });
+    }
+
+    // Auth check: only chief or admin
+    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the chief or an admin can remove members' });
     }
 
     clan.members.pull(userId);
@@ -300,6 +299,104 @@ const removeMember = async (req, res, next) => {
   }
 };
 
+// POST /api/clans/:id/approve/:userId — chief approves request
+const approveJoinRequest = async (req, res, next) => {
+  try {
+    const clan = await Clan.findById(req.params.id);
+    if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
+
+    // Auth check: only chief or admin
+    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the chief can approve requests' });
+    }
+
+    const { userId } = req.params;
+    if (!clan.requests.includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such request found' });
+    }
+
+    // Remove from other clans first
+    await Clan.updateMany(
+      { members: userId },
+      { $pull: { members: userId } }
+    );
+    // Remove from other requests too? Maybe not necessary but cleaner
+    await Clan.updateMany(
+      { requests: userId },
+      { $pull: { requests: userId } }
+    );
+
+    clan.requests.pull(userId);
+    clan.members.push(userId);
+    await clan.save();
+
+    await User.findByIdAndUpdate(userId, { clan: clan._id });
+
+    return sendSuccess(res, { message: 'Request approved' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// POST /api/clans/:id/reject/:userId — chief rejects request
+const rejectJoinRequest = async (req, res, next) => {
+  try {
+    const clan = await Clan.findById(req.params.id);
+    if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
+
+    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the chief can reject requests' });
+    }
+
+    clan.requests.pull(req.params.userId);
+    await clan.save();
+
+    return sendSuccess(res, { message: 'Request rejected' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// POST /api/clans/:id/notices — chief adds a notice
+const addClanNotice = async (req, res, next) => {
+  try {
+    const { notice } = req.body;
+    const clan = await Clan.findById(req.params.id);
+    if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
+
+    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the chief can post notices' });
+    }
+
+    clan.notices.push(notice);
+    await clan.save();
+
+    return sendSuccess(res, { data: clan.notices, message: 'Notice posted' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// DELETE /api/clans/:id/notices/:index — chief removes a notice
+const removeClanNotice = async (req, res, next) => {
+  try {
+    const { index } = req.params;
+    const clan = await Clan.findById(req.params.id);
+    if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
+
+    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only the chief can remove notices' });
+    }
+
+    clan.notices.splice(index, 1);
+    await clan.save();
+
+    return sendSuccess(res, { data: clan.notices, message: 'Notice removed' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getClans,
   getClan,
@@ -312,4 +409,8 @@ module.exports = {
   assignChief,
   addMember,
   removeMember,
+  approveJoinRequest,
+  rejectJoinRequest,
+  addClanNotice,
+  removeClanNotice,
 };

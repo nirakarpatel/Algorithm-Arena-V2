@@ -14,6 +14,8 @@ import {
   FiMessageSquare,
   FiAward,
   FiTarget,
+  FiX,
+  FiTrash2,
 } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
@@ -22,6 +24,7 @@ import EmptyState from '../components/EmptyState';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
+import { USE_MOCK } from '../lib/mockData';
 
 /* ─── Mock clans for fallback ─────────────────────────────── */
 const mockClans = [
@@ -43,6 +46,10 @@ const mockClans = [
       'New challenge set: Dynamic Programming Sprint',
     ],
     totalPoints: 11200,
+    requests: [
+      { _id: 'u_005', username: 'stackOverflow_fan' },
+      { _id: 'u_009', username: 'bitManipulator' },
+    ],
   },
   {
     _id: 'clan_02',
@@ -90,13 +97,67 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 );
 
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
-const ClanDashboard = ({ clan, userId, onLeave }) => {
-  const isChief = clan.chief?._id === userId;
+/* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
+const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, onAddNotice, onRemoveNotice }) => {
+  const isChief = userId && (clan.chief?._id || clan.chief) === userId;
   const members = clan.members || [];
+  const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
+  const [newNotice, setNewNotice] = useState('');
+
+  const submitNotice = (e) => {
+    e.preventDefault();
+    if (!newNotice.trim()) return;
+    onAddNotice(newNotice.trim());
+    setNewNotice('');
+  };
 
   return (
     <div className="space-y-6">
+      {/* 0. Pending Requests (Chief Only) */}
+      {isChief && requests.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="macos-glass border-accent/40 bg-accent/5 p-6 space-y-4"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <FiUsers className="text-accent" /> Pending Approvals
+              <span className="bg-accent text-white text-[10px] px-2 py-0.5 rounded-full">{requests.length}</span>
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {requests.map((req) => (
+              <div key={req._id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-glass-border/40">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center font-bold text-accent text-xs">
+                    {req.username[0].toUpperCase()}
+                  </div>
+                  <span className="text-sm font-semibold">{req.username}</span>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => onApprove(req._id)}
+                    className="p-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                    title="Approve"
+                  >
+                    <FiCheckCircle size={16} />
+                  </button>
+                  <button
+                    onClick={() => onReject(req._id)}
+                    className="p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                    title="Reject"
+                  >
+                    <FiX size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Header Banner */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -147,24 +208,59 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Notice Board */}
         <div className="xl:col-span-1 h-full">
-          <Card className="h-full flex flex-col">
+          <Card className="h-full flex flex-col min-h-[400px]">
             <h3 className="text-section-title font-bold flex items-center gap-2 mb-4 shrink-0">
               <FiMessageSquare className="text-accent" />
               Notice Board
             </h3>
-            <div className="space-y-3">
+
+            {isChief && (
+              <form onSubmit={submitNotice} className="mb-4 shrink-0">
+                <div className="relative group">
+                  <input
+                    type="text"
+                    className="field-input pr-10 text-xs"
+                    placeholder="Post new announcement..."
+                    value={newNotice}
+                    onChange={(e) => setNewNotice(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-accent hover:text-accent-light p-1 transition-colors"
+                  >
+                    <FiCheckCircle size={16} />
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar max-h-[500px]">
               {notices.map((notice, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.08 }}
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-glass-border/40"
+                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-glass-border/40 group/notice"
                 >
                   <FiStar className="text-yellow-400 mt-0.5 shrink-0" size={14} />
-                  <p className="text-sm text-primary/90 leading-relaxed">{notice}</p>
+                  <p className="text-sm text-primary/90 leading-relaxed flex-1">{notice}</p>
+                  {isChief && (
+                    <button
+                      onClick={() => onRemoveNotice(i)}
+                      className="text-secondary hover:text-red-400 opacity-0 group-hover/notice:opacity-100 transition-all p-1"
+                      title="Remove notice"
+                    >
+                      <FiTrash2 size={12} />
+                    </button>
+                  )}
                 </motion.div>
               ))}
+              {notices.length === 0 && (
+                <div className="text-center py-10 opacity-30 italic text-xs">
+                  No notices yet.
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -212,9 +308,20 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
                           CHIEF
                         </span>
                       ) : (
-                        <span className="text-[10px] bg-glass-surface text-secondary px-2 py-1 rounded-lg font-medium">
-                          Member
-                        </span>
+                        <>
+                          <span className="text-[10px] bg-glass-surface text-secondary px-2 py-1 rounded-lg font-medium">
+                            Member
+                          </span>
+                          {isChief && (
+                            <button
+                              onClick={() => onRemove(member)}
+                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+                              title="Remove from clan"
+                            >
+                              <FiX size={14} />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </motion.div>
@@ -340,6 +447,7 @@ const Clans = () => {
   const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
   const [leaving, setLeaving] = useState(false);
 
   // Fetch all clans
@@ -387,6 +495,139 @@ const Clans = () => {
     }
   };
 
+  const handleApprove = async (userId) => {
+    if (!myClan) return;
+    if (USE_MOCK) {
+      toast.success('Member approved (Mock Mode)!');
+      // Simulate data change in cache
+      const currentData = queryClient.getQueryData(['clans-list']) || [];
+      const updatedData = currentData.map(c => {
+        if (c._id === myClan._id) {
+          const userToMove = c.requests?.find(r => r._id === userId);
+          if (!userToMove) return c;
+          return {
+            ...c,
+            requests: c.requests.filter(r => r._id !== userId),
+            members: [...(c.members || []), userToMove]
+          };
+        }
+        return c;
+      });
+      queryClient.setQueryData(['clans-list'], updatedData);
+      return;
+    }
+    try {
+      await api.post(`/api/clans/${myClan._id}/approve/${userId}`);
+      toast.success('Member approved!');
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to approve.');
+    }
+  };
+
+  const handleReject = async (userId) => {
+    if (!myClan) return;
+    if (USE_MOCK) {
+      toast.success('Request rejected (Mock Mode)!');
+      // Simulate data change in cache
+      const currentData = queryClient.getQueryData(['clans-list']) || [];
+      const updatedData = currentData.map(c => {
+        if (c._id === myClan._id) {
+          return {
+            ...c,
+            requests: (c.requests || []).filter(r => r._id !== userId)
+          };
+        }
+        return c;
+      });
+      queryClient.setQueryData(['clans-list'], updatedData);
+      return;
+    }
+    try {
+      await api.post(`/api/clans/${myClan._id}/reject/${userId}`);
+      toast.success('Request rejected.');
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reject.');
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!myClan || !removeTarget) return;
+    if (USE_MOCK) {
+      toast.success(`${removeTarget.username} removed (Mock Mode)!`);
+      const currentData = queryClient.getQueryData(['clans-list']) || [];
+      const updatedData = currentData.map(c => {
+        if (c._id === myClan._id) {
+          return {
+            ...c,
+            members: (c.members || []).filter(m => m._id !== removeTarget._id)
+          };
+        }
+        return c;
+      });
+      queryClient.setQueryData(['clans-list'], updatedData);
+      setRemoveTarget(null);
+      return;
+    }
+    try {
+      await api.delete(`/api/clans/${myClan._id}/members/${removeTarget._id}`);
+      toast.success('Member removed from clan.');
+      setRemoveTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to remove member.');
+    }
+  };
+
+  const handleAddNotice = async (notice) => {
+    if (!myClan) return;
+    if (USE_MOCK) {
+      toast.success('Notice posted (Mock Mode)!');
+      const currentData = queryClient.getQueryData(['clans-list']) || [];
+      const updatedData = currentData.map(c => {
+        if (c._id === myClan._id) {
+          return { ...c, notices: [...(c.notices || []), notice] };
+        }
+        return c;
+      });
+      queryClient.setQueryData(['clans-list'], updatedData);
+      return;
+    }
+    try {
+      await api.post(`/api/clans/${myClan._id}/notices`, { notice });
+      toast.success('Notice posted!');
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error('Failed to post notice.');
+    }
+  };
+
+  const handleRemoveNotice = async (index) => {
+    if (!myClan) return;
+    if (USE_MOCK) {
+      toast.success('Notice removed (Mock Mode)!');
+      const currentData = queryClient.getQueryData(['clans-list']) || [];
+      const updatedData = currentData.map(c => {
+        if (c._id === myClan._id) {
+          const newNotices = [...(c.notices || [])];
+          newNotices.splice(index, 1);
+          return { ...c, notices: newNotices };
+        }
+        return c;
+      });
+      queryClient.setQueryData(['clans-list'], updatedData);
+      return;
+    }
+    try {
+      await api.delete(`/api/clans/${myClan._id}/notices/${index}`);
+      toast.success('Notice removed!');
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error('Failed to remove notice.');
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <PageHeader
@@ -406,6 +647,11 @@ const Clans = () => {
               clan={myClan}
               userId={user?.id}
               onLeave={() => setShowLeaveConfirm(true)}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onRemove={setRemoveTarget}
+              onAddNotice={handleAddNotice}
+              onRemoveNotice={handleRemoveNotice}
             />
           </motion.div>
         ) : (
@@ -432,6 +678,15 @@ const Clans = () => {
         confirmLabel={leaving ? 'Leaving...' : 'Yes, Leave'}
         onCancel={() => setShowLeaveConfirm(false)}
         onConfirm={handleLeave}
+      />
+
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        title="Remove Member"
+        description={`Are you sure you want to remove ${removeTarget?.username} from the clan?`}
+        confirmLabel="Remove"
+        onCancel={() => setRemoveTarget(null)}
+        onConfirm={handleRemoveMember}
       />
     </div>
   );

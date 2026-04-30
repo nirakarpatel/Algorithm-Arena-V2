@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser } from 'react-icons/fi';
+import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser, FiX } from 'react-icons/fi';
+import { clsx } from 'clsx';
 import Card from '../components/Card';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
@@ -31,6 +32,7 @@ const AdminPanel = () => {
   const [clanForm, setClanForm] = useState(defaultClanForm);
   const [editingClan, setEditingClan] = useState(null);
   const [deleteClanTarget, setDeleteClanTarget] = useState(null);
+  const [clanSearch, setClanSearch] = useState('');
 
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
@@ -212,6 +214,7 @@ const AdminPanel = () => {
         name: editingClan.name,
         tag: editingClan.tag,
         description: editingClan.description,
+        chiefId: editingClan.chief?._id || editingClan.chief, // Handle both object and ID
       });
       toast.success('Clan updated');
       setEditingClan(null);
@@ -291,7 +294,7 @@ const AdminPanel = () => {
           Permissions
         </button>
         <button className={`px-4 py-2 rounded-lg ${activeTab === 'clans' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('clans')}>
-          Clans
+          Manage Clans
         </button>
       </div>
 
@@ -566,14 +569,32 @@ const AdminPanel = () => {
           </Card>
 
           <Card>
-            <h2 className="text-section-title font-bold mb-4">Manage Clans</h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <h2 className="text-section-title font-bold">Manage Clans</h2>
+              <div className="relative w-full md:w-64">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  className="field-input pl-10 py-2"
+                  placeholder="Search clans or tags..."
+                  value={clanSearch}
+                  onChange={(e) => setClanSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
             {clansQuery.isLoading ? (
               <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
-            ) : (clansQuery.data || []).length === 0 ? (
-              <EmptyState title="No clans yet" description="Create your first clan above." />
+            ) : (clansQuery.data || []).filter(c => 
+              c.name.toLowerCase().includes(clanSearch.toLowerCase()) || 
+              c.tag.toLowerCase().includes(clanSearch.toLowerCase())
+            ).length === 0 ? (
+              <EmptyState title="No clans found" description={clanSearch ? "No clans match your search." : "Create your first clan above."} />
             ) : (
               <div className="space-y-4">
-                {(clansQuery.data || []).map((clan) => (
+                {(clansQuery.data || []).filter(c => 
+                  c.name.toLowerCase().includes(clanSearch.toLowerCase()) || 
+                  c.tag.toLowerCase().includes(clanSearch.toLowerCase())
+                ).map((clan) => (
                   <div key={clan._id} className="border border-glass-border rounded-xl p-5 space-y-4">
                     <div className="flex flex-wrap gap-3 justify-between items-start">
                       <div>
@@ -591,15 +612,12 @@ const AdminPanel = () => {
                         <p className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Roster</p>
                         <div className="flex flex-wrap gap-2">
                           {clan.members.map((member) => (
-                            <div key={member._id} className="flex items-center gap-2 bg-glass-surface px-3 py-1.5 rounded-lg text-sm">
+                            <div key={member._id} className="flex items-center gap-2 bg-glass-surface px-3 py-1.5 rounded-lg text-sm border border-glass-border/30">
                               <span className="font-medium">{member.username}</span>
-                              {clan.chief?._id !== member._id && (
-                                <button className="text-[10px] text-accent hover:underline" onClick={() => onAssignChief(clan._id, member._id)}>Make Chief</button>
-                              )}
                               {clan.chief?._id === member._id && (
                                 <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded font-bold">CHIEF</span>
                               )}
-                              <button className="text-[10px] text-red-400 hover:underline" onClick={() => onRemoveMember(clan._id, member._id)}>×</button>
+                              <button className="text-[10px] text-red-400 hover:text-red-500 transition-colors ml-1" onClick={() => onRemoveMember(clan._id, member._id)} title="Remove member">×</button>
                             </div>
                           ))}
                         </div>
@@ -710,26 +728,87 @@ const AdminPanel = () => {
       )}
 
       {editingClan && (
-        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="macos-glass w-full max-w-3xl p-6 space-y-4">
-            <h3 className="text-section-title font-bold">Edit Clan</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="field-label">Name</label>
-                <input className="field-input" value={editingClan.name} onChange={(e) => setEditingClan((p) => ({ ...p, name: e.target.value }))} />
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="macos-glass w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-glass-border/30 flex justify-between items-center bg-accent/5">
+              <h3 className="text-xl font-bold">Edit Clan Details</h3>
+              <button onClick={() => setEditingClan(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="field-label text-xs uppercase tracking-wider opacity-70">Clan Name</label>
+                  <input 
+                    className="field-input bg-white/5 border-glass-border/40 focus:border-accent/50" 
+                    value={editingClan.name} 
+                    onChange={(e) => setEditingClan((p) => ({ ...p, name: e.target.value }))} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="field-label text-xs uppercase tracking-wider opacity-70">Tag (Identifier)</label>
+                  <input 
+                    className="field-input bg-white/5 border-glass-border/40 focus:border-accent/50 font-mono" 
+                    value={editingClan.tag} 
+                    maxLength={5} 
+                    onChange={(e) => setEditingClan((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} 
+                  />
+                </div>
               </div>
-              <div>
-                <label className="field-label">Tag</label>
-                <input className="field-input" value={editingClan.tag} maxLength={5} onChange={(e) => setEditingClan((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} />
+
+              <div className="space-y-2">
+                <label className="field-label text-xs uppercase tracking-wider opacity-70">Description</label>
+                <textarea 
+                  className="field-textarea bg-white/5 border-glass-border/40 focus:border-accent/50 h-24" 
+                  value={editingClan.description || ''} 
+                  onChange={(e) => setEditingClan((p) => ({ ...p, description: e.target.value }))} 
+                />
               </div>
-              <div>
-                <label className="field-label">Description</label>
-                <input className="field-input" value={editingClan.description || ''} onChange={(e) => setEditingClan((p) => ({ ...p, description: e.target.value }))} />
+
+              <div className="space-y-3 pt-2 border-t border-glass-border/20">
+                <label className="field-label text-xs uppercase tracking-wider opacity-70 flex items-center gap-2">
+                  <FiShield className="text-accent" /> Assign Clan Chief
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {editingClan.members?.map((member) => (
+                    <button
+                      key={member._id}
+                      onClick={() => setEditingClan(p => ({ ...p, chief: member }))}
+                      className={clsx(
+                        "flex items-center justify-between p-3 rounded-xl border transition-all duration-200 text-sm",
+                        (editingClan.chief?._id === member._id || editingClan.chief === member._id)
+                          ? "bg-accent/10 border-accent/50 text-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]"
+                          : "bg-white/5 border-glass-border/30 hover:border-glass-border text-secondary"
+                      )}
+                    >
+                      <span className="font-medium">{member.username}</span>
+                      {(editingClan.chief?._id === member._id || editingClan.chief === member._id) && (
+                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                      )}
+                    </button>
+                  ))}
+                  {(!editingClan.members || editingClan.members.length === 0) && (
+                    <p className="text-xs text-tertiary italic col-span-2 py-2">No members available to promote.</p>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <button className="btn-secondary" onClick={() => setEditingClan(null)}>Cancel</button>
-              <button className="btn-primary" onClick={onUpdateClan}>Save Changes</button>
+
+            <div className="p-6 border-t border-glass-border/30 bg-black/10 flex justify-end gap-3">
+              <button 
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-glass-border hover:bg-white/5 transition-all" 
+                onClick={() => setEditingClan(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:opacity-90 shadow-lg shadow-accent/20 transition-all active:scale-95" 
+                onClick={onUpdateClan}
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

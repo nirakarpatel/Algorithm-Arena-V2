@@ -14,7 +14,11 @@ async function runStandalone() {
     logger.info('MongoDB In-Memory Server ready', { uri: mongoUri });
     
     // Dynamically require server after env is set
-    const { startServer } = require('./server');
+    const { startServer, connectDB } = require('./server');
+    const { seedDatabase } = require('./seed');
+
+    await connectDB();
+    await seedDatabase();
     await startServer();
     
     // Handle graceful shutdown

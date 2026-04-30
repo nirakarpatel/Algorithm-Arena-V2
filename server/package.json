@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "dev:standalone": "nodemon standalone.js",
     "test": "node --test tests/api.integration.test.js",
     "check": "node --check app.js && node --check server.js"
   },
