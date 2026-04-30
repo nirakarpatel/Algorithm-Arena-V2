@@ -68,9 +68,20 @@ const SolvedBreakdown = ({ stats }) => {
   );
 };
 
-const ActivityHeatmap = () => {
-  const data = useMemo(() => generateHeatmapData(), []);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const ActivityHeatmap = ({ heatmapData }) => {
+  const data = useMemo(() => heatmapData && heatmapData.length > 0 ? heatmapData : generateHeatmapData(), [heatmapData]);
+  
+  const months = useMemo(() => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = new Date().getMonth();
+    const result = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(currentMonth - i);
+      result.push(monthNames[d.getMonth()]);
+    }
+    return result;
+  }, []);
   
   return (
     <Card className="overflow-hidden">
@@ -254,7 +265,7 @@ const Profile = () => {
 
             <div className="flex justify-center gap-4 mt-8 pt-6 border-t border-glass-border">
                <FiGithub className="text-secondary hover:text-white cursor-pointer transition-colors" size={20} />
-               <FiTwitter className="text-secondary hover:text-white cursor-pointer transition-colors" size={12} />
+               <FiTwitter className="text-secondary hover:text-white cursor-pointer transition-colors" size={20} />
             </div>
           </Card>
 
@@ -263,7 +274,7 @@ const Profile = () => {
                <span className="text-xs font-bold uppercase tracking-widest text-accent">Current Rank</span>
                <FiAward className="text-accent" />
              </div>
-             <p className="text-4xl font-black text-primary">#142</p>
+             <p className="text-4xl font-black text-primary">{stats.rank ? `#${stats.rank}` : 'Unranked'}</p>
              <p className="text-xs text-secondary mt-2">Top 5% of all developers</p>
           </Card>
 
@@ -287,7 +298,7 @@ const Profile = () => {
             {[
               { label: 'Solved', val: stats.acceptedCount || 0, color: 'text-green-400', sub: 'Total missions', icon: FiZap },
               { label: 'Points', val: stats.totalPoints || 0, color: 'text-accent', sub: 'XP Gained', icon: FiAward },
-              { label: 'Streaks', val: 12, color: 'text-orange-400', sub: 'Days active', icon: FiActivity },
+              { label: 'Streaks', val: stats.streak || 0, color: 'text-orange-400', sub: `Max: ${stats.maxStreak || 0}`, icon: FiActivity },
               { label: 'Pending', val: stats.pendingCount || 0, color: 'text-yellow-400', sub: 'Awaiting review', icon: FiSearch }
             ].map((m, idx) => (
               <Card key={idx} className="relative overflow-hidden group">
@@ -304,7 +315,7 @@ const Profile = () => {
             ))}
           </div>
 
-          <ActivityHeatmap />
+          <ActivityHeatmap heatmapData={stats.heatmapData} />
 
           <Card className="flex-grow">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

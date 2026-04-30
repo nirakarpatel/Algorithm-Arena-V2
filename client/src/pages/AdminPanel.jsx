@@ -33,6 +33,7 @@ const AdminPanel = () => {
   const [editingClan, setEditingClan] = useState(null);
   const [deleteClanTarget, setDeleteClanTarget] = useState(null);
   const [clanSearch, setClanSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
 
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
@@ -674,14 +675,31 @@ const AdminPanel = () => {
       {activeTab === 'permissions' && (
         <Card>
           <div className="space-y-6">
-            <h2 className="text-section-title font-bold mb-4">Manage Permissions</h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+              <h2 className="text-section-title font-bold">Manage Permissions</h2>
+              <div className="relative w-full md:w-64">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  className="field-input pl-10 py-2"
+                  placeholder="Search members..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+            </div>
             {usersQuery.isLoading ? (
               <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
-            ) : (usersQuery.data || []).length === 0 ? (
-              <EmptyState title="No users found" description="There are no users registered." />
+            ) : (usersQuery.data || []).filter(u => 
+              u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
+              (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase()))
+            ).length === 0 ? (
+              <EmptyState title="No users found" description={userSearch ? "No members match your search." : "There are no users registered."} />
             ) : (
               <div className="space-y-4">
-                {(usersQuery.data || []).map((user) => (
+                {(usersQuery.data || []).filter(u => 
+                  u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
+                  (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                ).map((user) => (
                   <div key={user._id} className="border border-glass-border rounded-xl p-4 flex flex-wrap gap-3 justify-between items-center">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
