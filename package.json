@@ -9,7 +9,7 @@
     "server": "cd server && npm run dev",
     "server:standalone": "cd server && npm run dev:standalone",
     "client": "cd client && npm run dev",
-    "build": "cd client && npm run build",
+    "build": "cd client && npm install && npm run build",
     "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
   "keywords": [],
