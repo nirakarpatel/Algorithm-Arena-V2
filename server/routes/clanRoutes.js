@@ -13,6 +13,10 @@ const {
   assignChief,
   addMember,
   removeMember,
+  approveJoinRequest,
+  rejectJoinRequest,
+  addClanNotice,
+  removeClanNotice,
 } = require('../controllers/clanController');
 
 // Public / authenticated routes
