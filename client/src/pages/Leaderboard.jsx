@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSocket } from '../hooks/useSocket';
-import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap } from 'react-icons/fi';
+import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap, FiChevronUp, FiChevronDown } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -11,10 +11,7 @@ import { api } from '../lib/api';
 import { USE_MOCK, mockLeaderboardMembers, mockClans } from '../lib/mockData';
 import { useAuth } from '../context/useAuth';
 
-
-
 const Podium = ({ items, type }) => {
-  // Sort items for podium: [2, 1, 3] layout
   const podiumSteps = [
     items[1], // 2nd Place
     items[0], // 1st Place
@@ -112,7 +109,6 @@ const BackgroundAnimation = () => {
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-      {/* Drifting Blobs */}
       <div className="absolute inset-0 opacity-30 dark:opacity-50">
          <motion.div
             animate={{ 
@@ -136,7 +132,6 @@ const BackgroundAnimation = () => {
          />
       </div>
 
-      {/* Floating Bubbles */}
       {bubbles.map((bubble) => (
         <motion.div
           key={bubble.id}
@@ -161,7 +156,6 @@ const BackgroundAnimation = () => {
         />
       ))}
 
-      {/* Subtle Noise overlay */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
     </div>
   );
@@ -172,14 +166,49 @@ const Leaderboard = () => {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({ window: 'all', page: 1, limit: 20 });
 
-  // Listen for real-time leaderboard updates
   useSocket('leaderboard_update', () => {
     queryClient.invalidateQueries(['leaderboard']);
     queryClient.invalidateQueries(['clan-leaderboard']);
   });
 
   const [search, setSearch] = useState('');
-  const [leaderType, setLeaderType] = useState('individual'); // 'individual' or 'clans'
+  const [leaderType, setLeaderType] = useState('individual');
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig && sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+         direction = 'desc';
+      } else {
+         setSortConfig(null);
+         return;
+      }
+    } else {
+      if (key === 'totalPoints' || key === 'solvedCount' || (key === 'clanOrMembers' && leaderType === 'clans')) {
+        direction = 'desc';
+      }
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortableHeader = (label, sortKey, align = 'left') => (
+    <th 
+      className={`p-6 cursor-pointer group hover:bg-white/5 transition-colors select-none ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
+      onClick={() => requestSort(sortKey)}
+    >
+      <div className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'}`}>
+        {label}
+        {sortConfig?.key === sortKey ? (
+          sortConfig.direction === 'asc' ? <FiChevronUp className="text-accent" /> : <FiChevronDown className="text-accent" />
+        ) : (
+          <div className="opacity-0 group-hover:opacity-30 transition-opacity flex flex-col -space-y-[0.4rem] text-[10px]">
+            <FiChevronUp/><FiChevronDown/>
+          </div>
+        )}
+      </div>
+    </th>
+  );
 
   const leaderboardQuery = useQuery({
     queryKey: ['leaderboard', filters, leaderType],
@@ -217,17 +246,43 @@ const Leaderboard = () => {
     if (leaderType === 'clans') {
       return clanLeaderboardQuery.data || [];
     }
-    
     return leaderboardQuery.data?.data || [];
   }, [leaderboardQuery.data, clanLeaderboardQuery.data, leaderType]);
 
   const meta = leaderType === 'clans' ? { page: 1, totalPages: 1 } : (leaderboardQuery.data?.meta || {});
   
   const visibleRows = useMemo(() => {
+    let result = [...rows];
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) => (row.username || row.name).toLowerCase().includes(query));
-  }, [rows, search]);
+    if (query) {
+      result = result.filter((row) => (row.username || row.name).toLowerCase().includes(query));
+    }
+    
+    if (sortConfig) {
+      result.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        
+        if (sortConfig.key === 'nameOrUsername') {
+           valA = a.username || a.name || '';
+           valB = b.username || b.name || '';
+        }
+        if (sortConfig.key === 'clanOrMembers') {
+           valA = leaderType === 'individual' ? (a.clan || '') : (a.memberCount || 0);
+           valB = leaderType === 'individual' ? (b.clan || '') : (b.memberCount || 0);
+        }
+
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [rows, search, sortConfig, leaderType]);
 
   const myRow = leaderType === 'individual' ? rows.find((row) => row.username === user?.username) : null;
   const topThree = rows.slice(0, 3);
@@ -242,14 +297,14 @@ const Leaderboard = () => {
           <div className="segmented">
             <button 
               className={`segmented-btn ${leaderType === 'individual' ? 'active' : ''}`}
-              onClick={() => setLeaderType('individual')}
+              onClick={() => { setLeaderType('individual'); setSortConfig(null); }}
             >
               <FiAward />
               Individual
             </button>
             <button 
               className={`segmented-btn ${leaderType === 'clans' ? 'active' : ''}`}
-              onClick={() => setLeaderType('clans')}
+              onClick={() => { setLeaderType('clans'); setSortConfig(null); }}
             >
               <FiUsers />
               Clans
@@ -297,7 +352,7 @@ const Leaderboard = () => {
         >
           <div className="flex items-center gap-3">
              <div className="p-2 rounded-lg bg-accent/20 text-accent">
-               <FiTrendingUp />
+                <FiTrendingUp />
              </div>
              <span className="font-semibold text-primary">Your current standing in this window</span>
           </div>
@@ -328,11 +383,11 @@ const Leaderboard = () => {
                 <table className="responsive-table text-left">
                   <thead>
                     <tr className="border-b border-glass-border text-secondary text-xs uppercase tracking-widest font-bold">
-                      <th className="p-6">Rank</th>
-                      <th className="p-6">{leaderType === 'individual' ? 'Coder' : 'Clan'}</th>
-                      <th className="p-6 text-center">{leaderType === 'individual' ? 'Clan' : 'Members'}</th>
-                      <th className="p-6 text-center">Solved</th>
-                      <th className="p-6 text-right">XP Points</th>
+                      {renderSortableHeader('Rank', 'rank', 'left')}
+                      {renderSortableHeader(leaderType === 'individual' ? 'Coder' : 'Clan', 'nameOrUsername', 'left')}
+                      {renderSortableHeader(leaderType === 'individual' ? 'Clan' : 'Members', 'clanOrMembers', 'center')}
+                      {renderSortableHeader('Solved', 'solvedCount', 'center')}
+                      {renderSortableHeader('XP Points', 'totalPoints', 'right')}
                     </tr>
                   </thead>
                   <tbody>
@@ -387,7 +442,6 @@ const Leaderboard = () => {
                 </table>
               </div>
 
-              {/* Mobile View */}
               <div className="md:hidden p-4 space-y-4">
                 {visibleRows.map((item) => {
                   const isMe = leaderType === 'individual' && item.username === user?.username;
@@ -413,8 +467,6 @@ const Leaderboard = () => {
         )}
       </Card>
 
-
-      {/* Pagination */}
       <div className="macos-glass p-4 flex items-center justify-between">
         <span className="text-secondary text-sm">
           Page {meta.page || filters.page} of {meta.totalPages || 1}

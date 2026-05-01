@@ -39,13 +39,13 @@ const difficultyChips = [
 const Missions = () => {
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 50, // Increase limit when grouping to show all related items
+    limit: 50,
     search: "",
     difficulty: "",
     category: "",
     sortBy: "createdAt",
     sortDir: "desc",
-    grouping: "none", // 'none', 'weekly', 'monthly'
+    grouping: "none",
   });
   const [viewMode, setViewMode] = useState(
     () => localStorage.getItem("missions:view") || "grid",
@@ -122,7 +122,6 @@ const Missions = () => {
         subtitle="Browse all available challenges, filter by difficulty, and push your limits."
       />
 
-      {/* Filter Bar */}
       <div className="macos-glass p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
         <input
           className="field-input md:col-span-2"
@@ -171,7 +170,6 @@ const Missions = () => {
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
-        {/* Left Side: Difficulty Chips */}
         <div className="chip-group flex gap-2">
           {difficultyChips.map((chip) => (
             <button
@@ -184,7 +182,6 @@ const Missions = () => {
           ))}
         </div>
 
-        {/* Right Side: View Mode Toggle */}
         <div className="segmented flex items-center">
           <button
             className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}

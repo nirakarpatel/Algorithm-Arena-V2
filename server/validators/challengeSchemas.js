@@ -9,7 +9,7 @@ const challengeIdParamsSchema = {
 const challengeCreateSchema = {
   body: z.object({
     title: z.string().trim().min(3).max(200),
-    description: z.string().trim().min(10),
+    description: z.string().min(0),
     difficulty: z.enum(['Easy', 'Medium', 'Hard']).default('Easy'),
     points: z.coerce.number().int().positive().max(10000),
     category: z.string().trim().min(2).max(80).default('Logic'),

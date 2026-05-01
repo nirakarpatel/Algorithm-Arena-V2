@@ -57,8 +57,8 @@ const Dashboard = () => {
   const recentActivity = summaryQuery.data?.recentActivity?.length ? summaryQuery.data.recentActivity : MOCK_ACTIVITY;
   const solvedRate = summaryQuery.data?.totalChallenges
     ? Math.round(
-        (summaryQuery.data.solved / summaryQuery.data.totalChallenges) * 100,
-      )
+      (summaryQuery.data.solved / summaryQuery.data.totalChallenges) * 100,
+    )
     : 0;
   const MotionBlock = motion.div;
 
@@ -99,6 +99,14 @@ const Dashboard = () => {
     });
   }, [recentActivity]);
 
+  const pendingTasksPreview = challenges.slice(2, 5).map((ch, index) => ({
+    id: ch._id,
+    title: ch.title,
+    priority: ch.difficulty === 'Hard' ? 'High' : ch.difficulty === 'Medium' ? 'Med' : 'Low',
+    due: ['2h left', 'Tomorrow', '3 days'][index],
+    category: ch.category || 'General',
+  }));
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -107,25 +115,25 @@ const Dashboard = () => {
       />
 
       {/* Featured Hero */}
-      <MotionBlock 
+      <MotionBlock
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden macos-glass p-8 md:p-12 border-accent/20 bg-gradient-to-br from-accent/10 via-transparent to-purple-500/10"
       >
         <div className="relative z-10 max-w-2xl">
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-4 block">Recommended for you</span>
-          <h2 className="text-3xl md:text-5xl font-black text-primary mb-4 leading-tight">Mastering Dynamic <br/><span className="text-accent underline decoration-accent/30 underline-offset-8">Programming</span></h2>
+          <h2 className="text-3xl md:text-5xl font-black text-primary mb-4 leading-tight">Mastering Dynamic <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">Programming</span></h2>
           <p className="text-secondary text-sm md:text-lg mb-8 leading-relaxed max-w-lg">Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards.</p>
           <div className="flex flex-wrap gap-4">
-             <Link to="/missions" className="btn-primary px-8 shadow-accent-glow inline-block">Enter Arena</Link>
+             <Link to="/missions" className="btn-primary px-8 shadow-accent-glow inline-block text-center">Enter Arena</Link>
              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs">
                 <FiZap className="text-yellow-400" />
-                <span className="font-bold">+50 Bonus XP</span>
+                <span className="font-bold">+500 Bonus XP</span>
              </div>
           </div>
         </div>
         <div className="absolute top-1/2 right-0 -translate-y-1/2 opacity-10 pointer-events-none transform translate-x-1/4">
-           <FiCpu size={400} className="text-accent" />
+          <FiCpu size={400} className="text-accent" />
         </div>
       </MotionBlock>
 
@@ -185,10 +193,9 @@ const Dashboard = () => {
                   <Link to={`/challenge/${challenge._id}`} className="group block h-full">
                     <div className="macos-glass p-5 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col">
                       <div className="flex justify-between items-start mb-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
                             challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
-                        }`}>
+                          }`}>
                           {challenge.difficulty}
                         </span>
                         <span className="text-secondary text-xs font-bold">{challenge.points} XP</span>
@@ -205,7 +212,7 @@ const Dashboard = () => {
               ))}
             </div>
           )}
-          
+
           <div className="pt-2">
             <Link to="/missions" className="btn-secondary w-full flex items-center justify-center gap-2 hover:bg-white/5 hover:border-accent/40 transition-all py-3">
               Explore More Missions <FiArrowRight />
@@ -219,7 +226,6 @@ const Dashboard = () => {
             <FiActivity className="text-accent" />
             Recent Activity
           </h2>
-          {/* By setting flex-1, absolute positioning with inset-0 inside a relative parent makes it precisely match the adjacent column's height. */}
           <div className="macos-glass p-4 overflow-y-auto max-h-[380px] xl:max-h-none xl:h-[350px] space-y-3 custom-scrollbar">
             {sortedActivity.length ? (
               sortedActivity.map((submission) => (
@@ -227,11 +233,10 @@ const Dashboard = () => {
                   <p className="font-semibold text-sm line-clamp-1">{submission.challengeId?.title || 'Unknown Challenge'}</p>
                   <div className="flex justify-between items-end mt-2">
                     <p className="text-secondary text-xs">{new Date(submission.submittedAt).toLocaleDateString()}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                        submission.status === 'Accepted' ? 'bg-green-500/20 text-green-500' :
+                    <p className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${submission.status === 'Accepted' ? 'bg-green-500/20 text-green-500' :
                         submission.status === 'Rejected' ? 'bg-red-500/20 text-red-500' :
-                        'bg-yellow-500/20 text-yellow-500'
-                    }`}>
+                          'bg-yellow-500/20 text-yellow-500'
+                      }`}>
                       {submission.status}
                     </p>
                   </div>
@@ -245,6 +250,47 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Pending Tasks Section Preview */}
+      {pendingTasksPreview.length > 0 && (
+        <div className="mt-8 pt-8 border-t border-glass-border/20">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-section-title font-semibold flex items-center gap-2">
+                <FiClock className="text-accent" />
+                Pending Tasks
+                <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black tracking-widest">{pendingTasksPreview.length}</span>
+              </h2>
+              <Link to="/pending-tasks" className="text-xs text-accent font-bold hover:underline flex items-center gap-1">
+                View All <FiArrowRight />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {pendingTasksPreview.map((task) => (
+                <div key={task.id} onClick={() => navigate(`/challenge/${task.id}`)} className="group macos-glass p-5 hover:border-accent transition-all cursor-pointer bg-white/[0.02]">
+                  <div className="flex justify-between items-start mb-4">
+                    <span className="text-[10px] text-tertiary uppercase font-black tracking-widest">{task.category}</span>
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${task.priority === 'High' ? 'bg-red-500/20 text-red-500' :
+                        task.priority === 'Med' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                      {task.priority}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-lg leading-tight group-hover:text-accent transition-colors mb-4">{task.title}</h3>
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-glass-border/40">
+                    <div className="flex items-center gap-2">
+                      <FiClock size={12} className="text-accent" />
+                      <span className="text-[10px] text-secondary font-medium">Due {task.due}</span>
+                    </div>
+                    <button className="text-[10px] bg-accent/10 text-accent px-3 py-1 rounded-lg font-bold hover:bg-accent/20 transition-colors">Resume</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
