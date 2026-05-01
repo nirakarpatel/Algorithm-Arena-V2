@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap } from 'react-icons/fi';
+import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap, FiChevronUp, FiChevronDown } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -104,6 +104,42 @@ const Leaderboard = () => {
   const [filters, setFilters] = useState({ window: 'all', page: 1, limit: 20 });
   const [search, setSearch] = useState('');
   const [leaderType, setLeaderType] = useState('individual'); // 'individual' or 'clans'
+  const [sortConfig, setSortConfig] = useState(null);
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig && sortConfig.key === key) {
+      if (sortConfig.direction === 'asc') {
+         direction = 'desc';
+      } else {
+         setSortConfig(null);
+         return;
+      }
+    } else {
+      if (key === 'totalPoints' || key === 'solvedCount' || (key === 'clanOrMembers' && leaderType === 'clans')) {
+        direction = 'desc';
+      }
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortableHeader = (label, sortKey, align = 'left') => (
+    <th 
+      className={`p-6 cursor-pointer group hover:bg-white/5 transition-colors select-none ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
+      onClick={() => requestSort(sortKey)}
+    >
+      <div className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start'}`}>
+        {label}
+        {sortConfig?.key === sortKey ? (
+          sortConfig.direction === 'asc' ? <FiChevronUp className="text-accent" /> : <FiChevronDown className="text-accent" />
+        ) : (
+          <div className="opacity-0 group-hover:opacity-30 transition-opacity flex flex-col -space-y-[0.4rem] text-[10px]">
+            <FiChevronUp/><FiChevronDown/>
+          </div>
+        )}
+      </div>
+    </th>
+  );
 
   const leaderboardQuery = useQuery({
     queryKey: ['leaderboard', filters, leaderType],
@@ -147,10 +183,42 @@ const Leaderboard = () => {
   const meta = leaderType === 'clans' ? { page: 1, totalPages: 1 } : (leaderboardQuery.data?.meta || {});
   
   const visibleRows = useMemo(() => {
+    let result = [...rows];
+    
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((row) => (row.username || row.name).toLowerCase().includes(query));
-  }, [rows, search]);
+    if (query) {
+      result = result.filter((row) => (row.username || row.name).toLowerCase().includes(query));
+    }
+    
+    if (sortConfig) {
+      result.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+        
+        if (sortConfig.key === 'nameOrUsername') {
+           valA = a.username || a.name || '';
+           valB = b.username || b.name || '';
+        }
+        if (sortConfig.key === 'clanOrMembers') {
+           valA = leaderType === 'individual' ? (a.clan || '') : (a.memberCount || 0);
+           valB = leaderType === 'individual' ? (b.clan || '') : (b.memberCount || 0);
+        }
+
+        if (typeof valA === 'string') valA = valA.toLowerCase();
+        if (typeof valB === 'string') valB = valB.toLowerCase();
+
+        if (valA < valB) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [rows, search, sortConfig, leaderType]);
 
   const myRow = leaderType === 'individual' ? rows.find((row) => row.username === user?.username) : null;
   const topThree = rows.slice(0, 3);
@@ -164,14 +232,14 @@ const Leaderboard = () => {
           <div className="segmented">
             <button 
               className={`segmented-btn ${leaderType === 'individual' ? 'active' : ''}`}
-              onClick={() => setLeaderType('individual')}
+              onClick={() => { setLeaderType('individual'); setSortConfig(null); }}
             >
               <FiAward />
               Individual
             </button>
             <button 
               className={`segmented-btn ${leaderType === 'clans' ? 'active' : ''}`}
-              onClick={() => setLeaderType('clans')}
+              onClick={() => { setLeaderType('clans'); setSortConfig(null); }}
             >
               <FiUsers />
               Clans
@@ -250,11 +318,11 @@ const Leaderboard = () => {
                 <table className="responsive-table text-left">
                   <thead>
                     <tr className="border-b border-glass-border text-secondary text-xs uppercase tracking-widest font-bold">
-                      <th className="p-6">Rank</th>
-                      <th className="p-6">{leaderType === 'individual' ? 'Coder' : 'Clan'}</th>
-                      <th className="p-6 text-center">{leaderType === 'individual' ? 'Clan' : 'Members'}</th>
-                      <th className="p-6 text-center">Solved</th>
-                      <th className="p-6 text-right">XP Points</th>
+                      {renderSortableHeader('Rank', 'rank', 'left')}
+                      {renderSortableHeader(leaderType === 'individual' ? 'Coder' : 'Clan', 'nameOrUsername', 'left')}
+                      {renderSortableHeader(leaderType === 'individual' ? 'Clan' : 'Members', 'clanOrMembers', 'center')}
+                      {renderSortableHeader('Solved', 'solvedCount', 'center')}
+                      {renderSortableHeader('XP Points', 'totalPoints', 'right')}
                     </tr>
                   </thead>
                   <tbody>

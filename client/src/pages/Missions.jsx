@@ -220,13 +220,12 @@ const Missions = () => {
                       <div className="macos-glass p-6 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full">
                         <div className="flex justify-between items-start mb-4">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              challenge.difficulty === "Easy"
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${challenge.difficulty === "Easy"
                                 ? "bg-green-500/20 text-green-500"
                                 : challenge.difficulty === "Medium"
                                   ? "bg-yellow-500/20 text-yellow-500"
                                   : "bg-red-500/20 text-red-500"
-                            }`}
+                              }`}
                           >
                             {challenge.difficulty}
                           </span>
@@ -269,13 +268,12 @@ const Missions = () => {
                         </div>
                         <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              challenge.difficulty === "Easy"
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${challenge.difficulty === "Easy"
                                 ? "bg-green-500/20 text-green-500"
                                 : challenge.difficulty === "Medium"
                                   ? "bg-yellow-500/20 text-yellow-500"
                                   : "bg-red-500/20 text-red-500"
-                            }`}
+                              }`}
                           >
                             {challenge.difficulty}
                           </span>
