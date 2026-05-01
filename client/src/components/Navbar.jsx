@@ -19,6 +19,7 @@ import { useAuth } from "../context/useAuth";
 import ThemeToggle from "./ThemeToggle";
 
 const Navbar = ({ onLogout }) => {
+  const MotionDiv = motion.div;
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -107,12 +108,12 @@ const Navbar = ({ onLogout }) => {
                          className="fixed inset-0 z-40" 
                          onClick={() => setUserDropdownOpen(false)} 
                        />
-                       <motion.div
-                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                         className="absolute right-0 mt-3 w-64 macos-glass p-2 z-50 border-accent/20 shadow-2xl origin-top-right overflow-hidden"
-                       >
+                        <MotionDiv
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute right-0 mt-3 w-64 macos-glass p-2 z-50 border-accent/20 shadow-2xl origin-top-right overflow-hidden"
+                        >
                          <div className="px-4 py-3 bg-white/[0.03] rounded-xl mb-2 border border-white/5">
                             <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-1">Signed in as</p>
                             <p className="text-sm font-bold text-primary truncate">{user?.username}</p>
@@ -157,7 +158,7 @@ const Navbar = ({ onLogout }) => {
                              <span>Sign Out</span>
                            </button>
                          </div>
-                       </motion.div>
+                        </MotionDiv>
                      </>
                    )}
                  </AnimatePresence>

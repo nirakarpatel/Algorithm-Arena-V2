@@ -5,29 +5,36 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const useSocket = (event, callback) => {
   const socketRef = useRef(null);
+  const callbackRef = useRef(callback);
 
   useEffect(() => {
-    // Create socket connection
-    socketRef.current = io(SOCKET_URL, {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
       withCredentials: true,
       transports: ['websocket', 'polling'],
     });
+    socketRef.current = socket;
 
-    socketRef.current.on('connect', () => {
-      console.log('Socket connected:', socketRef.current.id);
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
     });
 
-    if (event && callback) {
-      socketRef.current.on(event, callback);
+    let unsubscribe = null;
+    if (event) {
+      const handler = (...args) => callbackRef.current?.(...args);
+      socket.on(event, handler);
+      unsubscribe = () => socket.off(event, handler);
     }
 
-    // Cleanup on unmount
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      unsubscribe?.();
+      socket.disconnect();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
       }
     };
-  }, [event, callback]);
-
-  return socketRef.current;
+  }, [event]);
 };

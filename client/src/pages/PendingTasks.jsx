@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader';
 import { mockChallenges } from '../lib/mockData';
 
 const PendingTasks = () => {
+  const MotionCard = motion.div;
   const navigate = useNavigate();
   const mockTasks = mockChallenges.slice(0, 5).map((ch, index) => ({
     id: ch._id,
@@ -24,7 +25,7 @@ const PendingTasks = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {mockTasks.map((task, index) => (
-          <motion.div
+          <MotionCard
             key={task.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -57,7 +58,7 @@ const PendingTasks = () => {
                 Resume
               </button>
             </div>
-          </motion.div>
+          </MotionCard>
         ))}
       </div>
     </div>

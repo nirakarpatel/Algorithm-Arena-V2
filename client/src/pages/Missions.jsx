@@ -35,6 +35,7 @@ const difficultyChips = [
   { value: "Medium", label: "Medium" },
   { value: "Hard", label: "Hard" },
 ];
+const FALLBACK_CREATED_AT = '2026-01-01T00:00:00.000Z';
 
 const Missions = () => {
   const [filters, setFilters] = useState({
@@ -84,7 +85,7 @@ const Missions = () => {
     if (filters.grouping === 'none') return { "All Missions": challenges };
     
     return challenges.reduce((acc, ch) => {
-      const date = new Date(ch.createdAt || Date.now());
+      const date = new Date(ch.createdAt || FALLBACK_CREATED_AT);
       let key = "";
       
       if (filters.grouping === 'weekly') {
