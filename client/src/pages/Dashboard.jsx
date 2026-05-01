@@ -156,6 +156,90 @@ const Dashboard = () => {
         })}
       </div>
 
+      <div className="macos-glass p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
+        <input
+          name="challengeSearch"
+          className="field-input md:col-span-2"
+          placeholder="Search title or description"
+          value={filters.search}
+          onChange={(e) => handleFilterChange("search", e.target.value)}
+        />
+        <input
+          name="challengeCategory"
+          className="field-input md:col-span-1"
+          placeholder="Category"
+          value={filters.category}
+          onChange={(e) => handleFilterChange("category", e.target.value)}
+        />
+
+        {/* Mobile controls row: Pagination (long) + Sort + Order (small) */}
+        <div className="flex gap-1 md:gap-2 md:grid md:grid-cols-3 md:col-span-3 items-center text-xs sm:text-base">
+          <select
+            name="challengePageSize"
+            className="field-select flex-[1] md:w-full"
+            value={filters.limit}
+            onChange={(e) => handleFilterChange("limit", Number(e.target.value))}
+          >
+            <option value={6}>6 / page</option>
+            <option value={12}>12 / page</option>
+            <option value={24}>24 / page</option>
+          </select>
+
+          <select
+            name="challengeSortBy"
+            className="field-select flex-1 min-w-[70px] md:w-full px-3 py-2 sm:px-3 sm:py-3"
+            value={filters.sortBy}
+            onChange={(e) => handleFilterChange("sortBy", e.target.value)}
+          >
+            <option value="createdAt">Newest</option>
+            <option value="difficulty">Difficulty</option>
+            <option value="title">Title</option>
+          </select>
+
+          <select
+            name="challengeSortDirection"
+            className="field-select flex-1 min-w-[70px] md:w-full px-2 py-2 sm:px-3 sm:py-3 s"
+            value={filters.sortDir}
+            onChange={(e) => handleFilterChange("sortDir", e.target.value)}
+          >
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+        </div>
+      </div>
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+        {/* Left Side: Difficulty Chips */}
+        <div className="chip-group flex gap-2">
+          {difficultyChips.map((chip) => (
+            <button
+              key={chip.label}
+              className={`chip-btn ${filters.difficulty === chip.value ? "active" : ""}`}
+              onClick={() => handleFilterChange("difficulty", chip.value)}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Right Side: View Mode Toggle */}
+        <div className="segmented flex items-center">
+          <button
+            className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}
+            onClick={() => setViewMode("grid")}
+          >
+            <FiGrid className="mr-2" />
+            Grid
+          </button>
+          <button
+            className={`segmented-btn ${viewMode === "list" ? "active" : ""}`}
+            onClick={() => setViewMode("list")}
+          >
+            <FiList className="mr-2" />
+            List
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
         {/* Available Missions - Left side (takes 2 cols) */}
         <div className="xl:col-span-2 space-y-4">
