@@ -31,7 +31,7 @@ const Podium = ({ items, type }) => {
     <div className="flex items-end justify-center gap-2 md:gap-8 mb-16 mt-12 px-4">
       {podiumSteps.map((item, index) => {
         if (!item) return <div key={index} className="flex-1 invisible" />;
-        
+
         const isFirst = index === 1;
         const colorClass = colors[index];
         const heightClass = heights[index];
@@ -46,21 +46,21 @@ const Podium = ({ items, type }) => {
           >
             <div className={`mb-6 text-center transform transition-transform group-hover:-translate-y-2 duration-500`}>
               <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-glass-surface border-2 ${isFirst ? 'border-yellow-400/50 shadow-[0_0_20px_rgba(234,179,8,0.3)]' : 'border-white/10'} flex items-center justify-center mb-3 shadow-2xl mx-auto overflow-hidden relative`}>
-                 {isFirst && (
-                   <motion.div 
-                     animate={{ rotate: 360 }} 
-                     transition={{ repeat: Infinity, duration: 8, ease: "linear" }} 
-                     className="absolute inset-[-50%] bg-gradient-to-r from-yellow-500/40 via-transparent to-yellow-500/40" 
-                   />
-                 )}
-                 {item.profilePicture ? (
-                    <img src={item.profilePicture} alt="" className="w-full h-full object-cover relative z-10" />
-                 ) : (
-                    <span className="text-2xl md:text-3xl font-black text-primary relative z-10">{item.username?.[0] || item.name?.[0]}</span>
-                 )}
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
+                {isFirst && (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+                    className="absolute inset-[-50%] bg-gradient-to-r from-yellow-500/40 via-transparent to-yellow-500/40"
+                  />
+                )}
+                {item.profilePicture ? (
+                  <img src={item.profilePicture} alt="" className="w-full h-full object-cover relative z-10" />
+                ) : (
+                  <span className="text-2xl md:text-3xl font-black text-primary relative z-10">{item.username?.[0] || item.name?.[0]}</span>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
               </div>
-              
+
               <div className="flex flex-col items-center">
                 <span className="font-black text-[10px] md:text-none text-accent uppercase tracking-widest mb-1">
                   {isFirst ? 'Grandmaster' : index === 0 ? 'Legend' : 'Elite'}
@@ -69,25 +69,25 @@ const Podium = ({ items, type }) => {
                   {item.username || item.name}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1">
-                   <FiZap size={10} className="text-accent" />
-                   <p className="text-secondary font-black text-sm md:text-lg tracking-tighter">
-                     {item.totalPoints.toLocaleString()}
-                   </p>
+                  <FiZap size={10} className="text-accent" />
+                  <p className="text-secondary font-black text-sm md:text-lg tracking-tighter">
+                    {item.totalPoints.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
-            
+
             <div className={`w-full ${heightClass} rounded-t-3xl bg-gradient-to-b ${colorClass} relative shadow-2xl flex flex-col items-center justify-start pt-6 border-t border-white/20`}>
-                <span className="text-white/20 text-5xl md:text-8xl font-black select-none">{index === 1 ? '1' : index === 0 ? '2' : '3'}</span>
-                {isFirst && (
-                  <motion.div 
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                    className="absolute -top-6"
-                  >
-                    <FiAward size={40} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]" />
-                  </motion.div>
-                )}
+              <span className="text-white/20 text-5xl md:text-8xl font-black select-none">{index === 1 ? '1' : index === 0 ? '2' : '3'}</span>
+              {isFirst && (
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="absolute -top-6"
+                >
+                  <FiAward size={40} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]" />
+                </motion.div>
+              )}
             </div>
             <div className="absolute inset-0 bg-accent/5 blur-3xl rounded-full -z-10 group-hover:bg-accent/10 transition-colors" />
           </motion.div>
@@ -110,33 +110,33 @@ const BackgroundAnimation = () => {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
       <div className="absolute inset-0 opacity-30 dark:opacity-50">
-         <motion.div
-            animate={{ 
-              x: [0, 80, 0], 
-              y: [0, 40, 0], 
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0]
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px]"
-         />
-         <motion.div
-            animate={{ 
-              x: [0, -100, 0], 
-              y: [0, 80, 0], 
-              scale: [1, 1.3, 1],
-              rotate: [0, -90, 0]
-            }}
-            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-500/10 blur-[120px]"
-         />
+        <motion.div
+          animate={{
+            x: [0, 80, 0],
+            y: [0, 40, 0],
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0]
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -100, 0],
+            y: [0, 80, 0],
+            scale: [1, 1.3, 1],
+            rotate: [0, -90, 0]
+          }}
+          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-500/10 blur-[120px]"
+        />
       </div>
 
       {bubbles.map((bubble) => (
         <motion.div
           key={bubble.id}
           initial={{ opacity: 0, y: "110vh" }}
-          animate={{ 
+          animate={{
             opacity: [0, 0.4, 0.4, 0],
             y: ["110vh", "-10vh"],
             x: [`${bubble.x}vw`, `${bubble.x + (Math.random() * 10 - 5)}vw`]
@@ -179,10 +179,10 @@ const Leaderboard = () => {
     let direction = 'asc';
     if (sortConfig && sortConfig.key === key) {
       if (sortConfig.direction === 'asc') {
-         direction = 'desc';
+        direction = 'desc';
       } else {
-         setSortConfig(null);
-         return;
+        setSortConfig(null);
+        return;
       }
     } else {
       if (key === 'totalPoints' || key === 'solvedCount' || (key === 'clanOrMembers' && leaderType === 'clans')) {
@@ -193,7 +193,7 @@ const Leaderboard = () => {
   };
 
   const renderSortableHeader = (label, sortKey, align = 'left') => (
-    <th 
+    <th
       className={`p-6 cursor-pointer group hover:bg-white/5 transition-colors select-none ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
       onClick={() => requestSort(sortKey)}
     >
@@ -203,7 +203,7 @@ const Leaderboard = () => {
           sortConfig.direction === 'asc' ? <FiChevronUp className="text-accent" /> : <FiChevronDown className="text-accent" />
         ) : (
           <div className="opacity-0 group-hover:opacity-30 transition-opacity flex flex-col -space-y-[0.4rem] text-[10px]">
-            <FiChevronUp/><FiChevronDown/>
+            <FiChevronUp /><FiChevronDown />
           </div>
         )}
       </div>
@@ -250,26 +250,26 @@ const Leaderboard = () => {
   }, [leaderboardQuery.data, clanLeaderboardQuery.data, leaderType]);
 
   const meta = leaderType === 'clans' ? { page: 1, totalPages: 1 } : (leaderboardQuery.data?.meta || {});
-  
+
   const visibleRows = useMemo(() => {
     let result = [...rows];
     const query = search.trim().toLowerCase();
     if (query) {
       result = result.filter((row) => (row.username || row.name).toLowerCase().includes(query));
     }
-    
+
     if (sortConfig) {
       result.sort((a, b) => {
         let valA = a[sortConfig.key];
         let valB = b[sortConfig.key];
-        
+
         if (sortConfig.key === 'nameOrUsername') {
-           valA = a.username || a.name || '';
-           valB = b.username || b.name || '';
+          valA = a.username || a.name || '';
+          valB = b.username || b.name || '';
         }
         if (sortConfig.key === 'clanOrMembers') {
-           valA = leaderType === 'individual' ? (a.clan || '') : (a.memberCount || 0);
-           valB = leaderType === 'individual' ? (b.clan || '') : (b.memberCount || 0);
+          valA = leaderType === 'individual' ? (a.clan || '') : (a.memberCount || 0);
+          valB = leaderType === 'individual' ? (b.clan || '') : (b.memberCount || 0);
         }
 
         if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -295,14 +295,14 @@ const Leaderboard = () => {
         subtitle="Celebrate the top rankers and elite clans of the arena."
         actions={
           <div className="segmented">
-            <button 
+            <button
               className={`segmented-btn ${leaderType === 'individual' ? 'active' : ''}`}
               onClick={() => { setLeaderType('individual'); setSortConfig(null); }}
             >
               <FiAward />
               Individual
             </button>
-            <button 
+            <button
               className={`segmented-btn ${leaderType === 'clans' ? 'active' : ''}`}
               onClick={() => { setLeaderType('clans'); setSortConfig(null); }}
             >
@@ -345,16 +345,16 @@ const Leaderboard = () => {
       </div>
 
       {myRow && leaderType === 'individual' && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="macos-glass p-4 flex flex-wrap items-center justify-between gap-2 border-accent/30 bg-accent/5"
         >
           <div className="flex items-center gap-3">
-             <div className="p-2 rounded-lg bg-accent/20 text-accent">
-                <FiTrendingUp />
-             </div>
-             <span className="font-semibold text-primary">Your current standing in this window</span>
+            <div className="p-2 rounded-lg bg-accent/20 text-accent">
+              <FiTrendingUp />
+            </div>
+            <span className="font-semibold text-primary">Your current standing in this window</span>
           </div>
           <span className="text-accent font-bold text-lg">Rank #{myRow.rank} — {myRow.totalPoints} pts</span>
         </motion.div>
@@ -403,15 +403,15 @@ const Leaderboard = () => {
                           className={`border-b border-glass-border/40 transition-colors hover:bg-white/[0.02] ${isMe ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
                         >
                           <td className="p-6">
-                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isPodium ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary'}`}>
-                               {item.rank}
-                             </div>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isPodium ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary'}`}>
+                              {item.rank}
+                            </div>
                           </td>
                           <td className="p-6">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent overflow-hidden">
                                 {item.profilePicture ? (
-                                   <img src={item.profilePicture} alt="" className="w-full h-full object-cover" />
+                                  <img src={item.profilePicture} alt="" className="w-full h-full object-cover" />
                                 ) : (
                                   (item.username || item.name)[0]
                                 )}
@@ -431,9 +431,9 @@ const Leaderboard = () => {
                           </td>
                           <td className="p-6 text-center text-secondary font-medium">{item.solvedCount}</td>
                           <td className="p-6 text-right">
-                             <span className="font-black text-primary bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-500">
-                               {item.totalPoints.toLocaleString()}
-                             </span>
+                            <span className="font-black text-primary bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-500">
+                              {item.totalPoints.toLocaleString()}
+                            </span>
                           </td>
                         </motion.tr>
                       );
