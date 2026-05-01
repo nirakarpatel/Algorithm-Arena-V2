@@ -298,9 +298,23 @@ const ChallengeDetails = () => {
                 <button onClick={handleInsertStarter}><FiRefreshCw /></button><button onClick={handleCopyCode}><FiClipboard /></button><button onClick={handleClearDraft}><FiTrash2 /></button>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
-              <FiGithub size={14} className="text-secondary" />
-              <input type="text" placeholder="GitHub URL (optional)" className="bg-transparent text-sm text-primary w-full outline-none" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} />
+          </div>
+
+          {/* Bottom Submit Section */}
+          <div className="px-4 py-3 border-t border-white/10 shrink-0 space-y-3">
+            {/* GitHub URL Input */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 flex-1 focus-within:border-accent transition-colors">
+                <FiGithub size={14} className="text-secondary shrink-0" />
+                <input
+                  name="submissionRepositoryUrl"
+                  type="text"
+                  placeholder="GitHub repository URL (optional)"
+                  className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                />
+              </div>
             </div>
             <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50">
               <FiSend size={14} /> {submitting ? 'Transmitting...' : 'Submit Solution'}

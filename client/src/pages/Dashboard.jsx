@@ -167,12 +167,14 @@ const Dashboard = () => {
 
       <div className="macos-glass p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
         <input
+          name="challengeSearch"
           className="field-input md:col-span-2"
           placeholder="Search title or description"
           value={filters.search}
           onChange={(e) => handleFilterChange("search", e.target.value)}
         />
         <input
+          name="challengeCategory"
           className="field-input md:col-span-1"
           placeholder="Category"
           value={filters.category}
@@ -182,6 +184,7 @@ const Dashboard = () => {
         {/* Mobile controls row: Pagination (long) + Sort + Order (small) */}
         <div className="flex gap-1 md:gap-2 md:grid md:grid-cols-3 md:col-span-3 items-center text-xs sm:text-base">
           <select
+            name="challengePageSize"
             className="field-select flex-[1] md:w-full"
             value={filters.limit}
             onChange={(e) => handleFilterChange("limit", Number(e.target.value))}
@@ -192,6 +195,7 @@ const Dashboard = () => {
           </select>
 
           <select
+            name="challengeSortBy"
             className="field-select flex-1 min-w-[70px] md:w-full px-3 py-2 sm:px-3 sm:py-3"
             value={filters.sortBy}
             onChange={(e) => handleFilterChange("sortBy", e.target.value)}
@@ -202,6 +206,7 @@ const Dashboard = () => {
           </select>
 
           <select
+            name="challengeSortDirection"
             className="field-select flex-1 min-w-[70px] md:w-full px-2 py-2 sm:px-3 sm:py-3 s"
             value={filters.sortDir}
             onChange={(e) => handleFilterChange("sortDir", e.target.value)}
