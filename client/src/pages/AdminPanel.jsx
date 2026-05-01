@@ -9,6 +9,8 @@ import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
 import { USE_MOCK, mockChallenges, mockClanMembers, filterSubmissions } from '../lib/mockData';
 
+const mockDelay = () => new Promise((r) => setTimeout(r, 400));
+
 const defaultChallengeForm = {
   title: '',
   description: '',
@@ -91,10 +93,14 @@ const AdminPanel = () => {
     }
     setAddingMember(true);
     try {
-      await api.post('/api/clan/members', {
-        identifier: memberSearch.trim(),
-        role: memberRole,
-      });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.post('/api/clan/members', {
+          identifier: memberSearch.trim(),
+          role: memberRole,
+        });
+      }
       toast.success('Member added successfully');
       setMemberSearch('');
       setMemberRole('member');
@@ -108,7 +114,11 @@ const AdminPanel = () => {
 
   const handleRemoveMember = async (memberId) => {
     try {
-      await api.delete(`/api/clan/members/${memberId}`);
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.delete(`/api/clan/members/${memberId}`);
+      }
       toast.success('Member removed');
       queryClient.invalidateQueries({ queryKey: ['clan-members'] });
     } catch (err) {
@@ -118,7 +128,11 @@ const AdminPanel = () => {
 
   const handleUpdateMemberRole = async (memberId, newRole) => {
     try {
-      await api.put(`/api/clan/members/${memberId}`, { role: newRole });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/clan/members/${memberId}`, { role: newRole });
+      }
       toast.success('Role updated');
       queryClient.invalidateQueries({ queryKey: ['clan-members'] });
     } catch (err) {
@@ -129,7 +143,11 @@ const AdminPanel = () => {
   const onCreateChallenge = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/api/challenges', createForm);
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.post('/api/challenges', createForm);
+      }
       toast.success('Challenge created');
       setCreateForm(defaultChallengeForm);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -141,14 +159,18 @@ const AdminPanel = () => {
   const onUpdateChallenge = async () => {
     if (!editingChallenge) return;
     try {
-      await api.put(`/api/challenges/${editingChallenge._id}`, {
-        title: editingChallenge.title,
-        description: editingChallenge.description,
-        link: editingChallenge.link || '',
-        difficulty: editingChallenge.difficulty,
-        points: Number(editingChallenge.points),
-        category: editingChallenge.category,
-      });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/challenges/${editingChallenge._id}`, {
+          title: editingChallenge.title,
+          description: editingChallenge.description,
+          link: editingChallenge.link || '',
+          difficulty: editingChallenge.difficulty,
+          points: Number(editingChallenge.points),
+          category: editingChallenge.category,
+        });
+      }
       toast.success('Challenge updated');
       setEditingChallenge(null);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -160,7 +182,11 @@ const AdminPanel = () => {
   const onDeleteChallenge = async () => {
     if (!deleteTarget) return;
     try {
-      await api.delete(`/api/challenges/${deleteTarget._id}`);
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.delete(`/api/challenges/${deleteTarget._id}`);
+      }
       toast.success('Challenge deleted');
       setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -171,7 +197,11 @@ const AdminPanel = () => {
 
   const onGrade = async (id, status) => {
     try {
-      await api.put(`/api/submissions/${id}`, { status });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/submissions/${id}`, { status });
+      }
       toast.success(`Submission marked ${status}`);
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
@@ -215,12 +245,12 @@ const AdminPanel = () => {
             <h2 className="text-section-title font-bold">Create Challenge</h2>
             <div>
               <label className="field-label">Title</label>
-              <input className="field-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
+              <input className="field-input border" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
             </div>
             <div>
               <label className="field-label">Description</label>
               <textarea
-                className="field-textarea"
+                className="field-textarea border"
                 value={createForm.description}
                 onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
                 required

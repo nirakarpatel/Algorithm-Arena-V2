@@ -78,14 +78,19 @@ const ChallengeDetails = () => {
   const [language, setLanguage] = useState('javascript');
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState('description');
-  const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
+  const [isDark, setIsDark] = useState(
+    document.documentElement.getAttribute('data-theme') === 'dark'
+  );
 
   // Logic: Sync with global Dark Mode toggle
   useEffect(() => {
+    const checkDark = () =>
+      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      document.documentElement.classList.contains('dark');
     const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'));
+      setIsDark(checkDark());
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => observer.disconnect();
   }, []);
 
@@ -185,12 +190,16 @@ const ChallengeDetails = () => {
     if (!repoUrl && !codeSnippet.trim()) return toast.error('Please provide code or a GitHub link.');
     setSubmitting(true);
     try {
-      await api.post('/api/submissions', {
-        challengeId: id,
-        repositoryUrl: repoUrl.trim() || undefined,
-        code: codeSnippet.trim() || undefined,
-        language,
-      });
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+      } else {
+        await api.post('/api/submissions', {
+          challengeId: id,
+          repositoryUrl: repoUrl.trim() || undefined,
+          code: codeSnippet.trim() || undefined,
+          language,
+        });
+      }
       toast.success('Solution submitted.');
       setRepoUrl('');
       setCodeByLang({});

@@ -3,11 +3,12 @@
 // Set USE_MOCK to false when your backend is ready.
 // ─────────────────────────────────────────────────────────────
 
-export const USE_MOCK = false;
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 // ─── Users ──────────────────────────────────────────────────
 
 export const mockCurrentUser = {
+  _id: 'u_001',
   id: 'u_001',
   username: 'devmaster',
   role: 'admin', // change to 'user' to test non-admin views
