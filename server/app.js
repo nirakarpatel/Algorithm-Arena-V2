@@ -31,6 +31,12 @@ try {
 const createApp = () => {
   const app = express();
 
+  // Keep Render keepalive traffic as cheap as possible by bypassing the
+  // standard middleware chain and returning immediately.
+  app.get('/ping', (_req, res) => {
+    return res.status(200).json({ ok: true });
+  });
+
   app.use(requestContext);
   app.use(helmet());
   app.use(

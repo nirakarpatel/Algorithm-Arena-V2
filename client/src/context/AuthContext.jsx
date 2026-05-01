@@ -32,16 +32,6 @@ export const AuthProvider = ({ children }) => {
       return mockCurrentUser;
     }
     try {
-      const existingToken = localStorage.getItem('token');
-      if (!existingToken) {
-        const refreshRes = await api.post('/api/auth/refresh');
-        const refreshPayload = refreshRes.data?.data;
-        const nextToken = refreshPayload?.token || refreshPayload?.accessToken;
-        if (nextToken) {
-          localStorage.setItem('token', nextToken);
-        }
-      }
-
       const res = await api.get('/api/auth/me');
       const me = res.data?.data;
       const normalizedUser = {

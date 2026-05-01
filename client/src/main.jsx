@@ -8,6 +8,14 @@ import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
+// Recover the original client-side route after a static host serves 404.html
+// for a deep link refresh.
+const pendingSpaRedirect = sessionStorage.getItem('spa-redirect');
+if (pendingSpaRedirect && pendingSpaRedirect.startsWith('/')) {
+  sessionStorage.removeItem('spa-redirect');
+  window.history.replaceState(null, '', pendingSpaRedirect);
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

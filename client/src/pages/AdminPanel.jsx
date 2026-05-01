@@ -12,6 +12,8 @@ import { USE_MOCK, mockChallenges, filterSubmissions, mockUsers } from '../lib/m
 
 const defaultClanForm = { name: '', tag: '', description: '' };
 
+const mockDelay = () => new Promise((r) => setTimeout(r, 400));
+
 const defaultChallengeForm = {
   title: '',
   description: '',
@@ -127,24 +129,68 @@ const AdminPanel = () => {
     },
   });
 
-  const usersQuery = useQuery({
-    queryKey: ['admin-users'],
-    enabled: activeTab === 'permissions',
-    queryFn: async () => {
-      try {
-        const res = await api.get('/api/users');
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockUsers;
-      } catch {
-        return mockUsers;
+  const handleAddMember = async () => {
+    if (!memberSearch.trim()) {
+      toast.error('Please enter a username or email');
+      return;
+    }
+    setAddingMember(true);
+    try {
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.post('/api/clan/members', {
+          identifier: memberSearch.trim(),
+          role: memberRole,
+        });
       }
-    },
-  });
+      toast.success('Member added successfully');
+      setMemberSearch('');
+      setMemberRole('member');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to add member');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    try {
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.delete(`/api/clan/members/${memberId}`);
+      }
+      toast.success('Member removed');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to remove member');
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId, newRole) => {
+    try {
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/clan/members/${memberId}`, { role: newRole });
+      }
+      toast.success('Role updated');
+      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
+    } catch (err) {
+      toast.error(err.userMessage || 'Failed to update role');
+    }
+  };
 
   const onCreateChallenge = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/api/challenges', createForm);
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.post('/api/challenges', createForm);
+      }
       toast.success('Challenge created');
       setCreateForm(defaultChallengeForm);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -156,14 +202,18 @@ const AdminPanel = () => {
   const onUpdateChallenge = async () => {
     if (!editingChallenge) return;
     try {
-      await api.put(`/api/challenges/${editingChallenge._id}`, {
-        title: editingChallenge.title,
-        description: editingChallenge.description,
-        link: editingChallenge.link || '',
-        difficulty: editingChallenge.difficulty,
-        points: Number(editingChallenge.points),
-        category: editingChallenge.category,
-      });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/challenges/${editingChallenge._id}`, {
+          title: editingChallenge.title,
+          description: editingChallenge.description,
+          link: editingChallenge.link || '',
+          difficulty: editingChallenge.difficulty,
+          points: Number(editingChallenge.points),
+          category: editingChallenge.category,
+        });
+      }
       toast.success('Challenge updated');
       setEditingChallenge(null);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -175,7 +225,11 @@ const AdminPanel = () => {
   const onDeleteChallenge = async () => {
     if (!deleteTarget) return;
     try {
-      await api.delete(`/api/challenges/${deleteTarget._id}`);
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.delete(`/api/challenges/${deleteTarget._id}`);
+      }
       toast.success('Challenge deleted');
       setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
@@ -186,7 +240,11 @@ const AdminPanel = () => {
 
   const onGrade = async (id, status) => {
     try {
-      await api.put(`/api/submissions/${id}`, { status });
+      if (USE_MOCK) {
+        await mockDelay();
+      } else {
+        await api.put(`/api/submissions/${id}`, { status });
+      }
       toast.success(`Submission marked ${status}`);
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
@@ -330,12 +388,12 @@ const AdminPanel = () => {
             <h2 className="text-section-title font-bold">Create Challenge</h2>
             <div>
               <label className="field-label">Title</label>
-              <input className="field-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
+              <input name="challengeTitle" className="field-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
             </div>
             <div>
               <label className="field-label">Description</label>
               <textarea
-                className="field-textarea"
+                className="field-textarea border"
                 value={createForm.description}
                 onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
                 required
@@ -344,6 +402,7 @@ const AdminPanel = () => {
             <div>
               <label className="field-label">Original Question Link</label>
               <input
+                name="challengeLink"
                 className="field-input"
                 type="url"
                 placeholder="https://leetcode.com/problems/..."
@@ -355,6 +414,7 @@ const AdminPanel = () => {
               <div>
                 <label className="field-label">Difficulty</label>
                 <select
+                  name="challengeDifficulty"
                   className="field-select"
                   value={createForm.difficulty}
                   onChange={(e) => setCreateForm((p) => ({ ...p, difficulty: e.target.value }))}
@@ -367,6 +427,7 @@ const AdminPanel = () => {
               <div>
                 <label className="field-label">Points</label>
                 <input
+                  name="challengePoints"
                   className="field-input"
                   type="number"
                   min="1"
@@ -376,7 +437,7 @@ const AdminPanel = () => {
               </div>
               <div>
                 <label className="field-label">Category</label>
-                <input className="field-input" value={createForm.category} onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value }))} />
+                <input name="challengeCategory" className="field-input" value={createForm.category} onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value }))} />
               </div>
             </div>
             <button className="btn-primary" type="submit">
@@ -393,6 +454,7 @@ const AdminPanel = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <select
+                name="reviewStatus"
                 className="field-select"
                 value={reviewFilters.status}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, status: e.target.value }))}
@@ -402,6 +464,7 @@ const AdminPanel = () => {
                 <option value="Rejected">Rejected</option>
               </select>
               <select
+                name="reviewChallenge"
                 className="field-select"
                 value={reviewFilters.challengeId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, challengeId: e.target.value }))}
@@ -414,12 +477,14 @@ const AdminPanel = () => {
                 ))}
               </select>
               <input
+                name="reviewUserId"
                 className="field-input"
                 placeholder="User ID (24 chars)"
                 value={reviewFilters.userId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
               />
               <input
+                name="reviewFromDate"
                 className="field-input"
                 type="date"
                 value={reviewFilters.from}
@@ -427,6 +492,7 @@ const AdminPanel = () => {
                 aria-label="From date"
               />
               <input
+                name="reviewToDate"
                 className="field-input"
                 type="date"
                 value={reviewFilters.to}
@@ -434,6 +500,7 @@ const AdminPanel = () => {
                 aria-label="To date"
               />
               <select
+                name="reviewPageSize"
                 className="field-select"
                 value={reviewFilters.limit}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, limit: Number(e.target.value) }))}
@@ -820,15 +887,26 @@ const AdminPanel = () => {
             <h3 className="text-section-title font-bold">Edit Challenge</h3>
             <div>
               <label className="field-label">Title</label>
-              <input className="field-input" value={editingChallenge.title} onChange={(e) => setEditingChallenge((p) => ({ ...p, title: e.target.value }))} />
+              <input
+                name="editChallengeTitle"
+                className="field-input"
+                value={editingChallenge.title}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, title: e.target.value }))}
+              />
             </div>
             <div>
               <label className="field-label">Description</label>
-              <textarea className="field-textarea" value={editingChallenge.description} onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))} />
+              <textarea
+                name="editChallengeDescription"
+                className="field-textarea"
+                value={editingChallenge.description}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))}
+              />
             </div>
             <div>
               <label className="field-label">Original Question Link</label>
               <input
+                name="editChallengeLink"
                 className="field-input"
                 type="url"
                 placeholder="https://leetcode.com/problems/..."
@@ -837,11 +915,29 @@ const AdminPanel = () => {
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <select className="field-select" value={editingChallenge.difficulty} onChange={(e) => setEditingChallenge((p) => ({ ...p, difficulty: e.target.value }))}>
-                <option>Easy</option><option>Medium</option><option>Hard</option>
+              <select
+                name="editChallengeDifficulty"
+                className="field-select"
+                value={editingChallenge.difficulty}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, difficulty: e.target.value }))}
+              >
+                <option>Easy</option>
+                <option>Medium</option>
+                <option>Hard</option>
               </select>
-              <input className="field-input" type="number" value={editingChallenge.points} onChange={(e) => setEditingChallenge((p) => ({ ...p, points: Number(e.target.value) }))} />
-              <input className="field-input" value={editingChallenge.category} onChange={(e) => setEditingChallenge((p) => ({ ...p, category: e.target.value }))} />
+              <input
+                name="editChallengePoints"
+                className="field-input"
+                type="number"
+                value={editingChallenge.points}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, points: Number(e.target.value) }))}
+              />
+              <input
+                name="editChallengeCategory"
+                className="field-input"
+                value={editingChallenge.category}
+                onChange={(e) => setEditingChallenge((p) => ({ ...p, category: e.target.value }))}
+              />
             </div>
             <div className="flex justify-end gap-2">
               <button className="btn-secondary" onClick={() => setEditingChallenge(null)}>Cancel</button>
@@ -883,12 +979,45 @@ const AdminPanel = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="field-label text-xs uppercase tracking-wider opacity-70">Description</label>
-                <textarea 
-                  className="field-textarea bg-white/5 border-glass-border/40 focus:border-accent/50 h-24" 
-                  value={editingClan.description || ''} 
-                  onChange={(e) => setEditingClan((p) => ({ ...p, description: e.target.value }))} 
-                />
+                {membersQuery.data.map((member) => (
+                  <div
+                    key={member._id}
+                    className="border border-glass-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center">
+                        {member.role === 'admin' ? (
+                          <FiShield size={16} className="text-accent" />
+                        ) : (
+                          <FiUser size={16} className="text-secondary" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">{member.username || member.email}</p>
+                        <p className="text-secondary text-xs">{member.email || ''}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select
+                        name={`memberRole-${member._id}`}
+                        className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
+                        value={member.role}
+                        onChange={(e) => handleUpdateMemberRole(member._id, e.target.value)}
+                      >
+                        <option value="member">Member</option>
+                        <option value="moderator">Moderator</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button
+                        className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors"
+                        onClick={() => handleRemoveMember(member._id)}
+                        title="Remove member"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
 
               <div className="space-y-3 pt-2 border-t border-glass-border/20">

@@ -30,8 +30,8 @@ function App() {
   const handleLoginSuccess = () => {};
 
   const handleLogout = () => {
-    navigate('/', { replace: true });
     logout();
+    navigate('/', { replace: true });
   };
 
   return (

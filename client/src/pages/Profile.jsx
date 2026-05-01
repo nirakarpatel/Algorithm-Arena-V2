@@ -150,6 +150,7 @@ const ActivityHeatmap = ({ heatmapData }) => {
 };
 
 const activityFilters = ['All', 'Accepted', 'Rejected', 'Pending'];
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop',
@@ -195,6 +196,16 @@ const Profile = () => {
 
   const stats = profileQuery.data || {};
   const submissions = useMemo(() => stats.recentSubmissions || [], [stats.recentSubmissions]);
+  const total = stats.totalSubmissions || 0;
+  const acceptedPct = total ? Math.round(((stats.acceptedCount || 0) / total) * 100) : 0;
+  // Anchor time-based calculations to the fetched query snapshot so the memo
+  // stays pure for a given set of inputs.
+  const profileSnapshotMs = profileQuery.dataUpdatedAt || 0;
+
+  const acceptedInLastWeek = useMemo(() => {
+    const sevenDaysAgo = profileSnapshotMs - WEEK_MS;
+    return submissions.filter((sub) => sub.status === 'Accepted' && new Date(sub.submittedAt).getTime() >= sevenDaysAgo).length;
+  }, [submissions, profileSnapshotMs]);
 
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((sub) => {
@@ -344,9 +355,16 @@ const Profile = () => {
              <p className="text-xs text-secondary mt-2">{user?.clanTag ? `[${user.clanTag}]` : 'Join a clan from the leaderboard'}</p>
           </Card>
 
-          <div className="flex-grow">
-            <SolvedBreakdown stats={stats} />
-          </div>
+      <Card>
+        <div className="flex flex-wrap justify-between gap-3 mb-4">
+          <h2 className="text-section-title font-bold">Recent Activity</h2>
+          <input
+            name="activitySearch"
+            className="field-input md:max-w-sm"
+            placeholder="Search by challenge title"
+            value={activityQuery}
+            onChange={(e) => setActivityQuery(e.target.value)}
+          />
         </div>
 
         {/* Right Column: Heatmap & Activity */}

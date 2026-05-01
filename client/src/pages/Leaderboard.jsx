@@ -239,17 +239,42 @@ const Leaderboard = () => {
         title="Hall of Fame"
         subtitle="Celebrate the top rankers and elite clans of the arena."
         actions={
-          <div className="segmented">
-            <button 
-              className={`segmented-btn ${leaderType === 'individual' ? 'active' : ''}`}
-              onClick={() => setLeaderType('individual')}
+          <>
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+              <input
+                name="leaderboardSearch"
+                className="field-input !pl-9 min-w-56"
+                placeholder={board === "members" ? "Search username" : "Search clan name"}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              name="leaderboardWindow"
+              className="field-select"
+              value={filters.window}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, page: 1, window: e.target.value }))
+              }
+              aria-label="Leaderboard timeframe"
             >
-              <FiAward />
-              Individual
-            </button>
-            <button 
-              className={`segmented-btn ${leaderType === 'clans' ? 'active' : ''}`}
-              onClick={() => setLeaderType('clans')}
+              <option value="all">All Time</option>
+              <option value="30d">Last 30 Days</option>
+              <option value="7d">Last 7 Days</option>
+            </select>
+            <select
+              name="leaderboardLimit"
+              className="field-select"
+              value={filters.limit}
+              onChange={(e) =>
+                setFilters((p) => ({
+                  ...p,
+                  page: 1,
+                  limit: Number(e.target.value),
+                }))
+              }
+              aria-label="Leaderboard page size"
             >
               <FiUsers />
               Clans
