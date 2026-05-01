@@ -102,6 +102,11 @@ The backend is partially modularized into domain services:
 - Node test runner + Supertest
 - Dockerfile for single-service deployment
 
+### Keepalive
+- `GET /ping` is a lightweight health endpoint used for Render keepalive checks.
+- The route is intentionally registered before the backend middleware stack so it returns immediately without auth, rate limiting, request logging, or request-body parsing.
+- GitHub Actions keepalive automation lives at `.github/workflows/render-keepalive.yml` and pings `https://algorithm-arena-v2.onrender.com/ping` every 10 minutes with `workflow_dispatch` enabled for manual testing.
+
 ## Core Data Model And Public Interfaces
 ### Primary Data Models
 - `User`: identity, legacy role, clan membership, role assignments, permission overrides

@@ -10,6 +10,7 @@ import { USE_MOCK, mockProfileStats } from '../lib/mockData';
 import { useAuth } from '../context/useAuth';
 
 const activityFilters = ['All', 'Accepted', 'Rejected', 'Pending'];
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 const Profile = () => {
   const { user } = useAuth();
@@ -29,12 +30,14 @@ const Profile = () => {
   const submissions = useMemo(() => stats.recentSubmissions || [], [stats.recentSubmissions]);
   const total = stats.totalSubmissions || 0;
   const acceptedPct = total ? Math.round(((stats.acceptedCount || 0) / total) * 100) : 0;
+  // Anchor time-based calculations to the fetched query snapshot so the memo
+  // stays pure for a given set of inputs.
+  const profileSnapshotMs = profileQuery.dataUpdatedAt || 0;
 
   const acceptedInLastWeek = useMemo(() => {
-    const NOW_MS = Date.now();
-    const sevenDaysAgo = NOW_MS - 7 * 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = profileSnapshotMs - WEEK_MS;
     return submissions.filter((sub) => sub.status === 'Accepted' && new Date(sub.submittedAt).getTime() >= sevenDaysAgo).length;
-  }, [submissions]);
+  }, [submissions, profileSnapshotMs]);
 
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((sub) => {
