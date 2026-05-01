@@ -42,6 +42,21 @@ test.beforeEach(async () => {
   await clearDatabase();
 });
 
+test('/ping returns a lightweight health response', async () => {
+  const pingRes = await request(app).get('/ping');
+
+  assert.equal(pingRes.status, 200);
+  assert.deepEqual(pingRes.body, { ok: true });
+});
+
+test('root status endpoint remains available', async () => {
+  const rootRes = await request(app).get('/');
+
+  assert.equal(rootRes.status, 200);
+  assert.equal(rootRes.body.success, true);
+  assert.equal(rootRes.body.message, 'Algorithm Arena API is running');
+});
+
 test('register, login, and /auth/me lifecycle works', async () => {
   const registerRes = await request(app).post('/api/auth/register').send({
     username: 'pilot_one',
