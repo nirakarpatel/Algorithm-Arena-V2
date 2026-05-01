@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { z } = require('zod');
 
 const cookieSecureSchema = z.preprocess((value) => {
@@ -15,7 +16,7 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(5000),
-    MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
+    MONGO_URI: z.string().default('mongodb://localhost:27017/algorithm_arena'),
     JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters').optional(),
     JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET must be at least 16 characters').optional(),
     JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET must be at least 16 characters').optional(),

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '../hooks/useSocket';
 import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../components/Card';
@@ -7,7 +8,7 @@ import EmptyState from '../components/EmptyState';
 import SkeletonCard from '../components/SkeletonCard';
 import PageHeader from '../components/PageHeader';
 import { api } from '../lib/api';
-import { USE_MOCK } from '../lib/mockData';
+import { USE_MOCK, mockLeaderboardMembers, mockClans } from '../lib/mockData';
 import { useAuth } from '../context/useAuth';
 
 
@@ -99,9 +100,84 @@ const Podium = ({ items, type }) => {
   );
 };
 
+const BackgroundAnimation = () => {
+  const bubbles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    size: Math.random() * 15 + 5,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 10 + 10,
+    delay: Math.random() * 5
+  })), []);
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+      {/* Drifting Blobs */}
+      <div className="absolute inset-0 opacity-30 dark:opacity-50">
+         <motion.div
+            animate={{ 
+              x: [0, 80, 0], 
+              y: [0, 40, 0], 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px]"
+         />
+         <motion.div
+            animate={{ 
+              x: [0, -100, 0], 
+              y: [0, 80, 0], 
+              scale: [1, 1.3, 1],
+              rotate: [0, -90, 0]
+            }}
+            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-500/10 blur-[120px]"
+         />
+      </div>
+
+      {/* Floating Bubbles */}
+      {bubbles.map((bubble) => (
+        <motion.div
+          key={bubble.id}
+          initial={{ opacity: 0, y: "110vh" }}
+          animate={{ 
+            opacity: [0, 0.4, 0.4, 0],
+            y: ["110vh", "-10vh"],
+            x: [`${bubble.x}vw`, `${bubble.x + (Math.random() * 10 - 5)}vw`]
+          }}
+          transition={{
+            duration: bubble.duration,
+            repeat: Infinity,
+            delay: bubble.delay,
+            ease: "linear"
+          }}
+          className="absolute rounded-full bg-white/20 dark:bg-accent/20 backdrop-blur-[1px]"
+          style={{
+            width: bubble.size,
+            height: bubble.size,
+            left: `${bubble.x}vw`
+          }}
+        />
+      ))}
+
+      {/* Subtle Noise overlay */}
+      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+    </div>
+  );
+};
+
 const Leaderboard = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState({ window: 'all', page: 1, limit: 20 });
+
+  // Listen for real-time leaderboard updates
+  useSocket('leaderboard_update', () => {
+    queryClient.invalidateQueries(['leaderboard']);
+    queryClient.invalidateQueries(['clan-leaderboard']);
+  });
+
   const [search, setSearch] = useState('');
   const [leaderType, setLeaderType] = useState('individual'); // 'individual' or 'clans'
 
@@ -110,7 +186,7 @@ const Leaderboard = () => {
     enabled: leaderType === 'individual',
     queryFn: async () => {
       if (USE_MOCK) {
-        return { data: [], meta: { page: 1, totalPages: 1 } };
+        return { data: mockLeaderboardMembers, meta: { page: 1, totalPages: 1 } };
       }
       const params = new URLSearchParams({
         window: filters.window,
@@ -128,10 +204,11 @@ const Leaderboard = () => {
   });
 
   const clanLeaderboardQuery = useQuery({
-    queryKey: ['clan-leaderboard'],
+    queryKey: ['clan-leaderboard', filters.window],
     enabled: leaderType === 'clans',
     queryFn: async () => {
-      const res = await api.get('/api/clans/leaderboard');
+      if (USE_MOCK) return mockClans;
+      const res = await api.get(`/api/clans/leaderboard?window=${filters.window}`);
       return res.data.data || [];
     },
   });
@@ -156,7 +233,8 @@ const Leaderboard = () => {
   const topThree = rows.slice(0, 3);
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 relative">
+      <BackgroundAnimation />
       <PageHeader
         title="Hall of Fame"
         subtitle="Celebrate the top rankers and elite clans of the arena."
@@ -196,9 +274,9 @@ const Leaderboard = () => {
           value={filters.window}
           onChange={(e) => setFilters((p) => ({ ...p, page: 1, window: e.target.value }))}
         >
-          <option value="all">All Time</option>
-          <option value="30d">30 Days</option>
-          <option value="7d">7 Days</option>
+          <option value="all">Globally</option>
+          <option value="30d">Monthly</option>
+          <option value="7d">Weekly</option>
         </select>
         <select
           className="field-select"

@@ -24,12 +24,12 @@ import EmptyState from '../components/EmptyState';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
-import { USE_MOCK } from '../lib/mockData';
+import { USE_MOCK, mockGlobalNotice } from '../lib/mockData';
 
 /* ─── Mock clans for fallback ─────────────────────────────── */
 const mockClans = [
   {
-    _id: 'clan_01',
+    _id: '60d5ecb8b5d3a51f0c000001',
     name: 'Alpha Coders',
     tag: 'AC',
     description: 'The elite squad of algorithm masters. We push boundaries and solve the unsolvable.',
@@ -52,7 +52,7 @@ const mockClans = [
     ],
   },
   {
-    _id: 'clan_02',
+    _id: '60d5ecb8b5d3a51f0c000002',
     name: 'Byte Knights',
     tag: 'BK',
     description: 'Honour. Code. Conquer. A clan for those who code with discipline.',
@@ -67,7 +67,7 @@ const mockClans = [
     totalPoints: 8400,
   },
   {
-    _id: 'clan_03',
+    _id: '60d5ecb8b5d3a51f0c000003',
     name: 'Stack Overlords',
     tag: 'SO',
     description: 'We overflow — with solutions. Competitive programming at its finest.',
@@ -98,8 +98,10 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
-const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, onAddNotice, onRemoveNotice }) => {
+const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, onRemove, onAddNotice, onRemoveNotice, globalNotice }) => {
   const isChief = userId && (clan.chief?._id || clan.chief) === userId;
+  const isAdmin = userRole === 'admin' || userRole === 'super-admin';
+  const isPrivileged = isChief || isAdmin;
   const members = clan.members || [];
   const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
@@ -114,8 +116,8 @@ const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, o
 
   return (
     <div className="space-y-6">
-      {/* 0. Pending Requests (Chief Only) */}
-      {isChief && requests.length > 0 && (
+      {/* 0. Pending Requests (Chief or Admin Only) */}
+      {isPrivileged && requests.length > 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -177,9 +179,9 @@ const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, o
               <p className="text-secondary mt-2 max-w-lg text-sm md:text-base">{clan.description}</p>
             </div>
             <div className="flex items-center gap-2">
-              {isChief && (
+              {isPrivileged && (
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-400 text-xs font-bold">
-                  <FiShield size={12} /> Chief
+                  <FiShield size={12} /> {isAdmin ? 'Admin View' : 'Chief'}
                 </span>
               )}
               <button
@@ -214,7 +216,7 @@ const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, o
               Notice Board
             </h3>
 
-            {isChief && (
+            {isPrivileged && (
               <form onSubmit={submitNotice} className="mb-4 shrink-0">
                 <div className="relative group">
                   <input
@@ -235,6 +237,25 @@ const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, o
             )}
 
             <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar max-h-[500px]">
+              {globalNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-accent/30 group/notice relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-accent text-[8px] font-black text-white rounded-bl-lg uppercase tracking-tighter">
+                    Global Notice
+                  </div>
+                  <FiAward className="text-accent mt-0.5 shrink-0" size={16} />
+                  <div>
+                    <p className="text-sm font-bold text-primary leading-relaxed">{globalNotice.content}</p>
+                    <p className="text-[9px] text-secondary mt-1 uppercase tracking-widest font-semibold">
+                      Posted by Admin • {new Date(globalNotice.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
               {notices.map((notice, i) => (
                 <motion.div
                   key={i}
@@ -245,7 +266,7 @@ const ClanDashboard = ({ clan, userId, onLeave, onApprove, onReject, onRemove, o
                 >
                   <FiStar className="text-yellow-400 mt-0.5 shrink-0" size={14} />
                   <p className="text-sm text-primary/90 leading-relaxed flex-1">{notice}</p>
-                  {isChief && (
+                  {isPrivileged && (
                     <button
                       onClick={() => onRemoveNotice(i)}
                       className="text-secondary hover:text-red-400 opacity-0 group-hover/notice:opacity-100 transition-all p-1"
@@ -456,18 +477,31 @@ const Clans = () => {
     queryFn: async () => {
       try {
         const res = await api.get('/api/clans');
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockClans;
-      } catch {
-        return mockClans;
+        return res.data.data || [];
+      } catch (err) {
+        if (USE_MOCK) return mockClans;
+        throw err;
       }
     },
   });
 
   // Find user's clan
   const myClan = (clansQuery.data || []).find((c) =>
-    (c.members || []).some((m) => m._id === user?.id),
+    (c.members || []).some((m) => (m._id || m) === user?.id),
   );
+
+  // Fetch global notice
+  const globalNoticeQuery = useQuery({
+    queryKey: ['global-notice'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/api/notices');
+        return res.data.data || (USE_MOCK ? mockGlobalNotice : null);
+      } catch {
+        return USE_MOCK ? mockGlobalNotice : null;
+      }
+    },
+  });
 
   const handleApply = async (clanId) => {
     try {
@@ -646,12 +680,14 @@ const Clans = () => {
             <ClanDashboard
               clan={myClan}
               userId={user?.id}
+              userRole={user?.role}
               onLeave={() => setShowLeaveConfirm(true)}
               onApprove={handleApprove}
               onReject={handleReject}
               onRemove={setRemoveTarget}
               onAddNotice={handleAddNotice}
               onRemoveNotice={handleRemoveNotice}
+              globalNotice={globalNoticeQuery.data}
             />
           </motion.div>
         ) : (

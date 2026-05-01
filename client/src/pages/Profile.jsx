@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiCalendar, FiMapPin, FiLink, FiGithub, FiTwitter, FiAward, FiActivity, FiZap, FiSearch, FiUsers } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { useSocket } from '../hooks/useSocket';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
 import SkeletonCard from '../components/SkeletonCard';
@@ -28,10 +29,27 @@ const generateHeatmapData = () => {
 
 const SolvedBreakdown = ({ stats }) => {
   const categories = [
-    { label: 'Easy', color: 'bg-green-500', val: 42, total: 100 },
-    { label: 'Medium', color: 'bg-yellow-500', val: 18, total: 250 },
-    { label: 'Hard', color: 'bg-red-500', val: 5, total: 50 }
+    { 
+      label: 'Easy', 
+      color: 'bg-green-500', 
+      val: stats?.difficultyBreakdown?.easy?.solved || 0, 
+      total: stats?.difficultyBreakdown?.easy?.total || 1 
+    },
+    { 
+      label: 'Medium', 
+      color: 'bg-yellow-500', 
+      val: stats?.difficultyBreakdown?.medium?.solved || 0, 
+      total: stats?.difficultyBreakdown?.medium?.total || 1 
+    },
+    { 
+      label: 'Hard', 
+      color: 'bg-red-500', 
+      val: stats?.difficultyBreakdown?.hard?.solved || 0, 
+      total: stats?.difficultyBreakdown?.hard?.total || 1 
+    }
   ];
+
+  const overallScore = stats?.overallScore || 0;
 
   return (
     <Card className="flex flex-col h-full">
@@ -59,10 +77,10 @@ const SolvedBreakdown = ({ stats }) => {
         </div>
       </div>
       <div className="mt-auto pt-6 border-t border-glass-border/40">
-         <div className="flex items-center justify-between text-[10px] text-tertiary">
+          <div className="flex items-center justify-between text-[10px] text-tertiary">
             <span>Overall Score</span>
-            <span className="text-accent font-black text-sm">84.2%</span>
-         </div>
+            <span className="text-accent font-black text-sm">{overallScore}%</span>
+          </div>
       </div>
     </Card>
   );
@@ -144,9 +162,27 @@ const PRESET_AVATARS = [
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
+  const queryClient = useQueryClient();
   const [activityFilter, setActivityFilter] = useState('All');
   const [activityQuery, setActivityQuery] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateUser({ profilePicture: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Listen for real-time profile updates
+  useSocket('leaderboard_update', () => {
+    queryClient.invalidateQueries(['profile-stats']);
+  });
 
   const profileQuery = useQuery({
     queryKey: ['profile-stats'],
@@ -207,6 +243,24 @@ const Profile = () => {
             className="macos-glass p-8 max-w-md w-full"
           >
             <h3 className="text-xl font-bold mb-6 text-primary">Identity Selection</h3>
+            
+            <div className="mb-8 p-6 border-2 border-dashed border-glass-border rounded-2xl hover:border-accent transition-colors cursor-pointer group relative" onClick={() => fileInputRef.current?.click()}>
+               <div className="flex flex-col items-center gap-2">
+                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                   <FiZap />
+                 </div>
+                 <p className="text-sm font-bold text-primary">Upload from device</p>
+                 <p className="text-[10px] text-tertiary">PNG, JPG up to 2MB</p>
+               </div>
+               <input 
+                 type="file" 
+                 ref={fileInputRef} 
+                 onChange={handleFileUpload} 
+                 className="hidden" 
+                 accept="image/*"
+               />
+            </div>
+
             <div className="grid grid-cols-3 gap-4 mb-8">
               {PRESET_AVATARS.map((url, i) => (
                 <button 
@@ -233,17 +287,20 @@ const Profile = () => {
         {/* Left Column: Stats Summary */}
         <div className="xl:col-span-1 flex flex-col gap-6 h-full min-h-full">
           <Card className="text-center pt-8">
-            <div className="relative inline-block mb-4">
-              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-accent to-purple-500 p-1">
+            <div className="relative inline-block mb-4 group cursor-pointer" onClick={() => setShowAvatarPicker(true)}>
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-accent to-purple-500 p-1 transition-transform group-hover:scale-105">
                 {user?.profilePicture ? (
                    <img src={user.profilePicture} alt="Profile" className="w-full h-full rounded-xl object-cover" />
                 ) : (
-                  <div className="w-full h-full rounded-xl bg-bg-app flex items-center justify-center text-4xl text-accent font-black">
-                    {user?.username?.[0]?.toUpperCase() || 'U'}
+                  <div className="w-full h-full rounded-xl bg-bg-app flex items-center justify-center text-4xl text-accent font-black uppercase">
+                    {user?.username?.[0] || 'U'}
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-bg-app" />
+              <div className="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-bg-app shadow-lg" />
+              <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">Update</span>
+              </div>
             </div>
             <h2 className="text-2xl font-black text-primary">{user?.username}</h2>
             <p className="text-secondary text-sm mt-1 mb-6">Expert Algorithmist</p>

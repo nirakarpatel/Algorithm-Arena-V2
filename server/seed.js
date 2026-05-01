@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const Challenge = require('./models/Challenge');
+const Clan = require('./models/Clan');
+const User = require('./models/User');
 
 const challenges = [
   {
@@ -50,6 +52,28 @@ async function seedDatabase() {
     // Insert new ones
     await Challenge.insertMany(challenges);
     console.log('✅ Database Seeded with 5 Pro Challenges!');
+
+    // Seed some initial clans
+    await Clan.deleteMany({});
+    await Clan.insertMany([
+      { name: 'Alpha Coders', tag: 'AC', description: 'The elite squad of algorithm masters.' },
+      { name: 'Byte Knights', tag: 'BK', description: 'Honour. Code. Conquer.' },
+      { name: 'Stack Overlords', tag: 'SO', description: 'We overflow — with solutions.' }
+    ]);
+    console.log('✅ Database Seeded with 3 Clans!');
+
+    // Seed a default admin user if it doesn't exist
+    const adminEmail = 'devmaster@iter.ac.in';
+    const existingAdmin = await User.findOne({ email: adminEmail });
+    if (!existingAdmin) {
+      await User.create({
+        username: 'devmaster',
+        email: adminEmail,
+        password: 'admin123',
+        role: 'admin'
+      });
+      console.log('✅ Default Admin User created (devmaster@iter.ac.in / admin123)');
+    }
   } catch (err) {
     console.error('❌ Seeding failed:', err);
     throw err;

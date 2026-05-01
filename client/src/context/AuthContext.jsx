@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }) => {
         id: me?._id,
         username: me?.username,
         role: me?.role,
+        profilePicture: me?.profilePicture,
       };
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
@@ -76,6 +77,7 @@ export const AuthProvider = ({ children }) => {
       id: payload?._id,
       username: payload?.username,
       role: payload?.role,
+      profilePicture: payload?.profilePicture,
     };
 
     if (token) {

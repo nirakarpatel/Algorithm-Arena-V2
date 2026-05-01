@@ -3,7 +3,7 @@
 // Set USE_MOCK to false when your backend is ready.
 // ─────────────────────────────────────────────────────────────
 
-export const USE_MOCK = false;
+export const USE_MOCK = true;
 
 // ─── Users ──────────────────────────────────────────────────
 
@@ -168,6 +168,16 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 2 * DAY).toISOString(),
   },
   {
+    _id: 'sub_002_pending',
+    userId: mockUsers[0], // u_001
+    challengeId: mockChallenges[1],
+    language: 'javascript',
+    code: 'function pendingTest() {}',
+    repositoryUrl: '',
+    status: 'Pending',
+    submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
+  },
+  {
     _id: 'sub_003',
     userId: mockUsers[2],
     challengeId: mockChallenges[2],
@@ -270,6 +280,13 @@ export const mockDashboardSummary = {
     .slice(0, 5),
 };
 
+export const mockGlobalNotice = {
+  _id: 'gn_001',
+  content: '🏆 Annual Algo-Coding Championship starts next week! Register now in the Missions tab.',
+  createdBy: { username: 'admin' },
+  createdAt: new Date().toISOString(),
+};
+
 // ─── Profile Stats ──────────────────────────────────────────
 
 const mySubmissions = mockSubmissions.filter(
@@ -284,7 +301,17 @@ export const mockProfileStats = {
   totalPoints: mySubmissions
     .filter((s) => s.status === 'Accepted')
     .reduce((sum, s) => sum + (s.challengeId?.points || 0), 0),
+  difficultyBreakdown: {
+    easy: { solved: 2, total: 4 },
+    medium: { solved: 1, total: 3 },
+    hard: { solved: 1, total: 3 },
+  },
+  overallScore: '40.0',
   recentSubmissions: mySubmissions,
+  rank: 5,
+  streak: 3,
+  maxStreak: 7,
+  heatmapData: [], // Profile component generates random heatmap if empty
 };
 
 // ─── Helper: paged response builder ────────────────────────

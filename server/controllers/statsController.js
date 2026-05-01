@@ -89,10 +89,61 @@ const getProfileStats = async (req, res, next) => {
               $cond: [{ $eq: ['$status', 'Accepted'] }, '$challenge.points', 0],
             },
           },
+          easySolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Easy'] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          mediumSolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Medium'] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          hardSolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Hard'] }] },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
 
+    // Get total counts for each difficulty to calculate percentage
+    const difficultyTotals = await Challenge.aggregate([
+      {
+        $group: {
+          _id: '$difficulty',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalsMap = { Easy: 0, Medium: 0, Hard: 0 };
+    difficultyTotals.forEach((d) => {
+      totalsMap[d._id] = d.count;
+    });
+
+    const overallScore = stats?.acceptedCount 
+      ? ((stats.acceptedCount / (Object.values(totalsMap).reduce((a, b) => a + b, 0) || 1)) * 100).toFixed(1)
+      : 0;
+
+    // ... (rest of the logic remains same: rank, heatmap, streaks, recentSubmissions)
+    
+    // [I'll skip repeating the intermediate lines to keep the replacement clean if possible, 
+    // but I need to make sure I don't break the existing code. I'll provide the full block for clarity.]
+    
     // Calculate Rank
     const leaderboard = await Submission.aggregate([
       { $match: { status: 'Accepted' } },
@@ -152,7 +203,7 @@ const getProfileStats = async (req, res, next) => {
             currentStreak++;
         } else {
             if (i === heatmapData.length - 1) {
-                continue; // if today is 0, streak might still be alive if yesterday was >0
+                continue;
             } else {
                 break;
             }
@@ -171,6 +222,12 @@ const getProfileStats = async (req, res, next) => {
         rejectedCount: stats?.rejectedCount || 0,
         pendingCount: stats?.pendingCount || 0,
         totalPoints: stats?.totalPoints || 0,
+        difficultyBreakdown: {
+          easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
+          medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
+          hard: { solved: stats?.hardSolved || 0, total: totalsMap.Hard },
+        },
+        overallScore,
         recentSubmissions,
         heatmapData,
         rank,

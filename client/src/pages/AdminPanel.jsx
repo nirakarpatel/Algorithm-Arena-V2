@@ -262,6 +262,7 @@ const AdminPanel = () => {
       await api.post(`/api/clans/${clanId}/approve/${userId}`);
       toast.success('Request approved');
       queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to approve request');
     }
@@ -272,6 +273,7 @@ const AdminPanel = () => {
       await api.post(`/api/clans/${clanId}/reject/${userId}`);
       toast.success('Request rejected');
       queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reject request');
     }
@@ -316,6 +318,9 @@ const AdminPanel = () => {
         </button>
         <button className={`px-4 py-2 rounded-lg ${activeTab === 'clans' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('clans')}>
           Manage Clans
+        </button>
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'notices' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('notices')}>
+          Global Notice
         </button>
       </div>
 
@@ -730,6 +735,63 @@ const AdminPanel = () => {
                 ))}
               </div>
             )}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'notices' && (
+        <Card>
+          <div className="space-y-6 max-w-2xl">
+            <h2 className="text-section-title font-bold">Manage Global Notice</h2>
+            <p className="text-secondary text-sm">
+              The global notice appears at the top of the notice board for <strong>all clans</strong>. 
+              Only one global notice can be active at a time.
+            </p>
+            
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const content = e.target.content.value;
+                if (!content.trim()) return;
+                try {
+                  await api.post('/api/notices', { content });
+                  toast.success('Global notice published!');
+                  e.target.reset();
+                  queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                } catch (err) {
+                  toast.error('Failed to publish global notice.');
+                }
+              }} 
+              className="space-y-4"
+            >
+              <div>
+                <label className="field-label">Notice Content</label>
+                <textarea 
+                  name="content"
+                  className="field-textarea min-h-[120px]" 
+                  placeholder="Type the global announcement here..."
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <button className="btn-primary" type="submit">Publish to All Clans</button>
+                <button 
+                  type="button"
+                  className="btn-secondary text-red-400 hover:border-red-500/50"
+                  onClick={async () => {
+                    try {
+                      await api.delete('/api/notices');
+                      toast.success('Global notice removed');
+                      queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                    } catch (err) {
+                      toast.error('Failed to delete notice.');
+                    }
+                  }}
+                >
+                  Clear Global Notice
+                </button>
+              </div>
+            </form>
           </div>
         </Card>
       )}

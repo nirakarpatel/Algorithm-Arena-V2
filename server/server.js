@@ -5,7 +5,11 @@ const { createApp } = require('./app');
 const { env } = require('./config/env');
 const { logger } = require('./utils/logger');
 
+const http = require('http');
+const { initSocket } = require('./config/socket');
+
 const app = createApp();
+const server = http.createServer(app);
 
 const connectDB = async () => {
   const conn = await mongoose.connect(env.MONGO_URI);
@@ -16,8 +20,12 @@ const connectDB = async () => {
 const startServer = async () => {
   try {
     await connectDB();
-    const server = app.listen(env.PORT, () => {
-      logger.info('Server started', { port: env.PORT, env: env.NODE_ENV });
+    
+    // Initialize Socket.io
+    initSocket(server);
+    
+    server.listen(env.PORT, () => {
+      logger.info('Server started with Real-time support', { port: env.PORT, env: env.NODE_ENV });
     });
     return server;
   } catch (err) {

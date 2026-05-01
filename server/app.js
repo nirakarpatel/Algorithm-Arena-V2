@@ -20,6 +20,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const clanRoutes = require('./routes/clanRoutes');
 const userRoutes = require('./routes/userRoutes');
+const noticeRoutes = require('./routes/noticeRoutes');
 
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -50,7 +51,7 @@ const createApp = () => {
 
   const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: process.env.NODE_ENV === 'development' ? 1000 : 200,
     standardHeaders: true,
     legacyHeaders: false,
     message: { success: false, message: 'Too many requests, please try again later.' },
@@ -64,6 +65,7 @@ const createApp = () => {
   app.use('/api/profile', profileRoutes);
   app.use('/api/clans', clanRoutes);
   app.use('/api/users', userRoutes);
+  app.use('/api/notices', noticeRoutes);
   app.use('/api/docs', express.static(path.join(__dirname, 'docs')));
 
   app.get('/', (req, res) => {

@@ -39,12 +39,13 @@ const difficultyChips = [
 const Missions = () => {
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 12,
+    limit: 50, // Increase limit when grouping to show all related items
     search: "",
     difficulty: "",
     category: "",
     sortBy: "createdAt",
     sortDir: "desc",
+    grouping: "none", // 'none', 'weekly', 'monthly'
   });
   const [viewMode, setViewMode] = useState(
     () => localStorage.getItem("missions:view") || "grid",
@@ -78,6 +79,29 @@ const Missions = () => {
 
   const challenges = challengesQuery.data?.data?.length ? challengesQuery.data.data : mockChallenges;
   const meta = challengesQuery.data?.meta || { page: 1, totalPages: 1, total: challenges.length };
+  
+  const groupedChallenges = useMemo(() => {
+    if (filters.grouping === 'none') return { "All Missions": challenges };
+    
+    return challenges.reduce((acc, ch) => {
+      const date = new Date(ch.createdAt || Date.now());
+      let key = "";
+      
+      if (filters.grouping === 'weekly') {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+        const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        key = `Week ${weekNum}`;
+      } else if (filters.grouping === 'monthly') {
+        key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+      }
+      
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(ch);
+      return acc;
+    }, {});
+  }, [challenges, filters.grouping]);
+
   const MotionBlock = motion.div;
 
   const handleFilterChange = (key, value) => {
@@ -129,18 +153,20 @@ const Missions = () => {
             value={filters.sortBy}
             onChange={(e) => handleFilterChange("sortBy", e.target.value)}
           >
-            <option value="createdAt">Newest</option>
+            <option value="createdAt">Date (Newest)</option>
+            <option value="points">XP Points</option>
             <option value="difficulty">Difficulty</option>
             <option value="title">Title</option>
           </select>
 
           <select
-            className="field-select flex-1 min-w-[70px] md:w-full px-2 py-2 sm:px-3 sm:py-3 s"
-            value={filters.sortDir}
-            onChange={(e) => handleFilterChange("sortDir", e.target.value)}
+            className="field-select flex-1 min-w-[70px] md:w-full px-3 py-2 sm:px-3 sm:py-3"
+            value={filters.grouping}
+            onChange={(e) => handleFilterChange("grouping", e.target.value)}
           >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
+            <option value="none">No Grouping</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
           </select>
         </div>
       </div>
@@ -204,91 +230,76 @@ const Missions = () => {
           />
         ) : (
           <>
-            {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {challenges.map((challenge, index) => (
-                  <MotionBlock
-                    key={challenge._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                  >
-                    <Link
-                      to={`/challenge/${challenge._id}`}
-                      className="group"
-                    >
-                      <div className="macos-glass p-6 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full">
-                        <div className="flex justify-between items-start mb-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              challenge.difficulty === "Easy"
-                                ? "bg-green-500/20 text-green-500"
-                                : challenge.difficulty === "Medium"
-                                  ? "bg-yellow-500/20 text-yellow-500"
-                                  : "bg-red-500/20 text-red-500"
-                            }`}
-                          >
-                            {challenge.difficulty}
-                          </span>
-                          <span className="text-secondary text-sm">
-                            {challenge.points} XP
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold group-hover:text-accent transition-colors">
-                          {challenge.title}
-                        </h3>
-                        <p
-                          className="text-secondary text-sm mt-2 line-clamp-2"
-                        >
-                          {challenge.description}
-                        </p>
-                      </div>
-                    </Link>
-                  </MotionBlock>
-                ))}
+          <div className="space-y-12">
+            {Object.entries(groupedChallenges).map(([groupName, groupItems]) => (
+              <div key={groupName} className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-black text-primary uppercase tracking-widest">{groupName}</h2>
+                  <div className="h-[1px] flex-1 bg-glass-border/30" />
+                  <span className="text-xs text-tertiary font-bold">{groupItems.length} Missions</span>
+                </div>
+                
+                {viewMode === "grid" ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {groupItems.map((challenge, index) => (
+                      <MotionBlock
+                        key={challenge._id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                      >
+                        <Link to={`/challenge/${challenge._id}`} className="group">
+                          <div className="macos-glass p-6 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full">
+                            <div className="flex justify-between items-start mb-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
+                                challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
+                              }`}>
+                                {challenge.difficulty}
+                              </span>
+                              <span className="text-secondary text-sm">{challenge.points} XP</span>
+                            </div>
+                            <h3 className="text-xl font-bold group-hover:text-accent transition-colors">{challenge.title}</h3>
+                            <p className="text-secondary text-sm mt-2 line-clamp-2">{challenge.description}</p>
+                          </div>
+                        </Link>
+                      </MotionBlock>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {groupItems.map((challenge, index) => (
+                      <MotionBlock
+                        key={challenge._id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                      >
+                        <Link to={`/challenge/${challenge._id}`} className="group">
+                          <div className="macos-glass p-4 sm:p-6 hover:border-accent transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div>
+                              <h3 className="text-lg font-bold group-hover:text-accent transition-colors">{challenge.title}</h3>
+                              <p className="text-secondary text-sm mt-1">{challenge.category}</p>
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
+                                challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
+                              }`}>
+                                {challenge.difficulty}
+                              </span>
+                              <span className="text-secondary text-sm min-w-[60px] text-right">{challenge.points} XP</span>
+                            </div>
+                          </div>
+                        </Link>
+                      </MotionBlock>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="space-y-4">
-                {challenges.map((challenge, index) => (
-                  <MotionBlock
-                    key={challenge._id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                  >
-                    <Link to={`/challenge/${challenge._id}`} className="group">
-                      <div className="macos-glass p-4 sm:p-6 hover:border-accent transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div>
-                          <h3 className="text-lg font-bold group-hover:text-accent transition-colors">
-                            {challenge.title}
-                          </h3>
-                          <p className="text-secondary text-sm mt-1">
-                            {challenge.category}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              challenge.difficulty === "Easy"
-                                ? "bg-green-500/20 text-green-500"
-                                : challenge.difficulty === "Medium"
-                                  ? "bg-yellow-500/20 text-yellow-500"
-                                  : "bg-red-500/20 text-red-500"
-                            }`}
-                          >
-                            {challenge.difficulty}
-                          </span>
-                          <span className="text-secondary text-sm min-w-[60px] text-right">
-                            {challenge.points} XP
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </MotionBlock>
-                ))}
-              </div>
-            )}
+            ))}
+          </div>
 
             {meta.totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-glass-border/40 pt-6 mt-8">

@@ -39,6 +39,16 @@ const getClan = async (req, res, next) => {
 // GET /api/clans/leaderboard — clan rankings
 const getClanLeaderboard = async (req, res, next) => {
   try {
+    const { window = 'all' } = req.query;
+    
+    // Calculate date filter based on window
+    let dateFilter = {};
+    if (window === '7d') {
+      dateFilter = { submittedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
+    } else if (window === '30d') {
+      dateFilter = { submittedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+    }
+
     const clans = await Clan.find({ status: 'active' })
       .populate('chief', 'username')
       .lean();
@@ -57,7 +67,13 @@ const getClanLeaderboard = async (req, res, next) => {
         }
 
         const [stats] = await Submission.aggregate([
-          { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
+          { 
+            $match: { 
+              userId: { $in: memberIds }, 
+              status: 'Accepted',
+              ...dateFilter
+            } 
+          },
           {
             $lookup: {
               from: 'challenges',
@@ -277,9 +293,10 @@ const removeMember = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Clan not found' });
     }
 
-    // Auth check: only chief or admin
-    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the chief or an admin can remove members' });
+    // Auth check: only chief or admin/super-admin
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super-admin';
+    if (clan.chief?.toString() !== req.user._id.toString() && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     clan.members.pull(userId);
@@ -305,9 +322,10 @@ const approveJoinRequest = async (req, res, next) => {
     const clan = await Clan.findById(req.params.id);
     if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
 
-    // Auth check: only chief or admin
-    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the chief can approve requests' });
+    // Auth check: only chief or admin/super-admin
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super-admin';
+    if (clan.chief?.toString() !== req.user._id.toString() && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Only the chief or an admin can approve requests' });
     }
 
     const { userId } = req.params;
@@ -344,8 +362,9 @@ const rejectJoinRequest = async (req, res, next) => {
     const clan = await Clan.findById(req.params.id);
     if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
 
-    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the chief can reject requests' });
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super-admin';
+    if (clan.chief?.toString() !== req.user._id.toString() && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Only the chief or an admin can reject requests' });
     }
 
     clan.requests.pull(req.params.userId);
@@ -364,8 +383,9 @@ const addClanNotice = async (req, res, next) => {
     const clan = await Clan.findById(req.params.id);
     if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
 
-    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the chief can post notices' });
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super-admin';
+    if (clan.chief?.toString() !== req.user._id.toString() && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Only the chief or an admin can post notices' });
     }
 
     clan.notices.push(notice);
@@ -384,8 +404,9 @@ const removeClanNotice = async (req, res, next) => {
     const clan = await Clan.findById(req.params.id);
     if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
 
-    if (clan.chief?.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Only the chief can remove notices' });
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super-admin';
+    if (clan.chief?.toString() !== req.user._id.toString() && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Only the chief or an admin can remove notices' });
     }
 
     clan.notices.splice(index, 1);
