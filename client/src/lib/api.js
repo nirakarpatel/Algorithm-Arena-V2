@@ -21,10 +21,9 @@ const isAuthFlowRequest = (url = '') => {
 };
 
 const normalizeUser = (payload) => ({
-  id: payload?._id ||'mock_id', //remove mock id
-  username: payload?.username ||'mock_user',//remove mock user
-  role: payload?.role || 'user'
-
+  id: payload?._id || null,
+  username: payload?.username || null,
+  role: payload?.role || 'user',
 });
 
 const updateSessionFromPayload = (payload) => {

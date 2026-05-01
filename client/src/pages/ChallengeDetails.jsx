@@ -2,10 +2,63 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FiClipboard, FiRefreshCw, FiTrash2, FiGithub, FiCode, FiFileText, FiClock, FiChevronLeft, FiSend } from 'react-icons/fi';
+import {
+  FiClipboard, FiRefreshCw, FiTrash2, FiGithub,
+  FiCode, FiFileText, FiClock, FiChevronLeft, FiSend
+} from 'react-icons/fi';
+
+// CodeMirror Imports
+import CodeMirror from '@uiw/react-codemirror';
+import { javascript } from '@codemirror/lang-javascript';
+import { python } from '@codemirror/lang-python';
+import { java } from '@codemirror/lang-java';
+import { cpp } from '@codemirror/lang-cpp';
+import { EditorView } from '@codemirror/view';
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
+
+// Local Project Imports
 import SkeletonCard from '../components/SkeletonCard';
 import { api } from '../lib/api';
 import { USE_MOCK, mockChallenges, mockSubmissions } from '../lib/mockData';
+
+// --- THEME & HIGHLIGHT DEFINITIONS ---
+
+const algoArenaDarkHighlight = HighlightStyle.define([
+  { tag: t.keyword, color: "#bd93f9", fontWeight: "bold" },
+  { tag: t.string, color: "#ff6090" },
+  { tag: t.variableName, color: "#8be9fd" },
+  { tag: t.definition(t.variableName), color: "#f1fa8c" },
+  { tag: t.function(t.variableName), color: "#50fa7b" },
+  { tag: t.comment, color: "#6272a4", fontStyle: "italic" },
+  { tag: t.number, color: "#ffb86c" },
+  { tag: t.operator, color: "#44adff" },
+]);
+
+const arenaDarkTheme = EditorView.theme({
+  "&": { color: "white", backgroundColor: "transparent !important" },
+  ".cm-content": { caretColor: "#ff6090", fontFamily: "'Fira Code', 'JetBrains Mono', monospace" },
+  ".cm-gutters": { backgroundColor: "transparent", color: "#4b5563", border: "none" },
+  "&.cm-focused .cm-cursor": { borderLeftColor: "#ff6090" },
+  "&.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "#ffffff1a" },
+}, { dark: true });
+
+const algoArenaLightHighlight = HighlightStyle.define([
+  { tag: t.keyword, color: "#d73a49", fontWeight: "bold" },
+  { tag: t.string, color: "#005cc5" },
+  { tag: t.variableName, color: "#24292e" },
+  { tag: t.function(t.variableName), color: "#6f42c1" },
+  { tag: t.comment, color: "#6a737d", fontStyle: "italic" },
+  { tag: t.number, color: "#e36209" },
+  { tag: t.operator, color: "#005cc5" },
+]);
+
+const arenaLightTheme = EditorView.theme({
+  "&": { color: "#24292e", backgroundColor: "white !important" },
+  ".cm-gutters": { backgroundColor: "#f6f8fa", color: "#afb8c1", borderRight: "1px solid #d0d7de" },
+  ".cm-activeLine": { backgroundColor: "#f6f8fa" },
+  "&.cm-focused .cm-selectionBackground, ::selection": { backgroundColor: "#add6ff" },
+}, { dark: false });
 
 const starterByLanguage = {
   javascript: 'function solve(input) {\n  // TODO: implement\n  return input;\n}\n',
@@ -25,26 +78,37 @@ const ChallengeDetails = () => {
   const [language, setLanguage] = useState('javascript');
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState('description');
+  const [isDark, setIsDark] = useState(
+    document.documentElement.getAttribute('data-theme') === 'dark'
+  );
 
-  // Derived: current code for the active language
+  // Logic: Sync with global Dark Mode toggle
+  useEffect(() => {
+    const checkDark = () =>
+      document.documentElement.getAttribute('data-theme') === 'dark' ||
+      document.documentElement.classList.contains('dark');
+    const observer = new MutationObserver(() => {
+      setIsDark(checkDark());
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+
   const codeSnippet = codeByLang[language] || '';
   const setCodeSnippet = (val) => {
     const newVal = typeof val === 'function' ? val(codeByLang[language] || '') : val;
     setCodeByLang((prev) => ({ ...prev, [language]: newVal }));
   };
 
+  // Logic: LocalStorage Persistence
   useEffect(() => {
     const raw = localStorage.getItem(draftKey);
     if (!raw) return;
     try {
       const draft = JSON.parse(raw);
       setRepoUrl(draft.repoUrl || '');
-      // Support both old format (codeSnippet string) and new format (codeByLang map)
-      if (draft.codeByLang) {
-        setCodeByLang(draft.codeByLang);
-      } else if (draft.codeSnippet) {
-        setCodeByLang({ [draft.language || 'javascript']: draft.codeSnippet });
-      }
+      if (draft.codeByLang) setCodeByLang(draft.codeByLang);
+      else if (draft.codeSnippet) setCodeByLang({ [draft.language || 'javascript']: draft.codeSnippet });
       setLanguage(draft.language || 'javascript');
     } catch {
       localStorage.removeItem(draftKey);
@@ -53,27 +117,28 @@ const ChallengeDetails = () => {
 
   useEffect(() => {
     const hasAnyCode = Object.values(codeByLang).some((c) => c.trim());
-    const hasDraft = repoUrl.trim() || hasAnyCode;
-    if (!hasDraft) {
+    if (!(repoUrl.trim() || hasAnyCode)) {
       localStorage.removeItem(draftKey);
       return;
     }
-
-    localStorage.setItem(
-      draftKey,
-      JSON.stringify({
-        repoUrl,
-        codeByLang,
-        language,
-      })
-    );
+    localStorage.setItem(draftKey, JSON.stringify({ repoUrl, codeByLang, language }));
   }, [draftKey, repoUrl, codeByLang, language]);
 
-  // Language switch handler — preserves code per language
-  const handleLanguageChange = (newLang) => {
-    if (newLang === language) return;
-    setLanguage(newLang);
-  };
+  // Logic: Editor Extensions
+  const editorExtensions = useMemo(() => {
+    const langExt = {
+      javascript: [javascript({ jsx: true })],
+      python: [python()],
+      java: [java()],
+      cpp: [cpp()],
+    }[language] || [javascript()];
+
+    const themeExt = isDark
+      ? [arenaDarkTheme, syntaxHighlighting(algoArenaDarkHighlight)]
+      : [arenaLightTheme, syntaxHighlighting(algoArenaLightHighlight)];
+
+    return [...langExt, ...themeExt];
+  }, [language, isDark]);
 
   const challengeQuery = useQuery({
     queryKey: ['challenge', id],
@@ -91,35 +156,26 @@ const ChallengeDetails = () => {
   const historyQuery = useQuery({
     queryKey: ['my-submissions', id],
     queryFn: async () => {
-      if (USE_MOCK) {
-        return mockSubmissions.filter((s) => s.challengeId._id === id);
-      }
+      if (USE_MOCK) return mockSubmissions.filter((s) => s.challengeId._id === id);
       const res = await api.get(`/api/submissions/my-submissions?challengeId=${id}&limit=8`);
       return res.data.data || [];
     },
   });
 
-  const codeStats = useMemo(() => {
-    const lines = codeSnippet ? codeSnippet.split('\n').length : 0;
-    const characters = codeSnippet.length;
-    return { lines, characters };
-  }, [codeSnippet]);
+  const codeStats = useMemo(() => ({
+    lines: codeSnippet ? codeSnippet.split('\n').length : 0,
+    characters: codeSnippet.length
+  }), [codeSnippet]);
 
-  const handleInsertStarter = () => {
-    const starter = starterByLanguage[language] || starterByLanguage.javascript;
-    setCodeSnippet(starter);
-  };
+  const handleInsertStarter = () => setCodeSnippet(starterByLanguage[language] || starterByLanguage.javascript);
 
   const handleCopyCode = async () => {
-    if (!codeSnippet.trim()) {
-      toast.error('No code to copy yet');
-      return;
-    }
+    if (!codeSnippet.trim()) return toast.error('No code to copy');
     try {
       await navigator.clipboard.writeText(codeSnippet);
       toast.success('Code copied');
     } catch {
-      toast.error('Unable to copy code');
+      toast.error('Unable to copy');
     }
   };
 
@@ -131,284 +187,115 @@ const ChallengeDetails = () => {
   };
 
   const handleSubmit = async () => {
-    if (!repoUrl && !codeSnippet.trim()) {
-      toast.error('Please provide code or a GitHub repository link.');
-      return;
-    }
-
+    if (!repoUrl && !codeSnippet.trim()) return toast.error('Please provide code or a GitHub link.');
     setSubmitting(true);
-
     try {
-      await api.post('/api/submissions', {
-        challengeId: id,
-        repositoryUrl: repoUrl.trim() || undefined,
-        code: codeSnippet.trim() || undefined,
-        language,
-      });
-
-      toast.success('Solution submitted successfully.');
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+      } else {
+        await api.post('/api/submissions', {
+          challengeId: id,
+          repositoryUrl: repoUrl.trim() || undefined,
+          code: codeSnippet.trim() || undefined,
+          language,
+        });
+      }
+      toast.success('Solution submitted.');
       setRepoUrl('');
       setCodeByLang({});
       localStorage.removeItem(draftKey);
       queryClient.invalidateQueries({ queryKey: ['my-submissions', id] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
     } catch (err) {
-      toast.error(err.userMessage || 'Submission failed. Please try again.');
+      toast.error(err.userMessage || 'Submission failed.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (challengeQuery.isLoading) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ height: 'calc(100vh - 6rem)' }}>
-        <SkeletonCard />
-        <SkeletonCard />
-      </div>
-    );
-  }
-
-  if (challengeQuery.isError || !challengeQuery.data) {
-    return (
-      <div className="macos-glass p-6">
-        <h2 className="text-xl font-bold mb-3">Challenge Not Available</h2>
-        <p className="text-secondary mb-4">{challengeQuery.error?.userMessage || 'Failed to load challenge details.'}</p>
-        <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
-        </button>
-      </div>
-    );
-  }
+  if (challengeQuery.isLoading) return <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-8"><SkeletonCard /><SkeletonCard /></div>;
+  if (challengeQuery.isError || !challengeQuery.data) return <div className="p-12 text-center"><h2 className="text-xl font-bold">Not Available</h2><button className="btn-secondary mt-4" onClick={() => navigate('/dashboard')}>Back</button></div>;
 
   const challenge = challengeQuery.data;
-  const difficultyColor =
-    challenge.difficulty === 'Easy'
-      ? 'text-green-400'
-      : challenge.difficulty === 'Medium'
-        ? 'text-yellow-400'
-        : 'text-red-400';
-
-  const difficultyBg =
-    challenge.difficulty === 'Easy'
-      ? 'bg-green-500/15'
-      : challenge.difficulty === 'Medium'
-        ? 'bg-yellow-500/15'
-        : 'bg-red-500/15';
+  const difficultyColor = challenge.difficulty === 'Easy' ? 'text-green-400' : challenge.difficulty === 'Medium' ? 'text-yellow-400' : 'text-red-400';
+  const difficultyBg = challenge.difficulty === 'Easy' ? 'bg-green-500/15' : challenge.difficulty === 'Medium' ? 'bg-yellow-500/15' : 'bg-red-500/15';
 
   return (
-    <div
-      className="flex flex-col px-4 sm:px-6 lg:px-8"
-      style={{
-        height: 'calc(100vh - 6rem)',
-        width: '100vw',
-        marginLeft: 'calc(-50vw + 50%)',
-      }}
-    >
-      {/* Top Bar */}
+    <div className="flex flex-col px-4 sm:px-6 lg:px-8" style={{ height: 'calc(100vh - 6rem)', width: '100vw', marginLeft: 'calc(-50vw + 50%)' }}>
+      {/* Header */}
       <div className="flex items-center gap-3 pb-3 border-b border-white/10 mb-3 shrink-0">
-        <Link
-          to="/dashboard"
-          className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-sm"
-        >
-          <FiChevronLeft size={16} />
-          <span className="hidden sm:inline">Missions</span>
+        <Link to="/dashboard" className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-sm">
+          <FiChevronLeft size={16} /><span className="hidden sm:inline">Missions</span>
         </Link>
         <div className="w-px h-5 bg-white/10" />
         <h1 className="text-lg sm:text-xl font-bold truncate">{challenge.title}</h1>
         <div className="flex items-center gap-2 ml-auto shrink-0">
-          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${difficultyBg} ${difficultyColor}`}>
-            {challenge.difficulty}
-          </span>
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${difficultyBg} ${difficultyColor}`}>{challenge.difficulty}</span>
           <span className="text-secondary text-sm hidden sm:inline">{challenge.points} XP</span>
-          <span className="text-secondary text-xs hidden sm:inline">•</span>
-          <span className="text-secondary text-sm hidden sm:inline">{challenge.category || 'General'}</span>
         </div>
       </div>
 
-      {/* Split Layout */}
+      {/* Main Split Layout */}
       <div className="flex flex-col lg:flex-row gap-3 flex-1 min-h-0 w-full">
-        {/* LEFT PANEL - Problem Details */}
+        {/* LEFT PANEL */}
         <div className="flex-1 flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden">
-          {/* Panel Tabs */}
           <div className="flex border-b border-white/10 shrink-0">
-            <button
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors relative ${
-                leftTab === 'description'
-                  ? 'text-primary'
-                  : 'text-secondary hover:text-primary'
-              }`}
-              onClick={() => setLeftTab('description')}
-            >
-              <FiFileText size={14} />
-              Description
-              {leftTab === 'description' && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
-              )}
+            <button className={`px-4 py-3 text-sm font-semibold relative ${leftTab === 'description' ? 'text-primary' : 'text-secondary'}`} onClick={() => setLeftTab('description')}>
+              <FiFileText className="inline mr-2" />Description
+              {leftTab === 'description' && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />}
             </button>
-            <button
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors relative ${
-                leftTab === 'submissions'
-                  ? 'text-primary'
-                  : 'text-secondary hover:text-primary'
-              }`}
-              onClick={() => setLeftTab('submissions')}
-            >
-              <FiClock size={14} />
-              Submissions
-              {historyQuery.data?.length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-accent/20 text-accent">
-                  {historyQuery.data.length}
-                </span>
-              )}
-              {leftTab === 'submissions' && (
-                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
-              )}
+            <button className={`px-4 py-3 text-sm font-semibold relative ${leftTab === 'submissions' ? 'text-primary' : 'text-secondary'}`} onClick={() => setLeftTab('submissions')}>
+              <FiClock className="inline mr-2" />Submissions
+              {leftTab === 'submissions' && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />}
             </button>
           </div>
-
-          {/* Panel Content */}
           <div className="flex-1 overflow-y-auto p-5">
             {leftTab === 'description' ? (
               <div className="space-y-4">
-                <div className="text-sm leading-relaxed whitespace-pre-wrap text-primary/90">
-                  {challenge.description}
-                </div>
-
-                {/* Challenge Meta Tags */}
+                <div className="text-sm leading-relaxed whitespace-pre-wrap text-primary/90">{challenge.description}</div>
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
-                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${difficultyBg} ${difficultyColor}`}>
-                    {challenge.difficulty}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 text-secondary">
-                    {challenge.category || 'General'}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent">
-                    {challenge.points} XP
-                  </span>
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${difficultyBg} ${difficultyColor}`}>{challenge.difficulty}</span>
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent">{challenge.points} XP</span>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                {historyQuery.isLoading ? (
-                  <div className="space-y-3">
-                    <SkeletonCard />
-                    <SkeletonCard />
-                  </div>
-                ) : historyQuery.data?.length ? (
-                  historyQuery.data.map((sub) => (
-                    <Link
-                      key={sub._id}
-                      to={`/submission/${sub._id}`}
-                      className="flex items-center justify-between p-3 rounded-xl border border-white/8 hover:border-accent/50 transition-all group"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              sub.status === 'Accepted'
-                                ? 'bg-green-400'
-                                : sub.status === 'Rejected'
-                                  ? 'bg-red-400'
-                                  : 'bg-yellow-400'
-                            }`}
-                          />
-                          <span
-                            className={`text-sm font-semibold ${
-                              sub.status === 'Accepted'
-                                ? 'text-green-400'
-                                : sub.status === 'Rejected'
-                                  ? 'text-red-400'
-                                  : 'text-yellow-400'
-                            }`}
-                          >
-                            {sub.status}
-                          </span>
-                        </div>
-                        <p className="text-secondary text-xs">{new Date(sub.submittedAt).toLocaleString()}</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-secondary bg-white/5 px-2 py-0.5 rounded-md">
-                          {sub.language || 'javascript'}
-                        </span>
-                        <span className="text-xs text-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                          View →
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FiCode size={32} className="text-secondary mb-3 opacity-40" />
-                    <p className="text-secondary text-sm">No submissions yet.</p>
-                    <p className="text-secondary text-xs mt-1">Submit your first solution on the right →</p>
-                  </div>
-                )}
+                {historyQuery.data?.map((sub) => (
+                  <Link key={sub._id} to={`/submission/${sub._id}`} className="flex items-center justify-between p-3 rounded-xl border border-white/20 hover:border-accent hover:scale-[99%] transition-all">
+                    <div><p className={`text-sm font-semibold ${sub.status === 'Accepted' ? 'text-green-400' : 'text-red-400'}`}>{sub.status}</p><p className="text-secondary text-xs">{new Date(sub.submittedAt).toLocaleDateString()}</p></div>
+                    <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-secondary">{sub.language}</span>
+                  </Link>
+                ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT PANEL - Code Editor / Submission */}
-        <div className="lg:w-1/2 flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden">
-          {/* Editor Header */}
+        {/* RIGHT PANEL - Editor */}
+        <div className="lg:w-1/2 flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
-            <div className="flex items-center gap-3">
-              <FiCode size={14} className="text-accent" />
-              <span className="text-sm font-semibold">Code Editor</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                name="submissionLanguage"
-                className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
-              </select>
-            </div>
+            <div className="flex items-center gap-2"><FiCode className="text-accent" /><span className="text-sm font-semibold">Code Editor</span></div>
+            <select className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1 text-primary focus:outline-none" value={language} onChange={(e) => setLanguage(e.target.value)}>
+              <option value="javascript">JavaScript</option><option value="python">Python</option><option value="java">Java</option><option value="cpp">C++</option>
+            </select>
           </div>
 
-          {/* Code Textarea */}
-          <div className="flex-1 min-h-0 relative flex flex-col">
-            <textarea
-              name="submissionCode"
-              className="flex-1 w-full bg-transparent resize-none p-4 font-mono text-sm leading-relaxed text-primary/90 placeholder-white/20 focus:outline-none"
-              placeholder="// Write your solution here..."
+          {/* CodeMirror Instance */}
+          <div className="flex-1 min-h-0 overflow-hidden bg-black/10">
+            <CodeMirror
               value={codeSnippet}
-              onChange={(e) => setCodeSnippet(e.target.value)}
-              spellCheck={false}
-              style={{ minHeight: '200px' }}
+              height="100%"
+              extensions={editorExtensions}
+              onChange={(value) => setCodeSnippet(value)}
+              className="text-sm h-full"
+              basicSetup={{ lineNumbers: true, bracketMatching: true, closeBrackets: true, autocompletion: false }}
             />
+          </div>
 
-            {/* Code Stats Bar */}
-            <div className="flex items-center justify-between px-4 py-2 border-t border-white/8 text-[11px] text-secondary shrink-0">
+          <div className="px-4 py-3 border-t border-white/10 shrink-0 space-y-3 bg-black/1">
+            <div className="flex items-center justify-between text-[11px] text-secondary">
               <span>{codeStats.lines} lines • {codeStats.characters} chars</span>
-              <div className="flex gap-1">
-                <button
-                  className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-                  onClick={handleInsertStarter}
-                  title="Insert starter code"
-                >
-                  <FiRefreshCw size={12} />
-                </button>
-                <button
-                  className="p-1.5 rounded-md hover:bg-white/10 transition-colors"
-                  onClick={handleCopyCode}
-                  title="Copy code"
-                >
-                  <FiClipboard size={12} />
-                </button>
-                <button
-                  className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-red-400/60 hover:text-red-400"
-                  onClick={handleClearDraft}
-                  title="Clear draft"
-                >
-                  <FiTrash2 size={12} />
-                </button>
+              <div className="flex gap-2">
+                <button onClick={handleInsertStarter}><FiRefreshCw /></button><button onClick={handleCopyCode}><FiClipboard /></button><button onClick={handleClearDraft}><FiTrash2 /></button>
               </div>
             </div>
           </div>
@@ -429,15 +316,8 @@ const ChallengeDetails = () => {
                 />
               </div>
             </div>
-
-            {/* Submit Button */}
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              <FiSend size={14} />
-              {submitting ? 'Submitting...' : 'Submit Solution'}
+            <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50">
+              <FiSend size={14} /> {submitting ? 'Transmitting...' : 'Submit Solution'}
             </button>
           </div>
         </div>
