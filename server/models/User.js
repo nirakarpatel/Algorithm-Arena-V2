@@ -28,8 +28,17 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'moderator', 'admin', 'super-admin'],
     default: 'user',
+  },
+  clan: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Clan',
+    default: null,
+  },
+  profilePicture: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,

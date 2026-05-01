@@ -79,6 +79,13 @@ const createChallenge = async (req, res, next) => {
       },
     });
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('new_challenge', {
+      challengeId: challenge._id,
+      title: challenge.title,
+      difficulty: challenge.difficulty,
+    });
+
     return sendSuccess(res, {
       statusCode: 201,
       data: challenge,

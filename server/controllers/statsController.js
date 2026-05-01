@@ -54,8 +54,10 @@ const getDashboardSummary = async (req, res, next) => {
 
 const getProfileStats = async (req, res, next) => {
   try {
+    const userId = new mongoose.Types.ObjectId(req.user.id);
+
     const [stats] = await Submission.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(req.user.id) } },
+      { $match: { userId } },
       {
         $lookup: {
           from: 'challenges',
@@ -87,9 +89,126 @@ const getProfileStats = async (req, res, next) => {
               $cond: [{ $eq: ['$status', 'Accepted'] }, '$challenge.points', 0],
             },
           },
+          easySolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Easy'] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          mediumSolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Medium'] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          hardSolved: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Hard'] }] },
+                1,
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
+
+    // Get total counts for each difficulty to calculate percentage
+    const difficultyTotals = await Challenge.aggregate([
+      {
+        $group: {
+          _id: '$difficulty',
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalsMap = { Easy: 0, Medium: 0, Hard: 0 };
+    difficultyTotals.forEach((d) => {
+      totalsMap[d._id] = d.count;
+    });
+
+    const overallScore = stats?.acceptedCount 
+      ? ((stats.acceptedCount / (Object.values(totalsMap).reduce((a, b) => a + b, 0) || 1)) * 100).toFixed(1)
+      : 0;
+
+    // ... (rest of the logic remains same: rank, heatmap, streaks, recentSubmissions)
+    
+    // [I'll skip repeating the intermediate lines to keep the replacement clean if possible, 
+    // but I need to make sure I don't break the existing code. I'll provide the full block for clarity.]
+    
+    // Calculate Rank
+    const leaderboard = await Submission.aggregate([
+      { $match: { status: 'Accepted' } },
+      { $lookup: { from: 'challenges', localField: 'challengeId', foreignField: '_id', as: 'challenge' } },
+      { $unwind: '$challenge' },
+      { $group: { _id: '$userId', totalPoints: { $sum: '$challenge.points' } } },
+      { $sort: { totalPoints: -1 } },
+    ]);
+    const rankIndex = leaderboard.findIndex((entry) => entry._id.toString() === req.user.id.toString());
+    const rank = rankIndex !== -1 ? rankIndex + 1 : null;
+
+    // Calculate Heatmap Data
+    const heatmapAggregation = await Submission.aggregate([
+      { $match: { userId } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$submittedAt" } },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const heatmapMap = {};
+    heatmapAggregation.forEach(item => {
+      heatmapMap[item._id] = item.count;
+    });
+
+    const heatmapData = [];
+    const today = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      heatmapData.push({
+        date: dateStr,
+        count: heatmapMap[dateStr] || 0
+      });
+    }
+    heatmapData.reverse();
+
+    // Calculate streaks
+    let currentStreak = 0;
+    let maxStreak = 0;
+    let tempStreak = 0;
+    
+    heatmapData.forEach(day => {
+       if (day.count > 0) {
+           tempStreak++;
+           if (tempStreak > maxStreak) maxStreak = tempStreak;
+       } else {
+           tempStreak = 0;
+       }
+    });
+
+    for (let i = heatmapData.length - 1; i >= 0; i--) {
+        if (heatmapData[i].count > 0) {
+            currentStreak++;
+        } else {
+            if (i === heatmapData.length - 1) {
+                continue;
+            } else {
+                break;
+            }
+        }
+    }
 
     const recentSubmissions = await Submission.find({ userId: req.user.id })
       .populate('challengeId', 'title difficulty points')
@@ -103,7 +222,17 @@ const getProfileStats = async (req, res, next) => {
         rejectedCount: stats?.rejectedCount || 0,
         pendingCount: stats?.pendingCount || 0,
         totalPoints: stats?.totalPoints || 0,
+        difficultyBreakdown: {
+          easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
+          medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
+          hard: { solved: stats?.hardSolved || 0, total: totalsMap.Hard },
+        },
+        overallScore,
         recentSubmissions,
+        heatmapData,
+        rank,
+        streak: currentStreak,
+        maxStreak
       },
     });
   } catch (err) {

@@ -1,26 +1,193 @@
-import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { FiAward, FiSearch, FiUsers, FiUser } from "react-icons/fi";
-import Card from "../components/Card";
-import EmptyState from "../components/EmptyState";
-import SkeletonCard from "../components/SkeletonCard";
-import PageHeader from "../components/PageHeader";
-import { api } from "../lib/api";
-import { USE_MOCK, mockLeaderboardMembers, mockClans, paginate } from "../lib/mockData";
-import { useAuth } from "../context/useAuth";
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSocket } from '../hooks/useSocket';
+import { FiAward, FiSearch, FiUsers, FiTrendingUp, FiZap } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
+import SkeletonCard from '../components/SkeletonCard';
+import PageHeader from '../components/PageHeader';
+import { api } from '../lib/api';
+import { USE_MOCK, mockLeaderboardMembers, mockClans } from '../lib/mockData';
+import { useAuth } from '../context/useAuth';
+
+
+
+const Podium = ({ items, type }) => {
+  // Sort items for podium: [2, 1, 3] layout
+  const podiumSteps = [
+    items[1], // 2nd Place
+    items[0], // 1st Place
+    items[2]  // 3rd Place
+  ];
+
+  const colors = [
+    'from-slate-400/80 via-slate-300 to-slate-500/50', // Silver
+    'from-yellow-500 via-yellow-200 to-yellow-600/50', // Gold
+    'from-orange-600 via-orange-300 to-orange-700/50' // Bronze
+  ];
+
+  const heights = ['h-32 md:h-44', 'h-40 md:h-60', 'h-24 md:h-36'];
+  const delays = [0.2, 0, 0.4];
+
+  return (
+    <div className="flex items-end justify-center gap-2 md:gap-8 mb-16 mt-12 px-4">
+      {podiumSteps.map((item, index) => {
+        if (!item) return <div key={index} className="flex-1 invisible" />;
+        
+        const isFirst = index === 1;
+        const colorClass = colors[index];
+        const heightClass = heights[index];
+
+        return (
+          <motion.div
+            key={item._id}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: delays[index], duration: 1, type: "spring", bounce: 0.4 }}
+            className="flex flex-col items-center flex-1 max-w-[120px] md:max-w-[200px] relative group"
+          >
+            <div className={`mb-6 text-center transform transition-transform group-hover:-translate-y-2 duration-500`}>
+              <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-glass-surface border-2 ${isFirst ? 'border-yellow-400/50 shadow-[0_0_20px_rgba(234,179,8,0.3)]' : 'border-white/10'} flex items-center justify-center mb-3 shadow-2xl mx-auto overflow-hidden relative`}>
+                 {isFirst && (
+                   <motion.div 
+                     animate={{ rotate: 360 }} 
+                     transition={{ repeat: Infinity, duration: 8, ease: "linear" }} 
+                     className="absolute inset-[-50%] bg-gradient-to-r from-yellow-500/40 via-transparent to-yellow-500/40" 
+                   />
+                 )}
+                 {item.profilePicture ? (
+                    <img src={item.profilePicture} alt="" className="w-full h-full object-cover relative z-10" />
+                 ) : (
+                    <span className="text-2xl md:text-3xl font-black text-primary relative z-10">{item.username?.[0] || item.name?.[0]}</span>
+                 )}
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10" />
+              </div>
+              
+              <div className="flex flex-col items-center">
+                <span className="font-black text-[10px] md:text-none text-accent uppercase tracking-widest mb-1">
+                  {isFirst ? 'Grandmaster' : index === 0 ? 'Legend' : 'Elite'}
+                </span>
+                <p className="font-bold text-sm md:text-base text-primary truncate max-w-full px-1">
+                  {item.username || item.name}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                   <FiZap size={10} className="text-accent" />
+                   <p className="text-secondary font-black text-sm md:text-lg tracking-tighter">
+                     {item.totalPoints.toLocaleString()}
+                   </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className={`w-full ${heightClass} rounded-t-3xl bg-gradient-to-b ${colorClass} relative shadow-2xl flex flex-col items-center justify-start pt-6 border-t border-white/20`}>
+                <span className="text-white/20 text-5xl md:text-8xl font-black select-none">{index === 1 ? '1' : index === 0 ? '2' : '3'}</span>
+                {isFirst && (
+                  <motion.div 
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                    className="absolute -top-6"
+                  >
+                    <FiAward size={40} className="text-yellow-400 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]" />
+                  </motion.div>
+                )}
+            </div>
+            <div className="absolute inset-0 bg-accent/5 blur-3xl rounded-full -z-10 group-hover:bg-accent/10 transition-colors" />
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
+const BackgroundAnimation = () => {
+  const bubbles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    size: Math.random() * 15 + 5,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 10 + 10,
+    delay: Math.random() * 5
+  })), []);
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+      {/* Drifting Blobs */}
+      <div className="absolute inset-0 opacity-30 dark:opacity-50">
+         <motion.div
+            animate={{ 
+              x: [0, 80, 0], 
+              y: [0, 40, 0], 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px]"
+         />
+         <motion.div
+            animate={{ 
+              x: [0, -100, 0], 
+              y: [0, 80, 0], 
+              scale: [1, 1.3, 1],
+              rotate: [0, -90, 0]
+            }}
+            transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-500/10 blur-[120px]"
+         />
+      </div>
+
+      {/* Floating Bubbles */}
+      {bubbles.map((bubble) => (
+        <motion.div
+          key={bubble.id}
+          initial={{ opacity: 0, y: "110vh" }}
+          animate={{ 
+            opacity: [0, 0.4, 0.4, 0],
+            y: ["110vh", "-10vh"],
+            x: [`${bubble.x}vw`, `${bubble.x + (Math.random() * 10 - 5)}vw`]
+          }}
+          transition={{
+            duration: bubble.duration,
+            repeat: Infinity,
+            delay: bubble.delay,
+            ease: "linear"
+          }}
+          className="absolute rounded-full bg-white/20 dark:bg-accent/20 backdrop-blur-[1px]"
+          style={{
+            width: bubble.size,
+            height: bubble.size,
+            left: `${bubble.x}vw`
+          }}
+        />
+      ))}
+
+      {/* Subtle Noise overlay */}
+      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+    </div>
+  );
+};
 
 const Leaderboard = () => {
   const { user } = useAuth();
-  const [board, setBoard] = useState("members"); // "members" | "clans"
-  const [filters, setFilters] = useState({ window: "all", page: 1, limit: 20 });
-  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
+  const [filters, setFilters] = useState({ window: 'all', page: 1, limit: 20 });
 
-  // ─── Members Leaderboard ──────────────────────────────────────
-  const membersQuery = useQuery({
-    queryKey: ["leaderboard", filters],
-    enabled: board === "members",
+  // Listen for real-time leaderboard updates
+  useSocket('leaderboard_update', () => {
+    queryClient.invalidateQueries(['leaderboard']);
+    queryClient.invalidateQueries(['clan-leaderboard']);
+  });
+
+  const [search, setSearch] = useState('');
+  const [leaderType, setLeaderType] = useState('individual'); // 'individual' or 'clans'
+
+  const leaderboardQuery = useQuery({
+    queryKey: ['leaderboard', filters, leaderType],
+    enabled: leaderType === 'individual',
     queryFn: async () => {
-      if (USE_MOCK) return paginate(mockLeaderboardMembers, filters);
+      if (USE_MOCK) {
+        return { data: mockLeaderboardMembers, meta: { page: 1, totalPages: 1 } };
+      }
       const params = new URLSearchParams({
         window: filters.window,
         page: String(filters.page),
@@ -36,61 +203,41 @@ const Leaderboard = () => {
     },
   });
 
-  // ─── Clans Leaderboard ────────────────────────────────────────
-  const clansQuery = useQuery({
-    queryKey: ["clan-leaderboard", filters],
-    enabled: board === "clans",
+  const clanLeaderboardQuery = useQuery({
+    queryKey: ['clan-leaderboard', filters.window],
+    enabled: leaderType === 'clans',
     queryFn: async () => {
-      if (USE_MOCK) return paginate(mockClans, filters);
-      const params = new URLSearchParams({
-        window: filters.window,
-        page: String(filters.page),
-        limit: String(filters.limit),
-      });
-      const res = await api.get(
-        `/api/clans/leaderboard?${params.toString()}`,
-      );
-      return {
-        data: res.data.data || [],
-        meta: res.data.meta || {},
-      };
+      if (USE_MOCK) return mockClans;
+      const res = await api.get(`/api/clans/leaderboard?window=${filters.window}`);
+      return res.data.data || [];
     },
   });
 
-  const activeQuery = board === "members" ? membersQuery : clansQuery;
-  const meta = activeQuery.data?.meta || {};
-  const rows = useMemo(
-    () => activeQuery.data?.data || [],
-    [activeQuery.data],
-  );
+  const rows = useMemo(() => {
+    if (leaderType === 'clans') {
+      return clanLeaderboardQuery.data || [];
+    }
+    
+    return leaderboardQuery.data?.data || [];
+  }, [leaderboardQuery.data, clanLeaderboardQuery.data, leaderType]);
 
+  const meta = leaderType === 'clans' ? { page: 1, totalPages: 1 } : (leaderboardQuery.data?.meta || {});
+  
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rows;
-    if (board === "members") {
-      return rows.filter((row) => row.username?.toLowerCase().includes(query));
-    }
-    return rows.filter((row) => row.name?.toLowerCase().includes(query));
-  }, [rows, search, board]);
+    return rows.filter((row) => (row.username || row.name).toLowerCase().includes(query));
+  }, [rows, search]);
 
-  const myRow = board === "members"
-    ? rows.find((row) => row.username === user?.username)
-    : null;
-
-  const handleBoardChange = (newBoard) => {
-    if (newBoard === board) return;
-    setBoard(newBoard);
-    setSearch("");
-    setFilters((p) => ({ ...p, page: 1 }));
-  };
+  const myRow = leaderType === 'individual' ? rows.find((row) => row.username === user?.username) : null;
+  const topThree = rows.slice(0, 3);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20 relative">
+      <BackgroundAnimation />
       <PageHeader
-        title="Leaderboard"
-        subtitle={board === "members"
-          ? "Track top solvers and compare your rank."
-          : "See which clans are dominating the arena."}
+        title="Hall of Fame"
+        subtitle="Celebrate the top rankers and elite clans of the arena."
         actions={
           <>
             <div className="relative">
@@ -129,256 +276,168 @@ const Leaderboard = () => {
               }
               aria-label="Leaderboard page size"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </>
+              <FiUsers />
+              Clans
+            </button>
+          </div>
         }
       />
 
-      {/* Board Toggle */}
-      <div className="flex items-center gap-3">
-        <div className="segmented">
-          <button
-            className={`segmented-btn flex items-center gap-2 ${board === "members" ? "active" : ""}`}
-            onClick={() => handleBoardChange("members")}
-          >
-            <FiUser size={14} />
-            Members
-          </button>
-          <button
-            className={`segmented-btn flex items-center gap-2 ${board === "clans" ? "active" : ""}`}
-            onClick={() => handleBoardChange("clans")}
-          >
-            <FiUsers size={14} />
-            Clans
-          </button>
+      <Podium items={topThree} type={leaderType} />
+      <div className="macos-glass p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+        <div className="relative md:col-span-2">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+          <input
+            className="field-input pl-9"
+            placeholder={leaderType === 'individual' ? "Search coders..." : "Search clans..."}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
+        <select
+          className="field-select"
+          value={filters.window}
+          onChange={(e) => setFilters((p) => ({ ...p, page: 1, window: e.target.value }))}
+        >
+          <option value="all">Globally</option>
+          <option value="30d">Monthly</option>
+          <option value="7d">Weekly</option>
+        </select>
+        <select
+          className="field-select"
+          value={filters.limit}
+          onChange={(e) => setFilters((p) => ({ ...p, page: 1, limit: Number(e.target.value) }))}
+        >
+          <option value={10}>10 / page</option>
+          <option value={20}>20 / page</option>
+          <option value={50}>50 / page</option>
+        </select>
       </div>
 
-      {/* My Rank Banner (members only) */}
-      {board === "members" && myRow ? (
-        <div className="macos-glass p-4 flex flex-wrap items-center justify-between gap-2">
-          <span className="font-semibold">Your rank on this page window:</span>
-          <span className="text-accent font-bold">
-            #{myRow.rank} - {myRow.totalPoints} pts
-          </span>
-        </div>
-      ) : null}
-
-      {/* ─── MEMBERS TABLE ─────────────────────────────────────── */}
-      {board === "members" && (
-        <Card className="p-0 overflow-hidden">
-          {activeQuery.isLoading ? (
-            <div className="p-4 space-y-3">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : visibleRows.length === 0 ? (
-            <div className="p-4">
-              <EmptyState
-                title="No rankings found"
-                description="Try another filter or search query."
-              />
-            </div>
-          ) : (
-            <>
-              {/* Desktop */}
-              <div className="hidden md:block overflow-auto">
-                <table className="responsive-table text-left">
-                  <thead>
-                    <tr className="border-b border-glass-border text-secondary text-xs uppercase tracking-wide">
-                      <th className="p-4">Rank</th>
-                      <th className="p-4">User</th>
-                      <th className="p-4 text-center">Solved</th>
-                      <th className="p-4 text-right">Points</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleRows.map((leader) => {
-                      const isMe = leader.username === user?.username;
-                      const isPodium = leader.rank <= 3;
-                      return (
-                        <tr
-                          key={`${leader._id}-${leader.rank}`}
-                          className={`border-b border-glass-border/70 ${isMe ? "bg-accent/10" : ""} ${isPodium ? "bg-white/[0.03]" : ""}`}
-                        >
-                          <td className="p-4 font-semibold">#{leader.rank}</td>
-                          <td className="p-4 font-semibold">
-                            <span className="inline-flex items-center gap-2">
-                              {isPodium ? (
-                                <FiAward className="text-yellow-400" />
-                              ) : null}
-                              {leader.username}
-                            </span>
-                            {isMe && (
-                              <span className="ml-2 text-xs px-2 py-0.5 rounded bg-accent text-white">
-                                YOU
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-4 text-center text-secondary">
-                            {leader.solvedCount}
-                          </td>
-                          <td className="p-4 text-right font-bold text-green-400">
-                            {leader.totalPoints}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile */}
-              <div className="md:hidden p-4 space-y-3">
-                {visibleRows.map((leader) => {
-                  const isMe = leader.username === user?.username;
-                  return (
-                    <div
-                      key={`${leader._id}-${leader.rank}`}
-                      className={`border border-glass-border rounded-xl p-4 ${isMe ? "bg-accent/10" : ""}`}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-bold">#{leader.rank}</span>
-                        <span className="font-bold text-green-400">
-                          {leader.totalPoints} pts
-                        </span>
-                      </div>
-                      <div className="font-semibold">
-                        {leader.username}
-                        {isMe && (
-                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-accent text-white">
-                            YOU
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-secondary text-sm">
-                        Solved: {leader.solvedCount}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </Card>
+      {myRow && leaderType === 'individual' && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="macos-glass p-4 flex flex-wrap items-center justify-between gap-2 border-accent/30 bg-accent/5"
+        >
+          <div className="flex items-center gap-3">
+             <div className="p-2 rounded-lg bg-accent/20 text-accent">
+               <FiTrendingUp />
+             </div>
+             <span className="font-semibold text-primary">Your current standing in this window</span>
+          </div>
+          <span className="text-accent font-bold text-lg">Rank #{myRow.rank} — {myRow.totalPoints} pts</span>
+        </motion.div>
       )}
 
-      {/* ─── CLANS TABLE ───────────────────────────────────────── */}
-      {board === "clans" && (
-        <Card className="p-0 overflow-hidden">
-          {activeQuery.isLoading ? (
-            <div className="p-4 space-y-3">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : visibleRows.length === 0 ? (
-            <div className="p-4">
-              <EmptyState
-                title="No clans found"
-                description="Try another filter or search query."
-              />
-            </div>
-          ) : (
-            <>
-              {/* Desktop */}
+      <Card className="p-0 overflow-hidden">
+        {(leaderboardQuery.isLoading && leaderType === 'individual') || (clanLeaderboardQuery.isLoading && leaderType === 'clans') ? (
+          <div className="p-4 space-y-3">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : visibleRows.length === 0 ? (
+          <div className="p-12 text-center">
+            <EmptyState title="No rankings found" description="Adjust your filters or try a different search." />
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={leaderType}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
               <div className="hidden md:block overflow-auto">
                 <table className="responsive-table text-left">
                   <thead>
-                    <tr className="border-b border-glass-border text-secondary text-xs uppercase tracking-wide">
-                      <th className="p-4">Rank</th>
-                      <th className="p-4">Clan</th>
-                      <th className="p-4 text-center">Members</th>
-                      <th className="p-4 text-center">Challenges Solved</th>
-                      <th className="p-4 text-right">Total Points</th>
+                    <tr className="border-b border-glass-border text-secondary text-xs uppercase tracking-widest font-bold">
+                      <th className="p-6">Rank</th>
+                      <th className="p-6">{leaderType === 'individual' ? 'Coder' : 'Clan'}</th>
+                      <th className="p-6 text-center">{leaderType === 'individual' ? 'Clan' : 'Members'}</th>
+                      <th className="p-6 text-center">Solved</th>
+                      <th className="p-6 text-right">XP Points</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleRows.map((clan, index) => {
-                      const rank = clan.rank || index + 1;
-                      const isPodium = rank <= 3;
+                    {visibleRows.map((item, index) => {
+                      const isMe = leaderType === 'individual' && item.username === user?.username;
+                      const isPodium = item.rank <= 3;
                       return (
-                        <tr
-                          key={clan._id}
-                          className={`border-b border-glass-border/70 ${isPodium ? "bg-white/[0.03]" : ""}`}
+                        <motion.tr
+                          key={item._id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className={`border-b border-glass-border/40 transition-colors hover:bg-white/[0.02] ${isMe ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
                         >
-                          <td className="p-4 font-semibold">#{rank}</td>
-                          <td className="p-4">
+                          <td className="p-6">
+                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isPodium ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary'}`}>
+                               {item.rank}
+                             </div>
+                          </td>
+                          <td className="p-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
-                                {isPodium ? (
-                                  <FiAward size={16} className="text-yellow-400" />
+                              <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent overflow-hidden">
+                                {item.profilePicture ? (
+                                   <img src={item.profilePicture} alt="" className="w-full h-full object-cover" />
                                 ) : (
-                                  <FiUsers size={14} className="text-secondary" />
+                                  (item.username || item.name)[0]
                                 )}
                               </div>
                               <div>
-                                <p className="font-semibold">{clan.name}</p>
-                                {clan.tag && (
-                                  <p className="text-secondary text-xs">[{clan.tag}]</p>
-                                )}
+                                <div className="font-bold text-primary flex items-center gap-2">
+                                  {item.username || item.name}
+                                  {isMe && <span className="text-[10px] bg-accent px-1.5 py-0.5 rounded text-white italic">YOU</span>}
+                                </div>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-center text-secondary">
-                            {clan.memberCount ?? "-"}
+                          <td className="p-6 text-center">
+                            <span className="px-2 py-1 rounded bg-glass-surface text-xs font-mono">
+                              {leaderType === 'individual' ? (item.clan || 'Solo') : item.memberCount}
+                            </span>
                           </td>
-                          <td className="p-4 text-center text-secondary">
-                            {clan.solvedCount ?? "-"}
+                          <td className="p-6 text-center text-secondary font-medium">{item.solvedCount}</td>
+                          <td className="p-6 text-right">
+                             <span className="font-black text-primary bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-500">
+                               {item.totalPoints.toLocaleString()}
+                             </span>
                           </td>
-                          <td className="p-4 text-right font-bold text-green-400">
-                            {clan.totalPoints ?? 0}
-                          </td>
-                        </tr>
+                        </motion.tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
 
-              {/* Mobile */}
-              <div className="md:hidden p-4 space-y-3">
-                {visibleRows.map((clan, index) => {
-                  const rank = clan.rank || index + 1;
-                  const isPodium = rank <= 3;
+              {/* Mobile View */}
+              <div className="md:hidden p-4 space-y-4">
+                {visibleRows.map((item) => {
+                  const isMe = leaderType === 'individual' && item.username === user?.username;
                   return (
-                    <div
-                      key={clan._id}
-                      className="border border-glass-border rounded-xl p-4"
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          {isPodium && <FiAward className="text-yellow-400" />}
-                          <span className="font-bold">#{rank}</span>
+                    <div key={item._id} className={`macos-glass p-5 border-glass-border ${isMe ? 'border-accent bg-accent/5' : ''}`}>
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl font-black text-secondary">#{item.rank}</span>
+                          <span className="font-bold text-lg">{item.username || item.name}</span>
                         </div>
-                        <span className="font-bold text-green-400">
-                          {clan.totalPoints ?? 0} pts
-                        </span>
+                        <span className="font-black text-accent">{item.totalPoints} pts</span>
                       </div>
-                      <div className="font-semibold">
-                        {clan.name}
-                        {clan.tag && (
-                          <span className="ml-2 text-xs text-secondary">[{clan.tag}]</span>
-                        )}
-                      </div>
-                      <div className="text-secondary text-sm flex gap-4 mt-1">
-                        <span>{clan.memberCount ?? "-"} members</span>
-                        <span>{clan.solvedCount ?? "-"} solved</span>
+                      <div className="flex justify-between text-sm text-secondary">
+                        <span>Solved: {item.solvedCount}</span>
+                        {leaderType === 'clans' && <span>{item.memberCount} Members</span>}
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </>
-          )}
-        </Card>
-      )}
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </Card>
+
 
       {/* Pagination */}
       <div className="macos-glass p-4 flex items-center justify-between">

@@ -8,12 +8,14 @@ import {
   FiTrendingUp,
   FiZap,
   FiArrowRight,
+  FiClock,
+  FiActivity,
 } from "react-icons/fi";
 import Card from "../components/Card";
 import SkeletonCard from "../components/SkeletonCard";
 import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
-import { USE_MOCK, mockChallenges } from "../lib/mockData";
+import { USE_MOCK, mockChallenges, mockSubmissions, mockCurrentUser } from "../lib/mockData";
 
 const MotionBlock = motion.div;
 
@@ -33,6 +35,23 @@ const Home = () => {
   });
 
   const challenges = challengesQuery.data || [];
+  
+  const submissionsQuery = useQuery({
+    queryKey: ["home-pending-tasks"],
+    queryFn: async () => {
+      if (USE_MOCK) {
+        return mockSubmissions.filter(s => 
+          s.status === 'Pending' && 
+          (s.userId._id === mockCurrentUser.id || s.userId === mockCurrentUser.id)
+        );
+      }
+      const res = await api.get("/api/submissions?status=Pending");
+      return res.data.data || [];
+    },
+    enabled: isAuthenticated,
+  });
+
+  const pendingTasks = submissionsQuery.data || [];
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-app text-primary font-sans selection:bg-accent selection:text-white">
@@ -118,27 +137,79 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Available Missions – only visible when authenticated */}
+      {/* Authenticated User Landing Sections */}
       {isAuthenticated && (
         <div className="relative z-10 px-6 py-16">
-          <div className="max-w-6xl mx-auto space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold">
-                  Available Missions
-                </h2>
-                <p className="text-secondary mt-1">
-                  Jump into a challenge — your next rank-up awaits.
-                </p>
+          <div className="max-w-6xl mx-auto space-y-16">
+            {/* Pending Tasks Section */}
+            {pendingTasks.length > 0 && (
+              <div className="space-y-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
+                    <FiClock className="text-xl text-yellow-500 animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold">Pending Tasks</h2>
+                    <p className="text-secondary text-sm">Missions currently under review. Stay sharp.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pendingTasks.map((task, index) => (
+                    <MotionBlock
+                      key={task._id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="group"
+                    >
+                      <Link to={`/submission/${task._id}`} className="block">
+                        <div className="macos-glass p-5 border-yellow-500/20 bg-yellow-500/5 hover:border-yellow-500/50 transition-all">
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">
+                              Under Review
+                            </span>
+                            <span className="text-secondary text-[10px]">
+                              {new Date(task.submittedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-lg group-hover:text-yellow-500 transition-colors">
+                            {task.challengeId?.title || "Unknown Challenge"}
+                          </h3>
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-secondary">
+                              <FiActivity className="text-accent" />
+                              <span>View Status</span>
+                            </div>
+                            <FiArrowRight className="text-secondary group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                      </Link>
+                    </MotionBlock>
+                  ))}
+                </div>
               </div>
-              <Link
-                to="/dashboard"
-                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent/10 text-accent font-semibold text-sm hover:bg-accent/20 transition-all"
-              >
-                View All Missions
-                <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
+            )}
+
+            {/* Available Missions Section */}
+            <div className="space-y-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-3xl md:text-4xl font-bold">
+                    Available Missions
+                  </h2>
+                  <p className="text-secondary mt-1">
+                    Jump into a challenge — your next rank-up awaits.
+                  </p>
+                </div>
+                <Link
+                  to="/missions"
+                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent/10 text-accent font-semibold text-sm hover:bg-accent/20 transition-all"
+                >
+                  View All Missions
+                  <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
 
             {challengesQuery.isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -209,6 +280,7 @@ const Home = () => {
             )}
           </div>
         </div>
+      </div>
       )}
 
       {/*Stats Strip */}
@@ -285,7 +357,7 @@ const Home = () => {
       </div> */}
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 py-10 text-center">
+      <footer className="relative z-10 border-t border-glass-border/40 py-8 text-center w-full mt-auto bg-black/5">
         <p className="text-sm text-secondary">
           Copyright 2026 Algorithm Arena. Built for{" "}
           <span className="text-primary font-semibold">

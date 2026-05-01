@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import LoadingScreen from './components/LoadingScreen';
 import ThemeToggle from './components/ThemeToggle';
+import NotificationListener from './components/NotificationListener';
 import { useAuth } from './context/useAuth';
 
 const Home = lazy(() => import('./pages/Home'));
@@ -15,8 +16,11 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ChallengeDetails = lazy(() => import('./pages/ChallengeDetails'));
 const SubmissionDetails = lazy(() => import('./pages/SubmissionDetails'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Clans = lazy(() => import('./pages/Clans'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const Missions = lazy(() => import('./pages/Missions'));
+const PendingTasks = lazy(() => import('./pages/PendingTasks'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function App() {
@@ -35,6 +39,7 @@ function App() {
       <div className="fixed bottom-6 right-6 z-[60]">
         <ThemeToggle />
       </div>
+      <NotificationListener />
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -50,9 +55,12 @@ function App() {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/clans" element={<Clans />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/challenge/:id" element={<ChallengeDetails />} />
             <Route path="/submission/:id" element={<SubmissionDetails />} />
+            <Route path="/missions" element={<Missions />} />
+            <Route path="/pending-tasks" element={<PendingTasks />} />
             <Route
               path="/admin"
               element={

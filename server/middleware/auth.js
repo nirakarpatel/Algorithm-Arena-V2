@@ -31,7 +31,7 @@ exports.protect = async (req, res, next) => {
 
 // Guard: Admin only access
 exports.admin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'super-admin')) {
     return next();
   }
 

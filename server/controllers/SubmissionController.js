@@ -273,6 +273,13 @@ const updateSubmissionStatus = async (req, res, next) => {
       },
     });
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('leaderboard_update', {
+      submissionId: submission._id,
+      userId: submission.userId?._id,
+      status: submission.status,
+    });
+
     return sendSuccess(res, {
       data: submission,
       message: 'Submission status updated successfully',

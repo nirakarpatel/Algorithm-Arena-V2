@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser } from 'react-icons/fi';
+import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser, FiX } from 'react-icons/fi';
+import { clsx } from 'clsx';
 import Card from '../components/Card';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
-import { USE_MOCK, mockChallenges, mockClanMembers, filterSubmissions } from '../lib/mockData';
+import { USE_MOCK, mockChallenges, filterSubmissions, mockUsers } from '../lib/mockData';
+
+const defaultClanForm = { name: '', tag: '', description: '' };
 
 const mockDelay = () => new Promise((r) => setTimeout(r, 400));
 
@@ -27,10 +30,12 @@ const AdminPanel = () => {
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Members tab state
-  const [memberSearch, setMemberSearch] = useState('');
-  const [memberRole, setMemberRole] = useState('member');
-  const [addingMember, setAddingMember] = useState(false);
+  // --- Clan state ---
+  const [clanForm, setClanForm] = useState(defaultClanForm);
+  const [editingClan, setEditingClan] = useState(null);
+  const [deleteClanTarget, setDeleteClanTarget] = useState(null);
+  const [clanSearch, setClanSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
 
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
@@ -69,20 +74,58 @@ const AdminPanel = () => {
     queryKey: ['admin-challenges'],
     enabled: activeTab === 'manage' || activeTab === 'review',
     queryFn: async () => {
-      if (USE_MOCK) return mockChallenges;
-      const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
-      return res.data.data || [];
+      try {
+        const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
+        const data = res.data.data || [];
+        return data.length > 0 ? data : mockChallenges;
+      } catch {
+        return mockChallenges;
+      }
     },
   });
 
-  // Members query
-  const membersQuery = useQuery({
-    queryKey: ['clan-members'],
-    enabled: activeTab === 'members',
+  const mockAdminClans = [
+    {
+      _id: 'clan_01', name: 'Alpha Coders', tag: 'AC', description: 'The elite squad of algorithm masters.',
+      chief: { _id: 'u_001', username: 'Nirakar' },
+      members: [
+        { _id: 'u_001', username: 'Nirakar' },
+        { _id: 'u_002', username: 'Ashutosh' },
+        { _id: 'u_004', username: 'Priyanka' },
+        { _id: 'u_006', username: 'recursionKing' },
+      ],
+    },
+    {
+      _id: 'clan_02', name: 'Byte Knights', tag: 'BK', description: 'Honour. Code. Conquer.',
+      chief: { _id: 'u_003', username: 'binaryBoss' },
+      members: [
+        { _id: 'u_003', username: 'binaryBoss' },
+        { _id: 'u_005', username: 'stackOverflow_fan' },
+        { _id: 'u_007', username: 'dpWizard' },
+      ],
+    },
+    {
+      _id: 'clan_03', name: 'Stack Overlords', tag: 'SO', description: 'We overflow — with solutions.',
+      chief: { _id: 'u_008', username: 'Soumya' },
+      members: [
+        { _id: 'u_008', username: 'Soumya' },
+        { _id: 'u_009', username: 'bitManipulator' },
+        { _id: 'u_010', username: 'heapHero' },
+      ],
+    },
+  ];
+
+  const clansQuery = useQuery({
+    queryKey: ['admin-clans'],
+    enabled: activeTab === 'clans',
     queryFn: async () => {
-      if (USE_MOCK) return mockClanMembers;
-      const res = await api.get('/api/clan/members');
-      return res.data.data || [];
+      try {
+        const res = await api.get('/api/clans');
+        const data = res.data.data || [];
+        return data.length > 0 ? data : mockAdminClans;
+      } catch {
+        return mockAdminClans;
+      }
     },
   });
 
@@ -210,6 +253,100 @@ const AdminPanel = () => {
     }
   };
 
+  // --- Clan handlers ---
+  const onCreateClan = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/api/clans', clanForm);
+      toast.success('Clan created');
+      setClanForm(defaultClanForm);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create clan');
+    }
+  };
+
+  const onUpdateClan = async () => {
+    if (!editingClan) return;
+    try {
+      await api.put(`/api/clans/${editingClan._id}`, {
+        name: editingClan.name,
+        tag: editingClan.tag,
+        description: editingClan.description,
+        chiefId: editingClan.chief?._id || editingClan.chief, // Handle both object and ID
+      });
+      toast.success('Clan updated');
+      setEditingClan(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update clan');
+    }
+  };
+
+  const onDeleteClan = async () => {
+    if (!deleteClanTarget) return;
+    try {
+      await api.delete(`/api/clans/${deleteClanTarget._id}`);
+      toast.success('Clan deleted');
+      setDeleteClanTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete clan');
+    }
+  };
+
+  const onAssignChief = async (clanId, userId) => {
+    try {
+      await api.put(`/api/clans/${clanId}/chief`, { userId });
+      toast.success('Chief assigned');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to assign chief');
+    }
+  };
+
+  const onRemoveMember = async (clanId, userId) => {
+    try {
+      await api.delete(`/api/clans/${clanId}/members/${userId}`);
+      toast.success('Member removed');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
+  const onApproveRequest = async (clanId, userId) => {
+    try {
+      await api.post(`/api/clans/${clanId}/approve/${userId}`);
+      toast.success('Request approved');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to approve request');
+    }
+  };
+
+  const onRejectRequest = async (clanId, userId) => {
+    try {
+      await api.post(`/api/clans/${clanId}/reject/${userId}`);
+      toast.success('Request rejected');
+      queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+      queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reject request');
+    }
+  };
+
+  const onUpdateUserRole = async (userId, newRole) => {
+    try {
+      await api.put(`/api/users/${userId}/role`, { role: newRole });
+      toast.success('Role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update role');
+    }
+  };
+
   const submissions = submissionsQuery.data?.data || [];
   const reviewMeta = submissionsQuery.data?.meta || {};
 
@@ -234,8 +371,14 @@ const AdminPanel = () => {
         <button className={`px-4 py-2 rounded-lg ${activeTab === 'manage' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('manage')}>
           Manage Challenges
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'members' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('members')}>
-          Members
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'permissions' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('permissions')}>
+          Permissions
+        </button>
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'clans' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('clans')}>
+          Manage Clans
+        </button>
+        <button className={`px-4 py-2 rounded-lg ${activeTab === 'notices' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('notices')}>
+          Global Notice
         </button>
       </div>
 
@@ -495,6 +638,231 @@ const AdminPanel = () => {
         </Card>
       )}
 
+      {activeTab === 'clans' && (
+        <div className="space-y-6">
+          <Card>
+            <form onSubmit={onCreateClan} className="space-y-4 max-w-2xl">
+              <h2 className="text-section-title font-bold">Create Clan</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="field-label">Clan Name</label>
+                  <input className="field-input" value={clanForm.name} onChange={(e) => setClanForm((p) => ({ ...p, name: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="field-label">Tag (2-5 chars)</label>
+                  <input className="field-input" value={clanForm.tag} maxLength={5} onChange={(e) => setClanForm((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} required />
+                </div>
+                <div>
+                  <label className="field-label">Description</label>
+                  <input className="field-input" value={clanForm.description} onChange={(e) => setClanForm((p) => ({ ...p, description: e.target.value }))} />
+                </div>
+              </div>
+              <button className="btn-primary" type="submit">Create Clan</button>
+            </form>
+          </Card>
+
+          <Card>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <h2 className="text-section-title font-bold">Manage Clans</h2>
+              <div className="relative w-full md:w-64">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  className="field-input pl-10 py-2"
+                  placeholder="Search clans or tags..."
+                  value={clanSearch}
+                  onChange={(e) => setClanSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {clansQuery.isLoading ? (
+              <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
+            ) : (clansQuery.data || []).filter(c => 
+              c.name.toLowerCase().includes(clanSearch.toLowerCase()) || 
+              c.tag.toLowerCase().includes(clanSearch.toLowerCase())
+            ).length === 0 ? (
+              <EmptyState title="No clans found" description={clanSearch ? "No clans match your search." : "Create your first clan above."} />
+            ) : (
+              <div className="space-y-4">
+                {(clansQuery.data || []).filter(c => 
+                  c.name.toLowerCase().includes(clanSearch.toLowerCase()) || 
+                  c.tag.toLowerCase().includes(clanSearch.toLowerCase())
+                ).map((clan) => (
+                  <div key={clan._id} className="border border-glass-border rounded-xl p-5 space-y-4">
+                    <div className="flex flex-wrap gap-3 justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-lg">{clan.name} <span className="text-accent text-sm font-mono">[{clan.tag}]</span></h3>
+                        <p className="text-secondary text-sm">{clan.description || 'No description'}</p>
+                        <p className="text-xs text-tertiary mt-1">Chief: {clan.chief?.username || 'None'} · {clan.members?.length || 0} members</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button className="btn-secondary" onClick={() => setEditingClan({ ...clan })}>Edit</button>
+                        <button className="btn-secondary" onClick={() => setDeleteClanTarget(clan)}>Delete</button>
+                      </div>
+                    </div>
+                    {clan.members && clan.members.length > 0 && (
+                      <div className="border-t border-glass-border/40 pt-3">
+                        <p className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Roster</p>
+                        <div className="flex flex-wrap gap-2">
+                          {clan.members.map((member) => (
+                            <div key={member._id} className="flex items-center gap-2 bg-glass-surface px-3 py-1.5 rounded-lg text-sm border border-glass-border/30">
+                              <span className="font-medium">{member.username}</span>
+                              {clan.chief?._id === member._id ? (
+                                <span className="text-[10px] bg-accent/20 text-accent px-1.5 rounded font-bold">CHIEF</span>
+                              ) : (
+                                <button className="text-[10px] bg-yellow-500/20 text-yellow-400 px-1.5 rounded font-bold hover:bg-yellow-500/40 transition-colors" onClick={() => onAssignChief(clan._id, member._id)} title="Promote to Chief">
+                                  MAKE CHIEF
+                                </button>
+                              )}
+                              <button className="text-[10px] text-red-400 hover:text-red-500 transition-colors ml-1 font-bold" onClick={() => onRemoveMember(clan._id, member._id)} title="Remove member">×</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {clan.requests && clan.requests.length > 0 && (
+                      <div className="border-t border-glass-border/40 pt-3 mt-3">
+                        <p className="text-xs font-bold text-yellow-500 uppercase tracking-widest mb-2">Pending Requests</p>
+                        <div className="flex flex-wrap gap-2">
+                          {clan.requests.map((reqUser) => (
+                            <div key={reqUser._id} className="flex items-center gap-2 bg-yellow-500/10 px-3 py-1.5 rounded-lg text-sm border border-yellow-500/30 text-yellow-400">
+                              <span className="font-medium">{reqUser.username}</span>
+                              <div className="flex gap-1 ml-1">
+                                <button className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-bold hover:bg-green-500/30 transition-colors flex items-center justify-center" onClick={() => onApproveRequest(clan._id, reqUser._id)} title="Approve">
+                                  ✓
+                                </button>
+                                <button className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-bold hover:bg-red-500/30 transition-colors flex items-center justify-center" onClick={() => onRejectRequest(clan._id, reqUser._id)} title="Reject">
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'permissions' && (
+        <Card>
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+              <h2 className="text-section-title font-bold">Manage Permissions</h2>
+              <div className="relative w-full md:w-64">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  className="field-input pl-10 py-2"
+                  placeholder="Search members..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            {usersQuery.isLoading ? (
+              <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
+            ) : (usersQuery.data || []).filter(u => 
+              u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
+              (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase()))
+            ).length === 0 ? (
+              <EmptyState title="No users found" description={userSearch ? "No members match your search." : "There are no users registered."} />
+            ) : (
+              <div className="space-y-4">
+                {(usersQuery.data || []).filter(u => 
+                  u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
+                  (u.email && u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                ).map((user) => (
+                  <div key={user._id} className="border border-glass-border rounded-xl p-4 flex flex-wrap gap-3 justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                        <FiUser size={18} className="text-accent" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-primary">{user.username}</h3>
+                        <p className="text-secondary text-xs">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <select
+                        className="field-select text-sm py-2 min-w-[140px]"
+                        value={user.role}
+                        onChange={(e) => onUpdateUserRole(user._id, e.target.value)}
+                      >
+                        <option value="user">Member</option>
+                        <option value="moderator">Moderator</option>
+                        <option value="admin">Admin</option>
+                        <option value="super-admin">Super Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === 'notices' && (
+        <Card>
+          <div className="space-y-6 max-w-2xl">
+            <h2 className="text-section-title font-bold">Manage Global Notice</h2>
+            <p className="text-secondary text-sm">
+              The global notice appears at the top of the notice board for <strong>all clans</strong>. 
+              Only one global notice can be active at a time.
+            </p>
+            
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const content = e.target.content.value;
+                if (!content.trim()) return;
+                try {
+                  await api.post('/api/notices', { content });
+                  toast.success('Global notice published!');
+                  e.target.reset();
+                  queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                } catch (err) {
+                  toast.error('Failed to publish global notice.');
+                }
+              }} 
+              className="space-y-4"
+            >
+              <div>
+                <label className="field-label">Notice Content</label>
+                <textarea 
+                  name="content"
+                  className="field-textarea min-h-[120px]" 
+                  placeholder="Type the global announcement here..."
+                  required
+                />
+              </div>
+              <div className="flex gap-2">
+                <button className="btn-primary" type="submit">Publish to All Clans</button>
+                <button 
+                  type="button"
+                  className="btn-secondary text-red-400 hover:border-red-500/50"
+                  onClick={async () => {
+                    try {
+                      await api.delete('/api/notices');
+                      toast.success('Global notice removed');
+                      queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                    } catch (err) {
+                      toast.error('Failed to delete notice.');
+                    }
+                  }}
+                >
+                  Clear Global Notice
+                </button>
+              </div>
+            </form>
+          </div>
+        </Card>
+      )}
+
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete challenge"
@@ -502,6 +870,15 @@ const AdminPanel = () => {
         confirmLabel="Delete"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={onDeleteChallenge}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteClanTarget)}
+        title="Delete clan"
+        description={`This will permanently remove clan "${deleteClanTarget?.name || ''}". All members will be unassigned.`}
+        confirmLabel="Delete"
+        onCancel={() => setDeleteClanTarget(null)}
+        onConfirm={onDeleteClan}
       />
 
       {editingChallenge && (
@@ -563,73 +940,44 @@ const AdminPanel = () => {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <button className="btn-secondary" onClick={() => setEditingChallenge(null)}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={onUpdateChallenge}>
-                Save Changes
-              </button>
+              <button className="btn-secondary" onClick={() => setEditingChallenge(null)}>Cancel</button>
+              <button className="btn-primary" onClick={onUpdateChallenge}>Save Changes</button>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'members' && (
-        <Card>
-          <div className="space-y-6">
-            <h2 className="text-section-title font-bold">Clan Members</h2>
-
-            {/* Add Member Section */}
-            <div className="border border-glass-border rounded-xl p-4 space-y-3">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <FiUserPlus size={16} className="text-accent" />
-                Add New Member
-              </h3>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
-                  <input
-                    name="memberSearch"
-                    className="field-input pl-9"
-                    placeholder="Username or email"
-                    value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
+      {editingClan && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="macos-glass w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-glass-border/30 flex justify-between items-center bg-accent/5">
+              <h3 className="text-xl font-bold">Edit Clan Details</h3>
+              <button onClick={() => setEditingClan(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="field-label text-xs uppercase tracking-wider opacity-70">Clan Name</label>
+                  <input 
+                    className="field-input bg-white/5 border-glass-border/40 focus:border-accent/50" 
+                    value={editingClan.name} 
+                    onChange={(e) => setEditingClan((p) => ({ ...p, name: e.target.value }))} 
                   />
                 </div>
-                <select
-                  name="memberRole"
-                  className="field-select sm:w-40"
-                  value={memberRole}
-                  onChange={(e) => setMemberRole(e.target.value)}
-                >
-                  <option value="member">Member</option>
-                  <option value="moderator">Moderator</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <button
-                  className="btn-primary flex items-center justify-center gap-2 sm:w-auto"
-                  onClick={handleAddMember}
-                  disabled={addingMember}
-                >
-                  <FiUserPlus size={14} />
-                  {addingMember ? 'Adding...' : 'Add'}
-                </button>
+                <div className="space-y-2">
+                  <label className="field-label text-xs uppercase tracking-wider opacity-70">Tag (Identifier)</label>
+                  <input 
+                    className="field-input bg-white/5 border-glass-border/40 focus:border-accent/50 font-mono" 
+                    value={editingClan.tag} 
+                    maxLength={5} 
+                    onChange={(e) => setEditingClan((p) => ({ ...p, tag: e.target.value.toUpperCase() }))} 
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Members List */}
-            {membersQuery.isLoading ? (
-              <div className="space-y-3">
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </div>
-            ) : !membersQuery.data?.length ? (
-              <EmptyState
-                title="No members yet"
-                description="Add members to your clan using the form above."
-              />
-            ) : (
               <div className="space-y-2">
                 {membersQuery.data.map((member) => (
                   <div
@@ -671,10 +1019,55 @@ const AdminPanel = () => {
                   </div>
                 ))}
               </div>
-            )}
+
+              <div className="space-y-3 pt-2 border-t border-glass-border/20">
+                <label className="field-label text-xs uppercase tracking-wider opacity-70 flex items-center gap-2">
+                  <FiShield className="text-accent" /> Assign Clan Chief
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {editingClan.members?.map((member) => (
+                    <button
+                      key={member._id}
+                      onClick={() => setEditingClan(p => ({ ...p, chief: member }))}
+                      className={clsx(
+                        "flex items-center justify-between p-3 rounded-xl border transition-all duration-200 text-sm",
+                        (editingClan.chief?._id === member._id || editingClan.chief === member._id)
+                          ? "bg-accent/10 border-accent/50 text-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]"
+                          : "bg-white/5 border-glass-border/30 hover:border-glass-border text-secondary"
+                      )}
+                    >
+                      <span className="font-medium">{member.username}</span>
+                      {(editingClan.chief?._id === member._id || editingClan.chief === member._id) && (
+                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                      )}
+                    </button>
+                  ))}
+                  {(!editingClan.members || editingClan.members.length === 0) && (
+                    <p className="text-xs text-tertiary italic col-span-2 py-2">No members available to promote.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-glass-border/30 bg-black/10 flex justify-end gap-3">
+              <button 
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-glass-border hover:bg-white/5 transition-all" 
+                onClick={() => setEditingClan(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-accent text-white hover:opacity-90 shadow-lg shadow-accent/20 transition-all active:scale-95" 
+                onClick={onUpdateClan}
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
-        </Card>
+        </div>
       )}
+
+
     </div>
   );
 };

@@ -5,11 +5,15 @@ import {
   FiGrid,
   FiAward,
   FiUser,
+  FiUsers,
   FiLogOut,
   FiMenu,
   FiX,
   FiShield,
+  FiSettings,
+  FiChevronDown
 } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { useAuth } from "../context/useAuth";
 import ThemeToggle from "./ThemeToggle";
@@ -17,16 +21,17 @@ import ThemeToggle from "./ThemeToggle";
 const Navbar = ({ onLogout }) => {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { role } = useAuth();
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const { role, user } = useAuth();
 
   const navItems = [
     { name: "Mission Control", path: "/dashboard", icon: FiGrid },
     { name: "Leaderboard", path: "/leaderboard", icon: FiAward },
-    { name: "Profile", path: "/profile", icon: FiUser },
+    { name: "Clan", path: "/clans", icon: FiUsers },
   ];
 
-  if (role === "admin") {
-    navItems.push({ name: "Admin", path: "/admin", icon: FiShield });
+  if (role === 'admin' || role === 'super-admin') {
+    navItems.push({ name: 'Admin', path: '/admin', icon: FiShield });
   }
 
   const closeMenu = () => setMenuOpen(false);
@@ -75,13 +80,89 @@ const Navbar = ({ onLogout }) => {
             </div>
 
             <div className="flex items-center gap-2 md:gap-4">
-              <button
-                onClick={onLogout}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-all duration-200"
-              >
-                <FiLogOut className="text-lg" />
-                <span>Log out</span>
-              </button>
+              <div className="relative">
+                 <button 
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="hidden md:flex items-center gap-3 group focus:outline-none py-1 px-2 rounded-2xl hover:bg-white/5 transition-all"
+                 >
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-lg shadow-accent/20">
+                    {user?.profilePicture ? (
+                      <img src={user.profilePicture} alt="Avatar" className="w-full h-full rounded-[9px] object-cover" />
+                    ) : (
+                      <div className="w-full h-full rounded-[9px] bg-[#1a1a1c] flex items-center justify-center text-sm text-white font-black uppercase">
+                        {user?.username?.[0] || 'U'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors">Account</span>
+                    <FiChevronDown className={clsx("text-secondary text-sm transition-transform duration-300", userDropdownOpen && "rotate-180")} />
+                  </div>
+                 </button>
+
+                 <AnimatePresence>
+                   {userDropdownOpen && (
+                     <>
+                       <div 
+                         className="fixed inset-0 z-40" 
+                         onClick={() => setUserDropdownOpen(false)} 
+                       />
+                       <motion.div
+                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                         animate={{ opacity: 1, y: 0, scale: 1 }}
+                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                         className="absolute right-0 mt-3 w-64 macos-glass p-2 z-50 border-accent/20 shadow-2xl origin-top-right overflow-hidden"
+                       >
+                         <div className="px-4 py-3 bg-white/[0.03] rounded-xl mb-2 border border-white/5">
+                            <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-1">Signed in as</p>
+                            <p className="text-sm font-bold text-primary truncate">{user?.username}</p>
+                            <p className="text-[10px] text-tertiary truncate">{user?.email || 'Authenticated User'}</p>
+                         </div>
+                         
+                         <div className="space-y-1">
+                           <Link 
+                             to="/profile" 
+                             onClick={() => setUserDropdownOpen(false)}
+                             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-white/5 transition-all group/item"
+                           >
+                             <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center group-hover/item:bg-accent/20 transition-colors">
+                               <FiUser className="text-accent" />
+                             </div>
+                             <span>My Profile</span>
+                           </Link>
+
+                           <Link 
+                             to="/settings" 
+                             onClick={() => setUserDropdownOpen(false)}
+                             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-white/5 transition-all group/item"
+                           >
+                             <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover/item:bg-blue-500/20 transition-colors">
+                               <FiSettings className="text-blue-400" />
+                             </div>
+                             <span>Settings</span>
+                           </Link>
+                         </div>
+
+                         <div className="mt-2 pt-2 border-t border-white/5">
+                           <button 
+                             onClick={() => {
+                               setUserDropdownOpen(false);
+                               onLogout();
+                             }}
+                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-all group/logout"
+                           >
+                             <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center group-hover/logout:bg-red-500/20 transition-colors">
+                               <FiLogOut />
+                             </div>
+                             <span>Sign Out</span>
+                           </button>
+                         </div>
+                       </motion.div>
+                     </>
+                   )}
+                 </AnimatePresence>
+              </div>
+
               <button
                 className="md:hidden p-2 rounded-lg border border-glass-border text-primary"
                 onClick={() => setMenuOpen((prev) => !prev)}
