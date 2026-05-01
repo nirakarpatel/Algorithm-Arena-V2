@@ -359,6 +359,7 @@ const ChallengeDetails = () => {
             </div>
             <div className="flex items-center gap-2">
               <select
+                name="submissionLanguage"
                 className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
@@ -374,6 +375,7 @@ const ChallengeDetails = () => {
           {/* Code Textarea */}
           <div className="flex-1 min-h-0 relative flex flex-col">
             <textarea
+              name="submissionCode"
               className="flex-1 w-full bg-transparent resize-none p-4 font-mono text-sm leading-relaxed text-primary/90 placeholder-white/20 focus:outline-none"
               placeholder="// Write your solution here..."
               value={codeSnippet}
@@ -418,6 +420,7 @@ const ChallengeDetails = () => {
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 flex-1 focus-within:border-accent transition-colors">
                 <FiGithub size={14} className="text-secondary shrink-0" />
                 <input
+                  name="submissionRepositoryUrl"
                   type="text"
                   placeholder="GitHub repository URL (optional)"
                   className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"

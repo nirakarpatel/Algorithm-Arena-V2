@@ -130,6 +130,7 @@ const Profile = () => {
         <div className="flex flex-wrap justify-between gap-3 mb-4">
           <h2 className="text-section-title font-bold">Recent Activity</h2>
           <input
+            name="activitySearch"
             className="field-input md:max-w-sm"
             placeholder="Search by challenge title"
             value={activityQuery}

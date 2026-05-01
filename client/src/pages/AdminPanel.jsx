@@ -215,11 +215,12 @@ const AdminPanel = () => {
             <h2 className="text-section-title font-bold">Create Challenge</h2>
             <div>
               <label className="field-label">Title</label>
-              <input className="field-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
+              <input name="challengeTitle" className="field-input" value={createForm.title} onChange={(e) => setCreateForm((p) => ({ ...p, title: e.target.value }))} required />
             </div>
             <div>
               <label className="field-label">Description</label>
               <textarea
+                name="challengeDescription"
                 className="field-textarea"
                 value={createForm.description}
                 onChange={(e) => setCreateForm((p) => ({ ...p, description: e.target.value }))}
@@ -229,6 +230,7 @@ const AdminPanel = () => {
             <div>
               <label className="field-label">Original Question Link</label>
               <input
+                name="challengeLink"
                 className="field-input"
                 type="url"
                 placeholder="https://leetcode.com/problems/..."
@@ -240,6 +242,7 @@ const AdminPanel = () => {
               <div>
                 <label className="field-label">Difficulty</label>
                 <select
+                  name="challengeDifficulty"
                   className="field-select"
                   value={createForm.difficulty}
                   onChange={(e) => setCreateForm((p) => ({ ...p, difficulty: e.target.value }))}
@@ -252,6 +255,7 @@ const AdminPanel = () => {
               <div>
                 <label className="field-label">Points</label>
                 <input
+                  name="challengePoints"
                   className="field-input"
                   type="number"
                   min="1"
@@ -261,7 +265,7 @@ const AdminPanel = () => {
               </div>
               <div>
                 <label className="field-label">Category</label>
-                <input className="field-input" value={createForm.category} onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value }))} />
+                <input name="challengeCategory" className="field-input" value={createForm.category} onChange={(e) => setCreateForm((p) => ({ ...p, category: e.target.value }))} />
               </div>
             </div>
             <button className="btn-primary" type="submit">
@@ -278,6 +282,7 @@ const AdminPanel = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <select
+                name="reviewStatus"
                 className="field-select"
                 value={reviewFilters.status}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, status: e.target.value }))}
@@ -287,6 +292,7 @@ const AdminPanel = () => {
                 <option value="Rejected">Rejected</option>
               </select>
               <select
+                name="reviewChallenge"
                 className="field-select"
                 value={reviewFilters.challengeId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, challengeId: e.target.value }))}
@@ -299,12 +305,14 @@ const AdminPanel = () => {
                 ))}
               </select>
               <input
+                name="reviewUserId"
                 className="field-input"
                 placeholder="User ID (24 chars)"
                 value={reviewFilters.userId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
               />
               <input
+                name="reviewFromDate"
                 className="field-input"
                 type="date"
                 value={reviewFilters.from}
@@ -312,6 +320,7 @@ const AdminPanel = () => {
                 aria-label="From date"
               />
               <input
+                name="reviewToDate"
                 className="field-input"
                 type="date"
                 value={reviewFilters.to}
@@ -319,6 +328,7 @@ const AdminPanel = () => {
                 aria-label="To date"
               />
               <select
+                name="reviewPageSize"
                 className="field-select"
                 value={reviewFilters.limit}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, limit: Number(e.target.value) }))}
@@ -472,6 +482,7 @@ const AdminPanel = () => {
             <div>
               <label className="field-label">Title</label>
               <input
+                name="editChallengeTitle"
                 className="field-input"
                 value={editingChallenge.title}
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, title: e.target.value }))}
@@ -480,6 +491,7 @@ const AdminPanel = () => {
             <div>
               <label className="field-label">Description</label>
               <textarea
+                name="editChallengeDescription"
                 className="field-textarea"
                 value={editingChallenge.description}
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, description: e.target.value }))}
@@ -488,6 +500,7 @@ const AdminPanel = () => {
             <div>
               <label className="field-label">Original Question Link</label>
               <input
+                name="editChallengeLink"
                 className="field-input"
                 type="url"
                 placeholder="https://leetcode.com/problems/..."
@@ -497,6 +510,7 @@ const AdminPanel = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <select
+                name="editChallengeDifficulty"
                 className="field-select"
                 value={editingChallenge.difficulty}
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, difficulty: e.target.value }))}
@@ -506,12 +520,14 @@ const AdminPanel = () => {
                 <option>Hard</option>
               </select>
               <input
+                name="editChallengePoints"
                 className="field-input"
                 type="number"
                 value={editingChallenge.points}
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, points: Number(e.target.value) }))}
               />
               <input
+                name="editChallengeCategory"
                 className="field-input"
                 value={editingChallenge.category}
                 onChange={(e) => setEditingChallenge((p) => ({ ...p, category: e.target.value }))}
@@ -544,6 +560,7 @@ const AdminPanel = () => {
                 <div className="flex-1 relative">
                   <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
                   <input
+                    name="memberSearch"
                     className="field-input pl-9"
                     placeholder="Username or email"
                     value={memberSearch}
@@ -551,6 +568,7 @@ const AdminPanel = () => {
                   />
                 </div>
                 <select
+                  name="memberRole"
                   className="field-select sm:w-40"
                   value={memberRole}
                   onChange={(e) => setMemberRole(e.target.value)}
@@ -604,6 +622,7 @@ const AdminPanel = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <select
+                        name={`memberRole-${member._id}`}
                         className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
                         value={member.role}
                         onChange={(e) => handleUpdateMemberRole(member._id, e.target.value)}

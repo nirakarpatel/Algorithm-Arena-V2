@@ -107,6 +107,11 @@ The backend is partially modularized into domain services:
 - The route is intentionally registered before the backend middleware stack so it returns immediately without auth, rate limiting, request logging, or request-body parsing.
 - GitHub Actions keepalive automation lives at `.github/workflows/render-keepalive.yml` and pings `https://algorithm-arena-v2.onrender.com/ping` every 10 minutes with `workflow_dispatch` enabled for manual testing.
 
+### SPA Routing
+- The frontend uses `BrowserRouter`, so direct requests to routes like `/dashboard` or `/profile` require the host to return the SPA entrypoint instead of a raw 404.
+- `client/public/404.html` now captures deep-link refreshes on static hosts and redirects them back into the React app.
+- For a Render Static Site, also configure a rewrite rule in the Render Dashboard so client-side routes resolve to `/index.html`. Render documents static-site rewrites here: `https://render.com/docs/redirects-rewrites`.
+
 ## Core Data Model And Public Interfaces
 ### Primary Data Models
 - `User`: identity, legacy role, clan membership, role assignments, permission overrides

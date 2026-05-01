@@ -96,6 +96,7 @@ const Leaderboard = () => {
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
               <input
+                name="leaderboardSearch"
                 className="field-input !pl-9 min-w-56"
                 placeholder={board === "members" ? "Search username" : "Search clan name"}
                 value={search}
@@ -103,6 +104,7 @@ const Leaderboard = () => {
               />
             </div>
             <select
+              name="leaderboardWindow"
               className="field-select"
               value={filters.window}
               onChange={(e) =>
@@ -115,6 +117,7 @@ const Leaderboard = () => {
               <option value="7d">Last 7 Days</option>
             </select>
             <select
+              name="leaderboardLimit"
               className="field-select"
               value={filters.limit}
               onChange={(e) =>
