@@ -84,17 +84,20 @@ const mockClans = [
 ];
 
 /* ─── Stat Card for the Clan Dashboard ────────────────────── */
-const StatCard = ({ icon: Icon, label, value, color }) => (
-  <div className="macos-glass p-5 flex items-center gap-4 group hover:border-accent/40 transition-all">
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-      <Icon size={22} />
+const StatCard = ({ icon, label, value, color }) => {
+  const IconComponent = icon;
+  return (
+    <div className="macos-glass p-5 flex items-center gap-4 group hover:border-accent/40 transition-all">
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+        <IconComponent size={22} />
+      </div>
+      <div>
+        <p className="text-xs text-secondary uppercase tracking-widest font-bold">{label}</p>
+        <p className="text-2xl font-black text-primary">{value}</p>
+      </div>
     </div>
-    <div>
-      <p className="text-xs text-secondary uppercase tracking-widest font-bold">{label}</p>
-      <p className="text-2xl font-black text-primary">{value}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
@@ -465,6 +468,7 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
    MAIN CLANS PAGE
    ═══════════════════════════════════════════════════════════════ */
 const Clans = () => {
+  const MotionDiv = motion.div;
   const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -632,7 +636,7 @@ const Clans = () => {
       await api.post(`/api/clans/${myClan._id}/notices`, { notice });
       toast.success('Notice posted!');
       queryClient.invalidateQueries({ queryKey: ['clans-list'] });
-    } catch (err) {
+    } catch {
       toast.error('Failed to post notice.');
     }
   };
@@ -657,7 +661,7 @@ const Clans = () => {
       await api.delete(`/api/clans/${myClan._id}/notices/${index}`);
       toast.success('Notice removed!');
       queryClient.invalidateQueries({ queryKey: ['clans-list'] });
-    } catch (err) {
+    } catch {
       toast.error('Failed to remove notice.');
     }
   };
@@ -671,7 +675,7 @@ const Clans = () => {
 
       <AnimatePresence mode="wait">
         {myClan ? (
-          <motion.div
+          <MotionDiv
             key="dashboard"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -689,9 +693,9 @@ const Clans = () => {
               onRemoveNotice={handleRemoveNotice}
               globalNotice={globalNoticeQuery.data}
             />
-          </motion.div>
+          </MotionDiv>
         ) : (
-          <motion.div
+          <MotionDiv
             key="browser"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -703,7 +707,7 @@ const Clans = () => {
               userId={user?.id}
               onApply={handleApply}
             />
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
 
