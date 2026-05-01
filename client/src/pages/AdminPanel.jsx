@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FiUserPlus, FiTrash2, FiSearch, FiShield, FiUser, FiX } from 'react-icons/fi';
+import { FiTrash2, FiSearch, FiShield, FiUser, FiX } from 'react-icons/fi';
 import { clsx } from 'clsx';
 import Card from '../components/Card';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -129,59 +129,22 @@ const AdminPanel = () => {
     },
   });
 
-  const handleAddMember = async () => {
-    if (!memberSearch.trim()) {
-      toast.error('Please enter a username or email');
-      return;
-    }
-    setAddingMember(true);
-    try {
+  const usersQuery = useQuery({
+    queryKey: ['admin-users'],
+    enabled: activeTab === 'permissions',
+    queryFn: async () => {
       if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.post('/api/clan/members', {
-          identifier: memberSearch.trim(),
-          role: memberRole,
-        });
+        return mockUsers;
       }
-      toast.success('Member added successfully');
-      setMemberSearch('');
-      setMemberRole('member');
-      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
-    } catch (err) {
-      toast.error(err.userMessage || 'Failed to add member');
-    } finally {
-      setAddingMember(false);
-    }
-  };
 
-  const handleRemoveMember = async (memberId) => {
-    try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.delete(`/api/clan/members/${memberId}`);
+      try {
+        const res = await api.get('/api/users');
+        return res.data.data || [];
+      } catch {
+        return mockUsers;
       }
-      toast.success('Member removed');
-      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
-    } catch (err) {
-      toast.error(err.userMessage || 'Failed to remove member');
-    }
-  };
-
-  const handleUpdateMemberRole = async (memberId, newRole) => {
-    try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.put(`/api/clan/members/${memberId}`, { role: newRole });
-      }
-      toast.success('Role updated');
-      queryClient.invalidateQueries({ queryKey: ['clan-members'] });
-    } catch (err) {
-      toast.error(err.userMessage || 'Failed to update role');
-    }
-  };
+    },
+  });
 
   const onCreateChallenge = async (e) => {
     e.preventDefault();
@@ -825,7 +788,7 @@ const AdminPanel = () => {
                   toast.success('Global notice published!');
                   e.target.reset();
                   queryClient.invalidateQueries({ queryKey: ['global-notice'] });
-                } catch (err) {
+                } catch {
                   toast.error('Failed to publish global notice.');
                 }
               }} 
@@ -850,7 +813,7 @@ const AdminPanel = () => {
                       await api.delete('/api/notices');
                       toast.success('Global notice removed');
                       queryClient.invalidateQueries({ queryKey: ['global-notice'] });
-                    } catch (err) {
+                    } catch {
                       toast.error('Failed to delete notice.');
                     }
                   }}
@@ -979,45 +942,12 @@ const AdminPanel = () => {
               </div>
 
               <div className="space-y-2">
-                {membersQuery.data.map((member) => (
-                  <div
-                    key={member._id}
-                    className="border border-glass-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center">
-                        {member.role === 'admin' ? (
-                          <FiShield size={16} className="text-accent" />
-                        ) : (
-                          <FiUser size={16} className="text-secondary" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-sm">{member.username || member.email}</p>
-                        <p className="text-secondary text-xs">{member.email || ''}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        name={`memberRole-${member._id}`}
-                        className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1.5 text-primary focus:border-accent focus:outline-none"
-                        value={member.role}
-                        onChange={(e) => handleUpdateMemberRole(member._id, e.target.value)}
-                      >
-                        <option value="member">Member</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <button
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-colors"
-                        onClick={() => handleRemoveMember(member._id)}
-                        title="Remove member"
-                      >
-                        <FiTrash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                <label className="field-label text-xs uppercase tracking-wider opacity-70">Clan Description</label>
+                <textarea
+                  className="field-textarea bg-white/5 border-glass-border/40 focus:border-accent/50"
+                  value={editingClan.description || ''}
+                  onChange={(e) => setEditingClan((p) => ({ ...p, description: e.target.value }))}
+                />
               </div>
 
               <div className="space-y-3 pt-2 border-t border-glass-border/20">

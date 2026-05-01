@@ -1,22 +1,26 @@
 import React, { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { FiClock, FiCheckCircle, FiTarget, FiTrendingUp, FiCpu, FiZap, FiActivity, FiArrowRight } from 'react-icons/fi';
+import { FiActivity, FiArrowRight, FiCheckCircle, FiClock, FiCpu, FiTarget, FiTrendingUp, FiZap } from 'react-icons/fi';
 import { api } from '../lib/api';
-import { mockChallenges } from '../lib/mockData';
+import { USE_MOCK, mockChallenges, mockDashboardSummary } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
 
-const Dashboard = () => {
-  const navigate = useNavigate();
+const MotionBlock = motion.div;
 
+const Dashboard = () => {
   const challengesQuery = useQuery({
-    queryKey: ["dashboard-challenges"],
+    queryKey: ['dashboard-challenges'],
     queryFn: async () => {
+      if (USE_MOCK) {
+        return mockChallenges.slice(0, 4);
+      }
+
       try {
-        const res = await api.get(`/api/challenges?page=1&limit=4&sortBy=createdAt&sortDir=desc`);
+        const res = await api.get('/api/challenges?page=1&limit=4&sortBy=createdAt&sortDir=desc');
         const data = res.data.data || [];
         return data.length > 0 ? data : mockChallenges.slice(0, 4);
       } catch {
@@ -25,76 +29,65 @@ const Dashboard = () => {
     },
   });
 
-  const mockSummary = {
-    totalChallenges: mockChallenges.length,
-    solved: 3,
-    pending: 2,
-    recentActivity: [],
-  };
-
   const summaryQuery = useQuery({
-    queryKey: ["dashboard-summary"],
+    queryKey: ['dashboard-summary'],
     queryFn: async () => {
+      if (USE_MOCK) {
+        return mockDashboardSummary;
+      }
+
       try {
-        const res = await api.get("/api/dashboard/summary");
-        const data = res.data.data;
-        return data?.totalChallenges ? data : mockSummary;
+        const res = await api.get('/api/dashboard/summary');
+        return res.data.data || mockDashboardSummary;
       } catch {
-        return mockSummary;
+        return mockDashboardSummary;
       }
     },
   });
 
-  const challenges = challengesQuery.data?.length ? challengesQuery.data : (challengesQuery.data?.data || mockChallenges.slice(0, 4));
-
-  const MOCK_ACTIVITY = [
-    { _id: 'a1', challengeId: { title: 'Two Sum' }, submittedAt: new Date().toISOString(), status: 'Accepted' },
-    { _id: 'a2', challengeId: { title: 'Reverse Link' }, submittedAt: new Date(Date.now() - 3600000).toISOString(), status: 'Pending' },
-    { _id: 'a3', challengeId: { title: 'Graph Traversal' }, submittedAt: new Date(Date.now() - 86400000).toISOString(), status: 'Rejected' },
-    { _id: 'a4', challengeId: { title: 'Dijkstra Path' }, submittedAt: new Date(Date.now() - 186400000).toISOString(), status: 'Accepted' },
-  ];
-
-  const recentActivity = summaryQuery.data?.recentActivity?.length ? summaryQuery.data.recentActivity : MOCK_ACTIVITY;
+  const challenges = challengesQuery.data || [];
+  const recentActivity = summaryQuery.data?.recentActivity?.length
+    ? summaryQuery.data.recentActivity
+    : mockDashboardSummary.recentActivity;
   const solvedRate = summaryQuery.data?.totalChallenges
-    ? Math.round(
-        (summaryQuery.data.solved / summaryQuery.data.totalChallenges) * 100,
-      )
+    ? Math.round((summaryQuery.data.solved / summaryQuery.data.totalChallenges) * 100)
     : 0;
-  const MotionBlock = motion.div;
 
   const stats = [
     {
-      label: "Total Challenges",
-      value: summaryQuery.data?.totalChallenges ?? "-",
+      label: 'Total Challenges',
+      value: summaryQuery.data?.totalChallenges ?? '-',
       icon: FiTarget,
-      valueClass: "text-primary",
+      valueClass: 'text-primary',
     },
     {
-      label: "Solved",
-      value: summaryQuery.data?.solved ?? "-",
+      label: 'Solved',
+      value: summaryQuery.data?.solved ?? '-',
       icon: FiCheckCircle,
-      valueClass: "text-green-500",
+      valueClass: 'text-green-500',
     },
     {
-      label: "Pending Reviews",
-      value: summaryQuery.data?.pending ?? "-",
+      label: 'Pending Reviews',
+      value: summaryQuery.data?.pending ?? '-',
       icon: FiClock,
-      valueClass: "text-yellow-500",
+      valueClass: 'text-yellow-500',
     },
     {
-      label: "Solved Rate",
+      label: 'Solved Rate',
       value: `${solvedRate}%`,
       icon: FiTrendingUp,
-      valueClass: "text-accent",
+      valueClass: 'text-accent',
     },
   ];
 
   const sortedActivity = useMemo(() => {
-    const statusOrder = { 'Rejected': 0, 'Pending': 1, 'Accepted': 2 };
+    const statusOrder = { Rejected: 0, Pending: 1, Accepted: 2 };
     return [...recentActivity].sort((a, b) => {
       const orderA = statusOrder[a.status] ?? 3;
       const orderB = statusOrder[b.status] ?? 3;
-      if (orderA !== orderB) return orderA - orderB;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
       return new Date(b.submittedAt) - new Date(a.submittedAt);
     });
   }, [recentActivity]);
@@ -106,30 +99,39 @@ const Dashboard = () => {
         subtitle="Track progress, jump back into your latest work, and command the arena."
       />
 
-      {/* Featured Hero */}
-      <MotionBlock 
+      <MotionBlock
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden macos-glass p-8 md:p-12 border-accent/20 bg-gradient-to-br from-accent/10 via-transparent to-purple-500/10"
       >
         <div className="relative z-10 max-w-2xl">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-4 block">Recommended for you</span>
-          <h2 className="text-3xl md:text-5xl font-black text-primary mb-4 leading-tight">Mastering Dynamic <br/><span className="text-accent underline decoration-accent/30 underline-offset-8">Programming</span></h2>
-          <p className="text-secondary text-sm md:text-lg mb-8 leading-relaxed max-w-lg">Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards.</p>
+          <span className="mb-4 block text-[10px] font-black uppercase tracking-[0.3em] text-accent">
+            Recommended for you
+          </span>
+          <h2 className="mb-4 text-3xl font-black leading-tight text-primary md:text-5xl">
+            Mastering Dynamic <br />
+            <span className="text-accent underline decoration-accent/30 underline-offset-8">Programming</span>
+          </h2>
+          <p className="mb-8 max-w-lg text-sm leading-relaxed text-secondary md:text-lg">
+            Push your limits with this week&apos;s elite challenge. Solve complex optimizations and climb the global
+            leaderboards.
+          </p>
           <div className="flex flex-wrap gap-4">
-             <Link to="/missions" className="btn-primary px-8 shadow-accent-glow inline-block">Enter Arena</Link>
-             <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs">
-                <FiZap className="text-yellow-400" />
-                <span className="font-bold">+50 Bonus XP</span>
-             </div>
+            <Link to="/missions" className="btn-primary inline-block px-8 shadow-accent-glow">
+              Enter Arena
+            </Link>
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs">
+              <FiZap className="text-yellow-400" />
+              <span className="font-bold">+50 Bonus XP</span>
+            </div>
           </div>
         </div>
-        <div className="absolute top-1/2 right-0 -translate-y-1/2 opacity-10 pointer-events-none transform translate-x-1/4">
-           <FiCpu size={400} className="text-accent" />
+        <div className="pointer-events-none absolute right-0 top-1/2 translate-x-1/4 -translate-y-1/2 opacity-10">
+          <FiCpu size={400} className="text-accent" />
         </div>
       </MotionBlock>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((card, index) => {
           const Icon = card.icon;
           return (
@@ -138,128 +140,43 @@ const Dashboard = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="macos-glass p-6 group hover:border-accent/40 transition-all relative overflow-hidden"
+              className="group relative overflow-hidden macos-glass p-6 hover:border-accent/40 transition-all"
             >
-              <div className="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity">
+              <div className="absolute -bottom-2 -right-2 opacity-5 transition-opacity group-hover:opacity-10">
                 <Icon size={64} />
               </div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-tertiary text-[10px] font-bold uppercase tracking-widest">{card.label}</h3>
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-tertiary">{card.label}</h3>
                 <Icon className="text-secondary" size={14} />
               </div>
               <div className="flex items-baseline gap-2">
                 <p className={`text-3xl font-black ${card.valueClass}`}>{card.value}</p>
-                <span className="text-[10px] text-green-500 font-bold bg-green-500/10 px-1 rounded">▲ 2%</span>
+                <span className="rounded bg-green-500/10 px-1 text-[10px] font-bold text-green-500">▲ 2%</span>
               </div>
             </MotionBlock>
           );
         })}
       </div>
 
-      <div className="macos-glass p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
-        <input
-          name="challengeSearch"
-          className="field-input md:col-span-2"
-          placeholder="Search title or description"
-          value={filters.search}
-          onChange={(e) => handleFilterChange("search", e.target.value)}
-        />
-        <input
-          name="challengeCategory"
-          className="field-input md:col-span-1"
-          placeholder="Category"
-          value={filters.category}
-          onChange={(e) => handleFilterChange("category", e.target.value)}
-        />
-
-        {/* Mobile controls row: Pagination (long) + Sort + Order (small) */}
-        <div className="flex gap-1 md:gap-2 md:grid md:grid-cols-3 md:col-span-3 items-center text-xs sm:text-base">
-          <select
-            name="challengePageSize"
-            className="field-select flex-[1] md:w-full"
-            value={filters.limit}
-            onChange={(e) => handleFilterChange("limit", Number(e.target.value))}
-          >
-            <option value={6}>6 / page</option>
-            <option value={12}>12 / page</option>
-            <option value={24}>24 / page</option>
-          </select>
-
-          <select
-            name="challengeSortBy"
-            className="field-select flex-1 min-w-[70px] md:w-full px-3 py-2 sm:px-3 sm:py-3"
-            value={filters.sortBy}
-            onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-          >
-            <option value="createdAt">Newest</option>
-            <option value="difficulty">Difficulty</option>
-            <option value="title">Title</option>
-          </select>
-
-          <select
-            name="challengeSortDirection"
-            className="field-select flex-1 min-w-[70px] md:w-full px-2 py-2 sm:px-3 sm:py-3 s"
-            value={filters.sortDir}
-            onChange={(e) => handleFilterChange("sortDir", e.target.value)}
-          >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
-          </select>
-        </div>
-      </div>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
-        {/* Left Side: Difficulty Chips */}
-        <div className="chip-group flex gap-2">
-          {difficultyChips.map((chip) => (
-            <button
-              key={chip.label}
-              className={`chip-btn ${filters.difficulty === chip.value ? "active" : ""}`}
-              onClick={() => handleFilterChange("difficulty", chip.value)}
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Right Side: View Mode Toggle */}
-        <div className="segmented flex items-center">
-          <button
-            className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}
-            onClick={() => setViewMode("grid")}
-          >
-            <FiGrid className="mr-2" />
-            Grid
-          </button>
-          <button
-            className={`segmented-btn ${viewMode === "list" ? "active" : ""}`}
-            onClick={() => setViewMode("list")}
-          >
-            <FiList className="mr-2" />
-            List
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
-        {/* Available Missions - Left side (takes 2 cols) */}
-        <div className="xl:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-6">
+        <div className="space-y-4 xl:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="text-section-title font-semibold">Available Missions</h2>
-            <Link to="/missions" className="text-xs text-accent font-bold hover:underline flex items-center gap-1">
+            <Link to="/missions" className="flex items-center gap-1 text-xs font-bold text-accent hover:underline">
               View All <FiArrowRight />
             </Link>
           </div>
 
           {challengesQuery.isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <SkeletonCard />
               <SkeletonCard />
             </div>
           ) : challenges.length === 0 ? (
             <EmptyState title="No challenges found" description="Check back later for new missions." />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {challenges.slice(0, 4).map((challenge, index) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {challenges.map((challenge, index) => (
                 <MotionBlock
                   key={challenge._id}
                   initial={{ opacity: 0, y: 10 }}
@@ -267,64 +184,76 @@ const Dashboard = () => {
                   transition={{ delay: index * 0.03 }}
                 >
                   <Link to={`/challenge/${challenge._id}`} className="group block h-full">
-                    <div className="macos-glass p-5 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col">
-                      <div className="flex justify-between items-start mb-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
-                            challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
-                        }`}>
+                    <div className="flex h-full flex-col macos-glass p-5 transition-all duration-300 hover:-translate-y-1 hover:border-accent">
+                      <div className="mb-3 flex items-start justify-between">
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            challenge.difficulty === 'Easy'
+                              ? 'bg-green-500/20 text-green-500'
+                              : challenge.difficulty === 'Medium'
+                                ? 'bg-yellow-500/20 text-yellow-500'
+                                : 'bg-red-500/20 text-red-500'
+                          }`}
+                        >
                           {challenge.difficulty}
                         </span>
-                        <span className="text-secondary text-xs font-bold">{challenge.points} XP</span>
+                        <span className="text-xs font-bold text-secondary">{challenge.points} XP</span>
                       </div>
-                      <h3 className="text-lg font-bold group-hover:text-accent transition-colors mb-2 leading-tight">
+                      <h3 className="mb-2 text-lg font-bold leading-tight transition-colors group-hover:text-accent">
                         {challenge.title}
                       </h3>
-                      <p className="text-secondary text-xs mt-auto line-clamp-2">
-                        {challenge.description}
-                      </p>
+                      <p className="mt-auto line-clamp-2 text-xs text-secondary">{challenge.description}</p>
                     </div>
                   </Link>
                 </MotionBlock>
               ))}
             </div>
           )}
-          
+
           <div className="pt-2">
-            <Link to="/missions" className="btn-secondary w-full flex items-center justify-center gap-2 hover:bg-white/5 hover:border-accent/40 transition-all py-3">
+            <Link
+              to="/missions"
+              className="btn-secondary flex w-full items-center justify-center gap-2 py-3 transition-all hover:border-accent/40 hover:bg-white/5"
+            >
               Explore More Missions <FiArrowRight />
             </Link>
           </div>
         </div>
 
-        {/* Recent Activity - Right side (takes 1 col) */}
-        <div className="space-y-4 h-full flex flex-col">
-          <h2 className="text-section-title font-semibold flex items-center gap-2">
+        <div className="flex h-full flex-col space-y-4">
+          <h2 className="text-section-title flex items-center gap-2 font-semibold">
             <FiActivity className="text-accent" />
             Recent Activity
           </h2>
-          {/* By setting flex-1, absolute positioning with inset-0 inside a relative parent makes it precisely match the adjacent column's height. */}
-          <div className="macos-glass p-4 overflow-y-auto max-h-[380px] xl:max-h-none xl:h-[350px] space-y-3 custom-scrollbar">
+          <div className="custom-scrollbar space-y-3 overflow-y-auto macos-glass p-4 xl:h-[350px]">
             {sortedActivity.length ? (
               sortedActivity.map((submission) => (
-                <Link key={submission._id} to={`/submission/${submission._id}`} className="block border border-glass-border bg-white/[0.01] rounded-xl p-4 hover:border-accent hover:bg-accent/5 transition-all">
-                  <p className="font-semibold text-sm line-clamp-1">{submission.challengeId?.title || 'Unknown Challenge'}</p>
-                  <div className="flex justify-between items-end mt-2">
-                    <p className="text-secondary text-xs">{new Date(submission.submittedAt).toLocaleDateString()}</p>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                        submission.status === 'Accepted' ? 'bg-green-500/20 text-green-500' :
-                        submission.status === 'Rejected' ? 'bg-red-500/20 text-red-500' :
-                        'bg-yellow-500/20 text-yellow-500'
-                    }`}>
+                <Link
+                  key={submission._id}
+                  to={`/submission/${submission._id}`}
+                  className="block rounded-xl border border-glass-border bg-white/[0.01] p-4 transition-all hover:border-accent hover:bg-accent/5"
+                >
+                  <p className="line-clamp-1 text-sm font-semibold">
+                    {submission.challengeId?.title || 'Unknown Challenge'}
+                  </p>
+                  <div className="mt-2 flex items-end justify-between">
+                    <p className="text-xs text-secondary">{new Date(submission.submittedAt).toLocaleDateString()}</p>
+                    <p
+                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                        submission.status === 'Accepted'
+                          ? 'bg-green-500/20 text-green-500'
+                          : submission.status === 'Rejected'
+                            ? 'bg-red-500/20 text-red-500'
+                            : 'bg-yellow-500/20 text-yellow-500'
+                      }`}
+                    >
                       {submission.status}
                     </p>
                   </div>
                 </Link>
               ))
             ) : (
-              <p className="text-secondary text-sm">
-                No recent submissions yet. Start with an easy challenge.
-              </p>
+              <p className="text-sm text-secondary">No recent submissions yet. Start with an easy challenge.</p>
             )}
           </div>
         </div>
