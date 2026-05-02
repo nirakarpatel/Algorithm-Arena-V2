@@ -340,3 +340,27 @@ body {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* Custom Heatmap Scrollbar (Sliding Bar) */
+.heatmap-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-track {
+    background: var(--field-bg);
+    border-radius: 10px;
+    margin: 0 10px;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background 0.3s ease;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+    background-clip: border-box;
+}

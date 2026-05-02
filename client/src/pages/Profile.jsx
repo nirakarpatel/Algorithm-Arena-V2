@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { FiActivity, FiAward, FiCalendar, FiLink, FiMapPin, FiSearch, FiUsers, FiZap } from 'react-icons/fi';
+import { FiActivity, FiAward, FiCalendar, FiGithub, FiLink, FiMapPin, FiSearch, FiTwitter, FiUsers, FiZap } from 'react-icons/fi';
 import { useSocket } from '../hooks/useSocket';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -23,6 +23,187 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?w=400&h=400&fit=crop',
   'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
 ];
+
+// Mock heatmap data generation (365 days starting from simulated join date)
+const generateHeatmapData = () => {
+  const data = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Simulate joining 30 days ago
+  const joinDate = new Date(today);
+  joinDate.setDate(today.getDate() - 30);
+  
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(joinDate);
+    d.setDate(joinDate.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    data.push({
+      date: dateStr,
+      count: d > today ? 0 : Math.floor(Math.random() * 5),
+      isFuture: d > today,
+    });
+  }
+  return data;
+};
+
+const SolvedBreakdown = ({ stats }) => {
+  const categories = [
+    { label: 'Easy', color: 'bg-green-500', val: stats?.difficultyBreakdown?.easy?.solved || 0, total: stats?.difficultyBreakdown?.easy?.total || 100 },
+    { label: 'Medium', color: 'bg-yellow-500', val: stats?.difficultyBreakdown?.medium?.solved || 0, total: stats?.difficultyBreakdown?.medium?.total || 250 },
+    { label: 'Hard', color: 'bg-red-500', val: stats?.difficultyBreakdown?.hard?.solved || 0, total: stats?.difficultyBreakdown?.hard?.total || 50 },
+  ];
+
+  return (
+    <Card className="flex h-full flex-col">
+      <div>
+        <div className="mb-6 flex items-center justify-between">
+          <h3 className="font-bold text-primary">Solved Problems</h3>
+          <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-bold text-accent uppercase">
+            {stats?.rank < 10 ? 'EXPERT' : 'ACTIVE'}
+          </span>
+        </div>
+        <div className="space-y-6">
+          {categories.map((c) => (
+            <div key={c.label}>
+              <div className="mb-2 flex justify-between text-xs">
+                <span className="font-medium text-secondary">{c.label}</span>
+                <span className="font-bold text-primary">
+                  {c.val}
+                  <span className="text-tertiary">/{c.total}</span>
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(c.val / (c.total || 1)) * 100}%` }}
+                  className={`h-full ${c.color} shadow-[0_0_8px_rgba(34,197,94,0.4)]`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="mt-auto border-t border-glass-border/40 pt-6">
+        <div className="flex items-center justify-between text-[10px] text-tertiary">
+          <span>Overall Score</span>
+          <span className="text-sm font-black text-accent">{stats?.overallScore || '0'}%</span>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const ActivityHeatmap = ({ heatmapData }) => {
+  const data = useMemo(
+    () => (heatmapData && heatmapData.length > 0 ? heatmapData : generateHeatmapData()),
+    [heatmapData]
+  );
+
+  const months = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const result = [];
+    let lastMonth = -1;
+    
+    // Scan data to find where months change
+    data.forEach((day, index) => {
+      const d = new Date(day.date);
+      const m = d.getMonth();
+      if (m !== lastMonth) {
+        // Only add month if it's the first occurrence or at least 2 weeks apart from the last one
+        result.push({ name: monthNames[m], index });
+        lastMonth = m;
+      }
+    });
+    
+    return result;
+  }, [data]);
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FiActivity className="text-accent" />
+          <h2 className="text-lg font-bold">Activity Heatmap</h2>
+        </div>
+        <span className="text-[10px] text-tertiary">365-day contribution graph</span>
+      </div>
+
+      <div className="heatmap-scrollbar overflow-x-auto pb-6 pt-2 px-1">
+        <div className="flex gap-4 w-fit">
+          {/* Day Labels */}
+          <div className="grid grid-rows-7 gap-[3px] text-[9px] text-tertiary pt-[18px]">
+             <span className="h-[11px] leading-[11px]"></span>
+             <span className="h-[11px] leading-[11px]">Mon</span>
+             <span className="h-[11px] leading-[11px]"></span>
+             <span className="h-[11px] leading-[11px]">Wed</span>
+             <span className="h-[11px] leading-[11px]"></span>
+             <span className="h-[11px] leading-[11px]">Fri</span>
+             <span className="h-[11px] leading-[11px]"></span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {/* Month Labels */}
+            <div className="relative h-4 text-[9px] font-medium tracking-tighter text-tertiary uppercase">
+              {months.map((m, idx) => (
+                <span 
+                  key={idx} 
+                  className="absolute whitespace-nowrap"
+                  style={{ left: `${(m.index / 7) * 14}px` }} 
+                >
+                  {m.name}
+                </span>
+              ))}
+            </div>
+
+            {/* The Grid */}
+            <div className="grid grid-flow-col grid-rows-7 gap-[3px] w-max">
+              {data.map((day, i) => (
+                <motion.div
+                  key={day.date}
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.0005 }}
+                  className={`h-[11px] w-[11px] cursor-pointer rounded-[2px] transition-all hover:ring-1 hover:ring-white/40 ${
+                    day.isFuture || day.count === 0
+                      ? 'bg-[#ebedf0] dark:bg-[#161b22] border border-black/[0.03] dark:border-white/[0.03]'
+                      : day.count === 1
+                        ? 'bg-[#0e4429] border border-white/[0.05]'
+                        : day.count === 2
+                          ? 'bg-[#006d32] border border-white/[0.05]'
+                          : day.count === 3
+                            ? 'bg-[#26a641] border border-white/[0.05]'
+                            : 'bg-[#39d353] border border-white/[0.05] shadow-[0_0_10px_rgba(57,211,83,0.3)]'
+                  }`}
+                  title={`${day.date}: ${day.count} missions ${day.isFuture ? '(Future)' : ''}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between px-2">
+        <span className="text-[10px] text-tertiary hover:text-accent cursor-pointer transition-colors">
+          Learn how we count contributions
+        </span>
+        <div className="flex items-center gap-4 text-[10px] text-tertiary">
+          <span className="font-medium">Less</span>
+          <div className="flex gap-[3px]">
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[#ebedf0] dark:bg-[#161b22] border border-black/[0.03] dark:border-white/[0.03]" title="No activity" />
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[#0e4429]" title="1-2 missions" />
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[#006d32]" title="3-4 missions" />
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[#26a641]" title="5-6 missions" />
+            <div className="h-[11px] w-[11px] rounded-[2px] bg-[#39d353]" title="7+ missions" />
+          </div>
+          <span className="font-medium">More</span>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -211,6 +392,10 @@ const Profile = () => {
                 <span className="truncate text-accent">arena.dev/{user?.username}</span>
               </div>
             </div>
+            <div className="flex justify-center gap-4 border-t border-glass-border pt-6 mt-8">
+              <FiGithub className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
+              <FiTwitter className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
+            </div>
           </Card>
 
           <Card className="border-accent/20 bg-gradient-to-br from-accent/10 to-transparent">
@@ -232,6 +417,10 @@ const Profile = () => {
               {user?.clanTag ? `[${user.clanTag}]` : 'Join a clan from the clans page'}
             </p>
           </Card>
+
+          <div className="flex-grow">
+            <SolvedBreakdown stats={stats} />
+          </div>
         </div>
 
         <div className="flex flex-col gap-6 xl:col-span-3">
@@ -251,15 +440,7 @@ const Profile = () => {
             })}
           </div>
 
-          <Card>
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-secondary">Acceptance Rate</span>
-              <span className="font-semibold">{acceptedPct}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full bg-gradient-to-r from-green-400 to-accent" style={{ width: `${acceptedPct}%` }} />
-            </div>
-          </Card>
+          <ActivityHeatmap heatmapData={stats.heatmapData} />
 
           <Card className="flex-grow">
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
