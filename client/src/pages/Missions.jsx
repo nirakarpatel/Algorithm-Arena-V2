@@ -61,18 +61,44 @@ const Missions = () => {
   const challengesQuery = useQuery({
     queryKey,
     queryFn: async () => {
+      const getFilteredMockData = () => {
+        let filtered = mockChallenges;
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          filtered = filtered.filter(c => c.title.toLowerCase().includes(searchLower) || c.description.toLowerCase().includes(searchLower));
+        }
+        if (filters.difficulty) {
+          filtered = filtered.filter(c => c.difficulty === filters.difficulty);
+        }
+        if (filters.category) {
+          const categoryLower = filters.category.toLowerCase();
+          filtered = filtered.filter(c => c.category && c.category.toLowerCase().includes(categoryLower));
+        }
+        return filtered;
+      };
+
       try {
         const qs = buildChallengeQuery(filters);
         const res = await api.get(`/api/challenges?${qs}`);
         const data = res.data.data || [];
+        
+        if (data.length > 0) {
+          return {
+            data,
+            meta: res.data.meta || { page: 1, totalPages: 1, total: data.length },
+          };
+        }
+        
+        const filteredMock = getFilteredMockData();
         return {
-          data: data.length > 0 ? data : mockChallenges,
-          meta: res.data.meta || { page: 1, totalPages: 1, total: mockChallenges.length },
+          data: filteredMock,
+          meta: { page: 1, totalPages: Math.ceil(filteredMock.length / filters.limit) || 1, total: filteredMock.length },
         };
       } catch {
+        const filteredMock = getFilteredMockData();
         return {
-          data: mockChallenges,
-          meta: { page: 1, totalPages: 1, total: mockChallenges.length },
+          data: filteredMock,
+          meta: { page: 1, totalPages: Math.ceil(filteredMock.length / filters.limit) || 1, total: filteredMock.length },
         };
       }
     },
@@ -80,14 +106,14 @@ const Missions = () => {
 
   const challenges = challengesQuery.data?.data?.length ? challengesQuery.data.data : mockChallenges;
   const meta = challengesQuery.data?.meta || { page: 1, totalPages: 1, total: challenges.length };
-  
+
   const groupedChallenges = useMemo(() => {
     if (filters.grouping === 'none') return { "All Missions": challenges };
-    
+
     return challenges.reduce((acc, ch) => {
       const date = new Date(ch.createdAt || FALLBACK_CREATED_AT);
       let key = "";
-      
+
       if (filters.grouping === 'weekly') {
         const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
         const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
@@ -96,7 +122,7 @@ const Missions = () => {
       } else if (filters.grouping === 'monthly') {
         key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
       }
-      
+
       if (!acc[key]) acc[key] = [];
       acc[key].push(ch);
       return acc;
@@ -173,7 +199,7 @@ const Missions = () => {
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
         {/* Left Side: Difficulty Chips */}
-        <div className="chip-group flex gap-2">
+        <div className="chip-group  flex flex-wrap gap-2">
           {difficultyChips.map((chip) => (
             <button
               key={chip.label}
@@ -239,7 +265,7 @@ const Missions = () => {
                   <div className="h-[1px] flex-1 bg-glass-border/30" />
                   <span className="text-xs text-tertiary font-bold">{groupItems.length} Missions</span>
                 </div>
-                
+
                 {viewMode === "grid" ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {groupItems.map((challenge, index) => (
@@ -253,7 +279,7 @@ const Missions = () => {
                           <div className="macos-glass p-6 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full">
                             <div className="flex justify-between items-start mb-4">
                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
+                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
                                 challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
                               }`}>
                                 {challenge.difficulty}
@@ -285,7 +311,7 @@ const Missions = () => {
                             </div>
                             <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
                               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" : 
+                                challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
                                 challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
                               }`}>
                                 {challenge.difficulty}
