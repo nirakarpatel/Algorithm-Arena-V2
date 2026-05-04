@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Challenge = require('../models/Challenge');
 const Submission = require('../models/Submission');
+const User = require('../models/User');
 const { sendSuccess } = require('../utils/response');
 
 const getDashboardSummary = async (req, res, next) => {
@@ -157,7 +158,7 @@ const getProfileStats = async (req, res, next) => {
 
     // Calculate Heatmap Data
     const heatmapAggregation = await Submission.aggregate([
-      { $match: { userId } },
+      { $match: { userId, status: 'Accepted' } },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$submittedAt" } },
@@ -171,18 +172,25 @@ const getProfileStats = async (req, res, next) => {
       heatmapMap[item._id] = item.count;
     });
 
+    const user = await User.findById(req.user.id).select('createdAt');
+    const joinDate = user?.createdAt || new Date();
+    
+    // Normalize to UTC midnight for consistency with $dateToString
+    const startUTC = Date.UTC(joinDate.getUTCFullYear(), joinDate.getUTCMonth(), joinDate.getUTCDate());
+    const todayUTC = new Date();
+    const todayStr = todayUTC.toISOString().split('T')[0];
+
     const heatmapData = [];
-    const today = new Date();
     for (let i = 0; i < 365; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
+      const d = new Date(startUTC + (i * 24 * 60 * 60 * 1000));
       const dateStr = d.toISOString().split('T')[0];
+      
       heatmapData.push({
         date: dateStr,
-        count: heatmapMap[dateStr] || 0
+        count: dateStr > todayStr ? 0 : (heatmapMap[dateStr] || 0),
+        isFuture: dateStr > todayStr
       });
     }
-    heatmapData.reverse();
 
     // Calculate streaks
     let currentStreak = 0;

@@ -146,6 +146,19 @@ const AdminPanel = () => {
     },
   });
 
+  const noticesHistoryQuery = useQuery({
+    queryKey: ['admin-notices-history'],
+    enabled: activeTab === 'notices',
+    queryFn: async () => {
+      try {
+        const res = await api.get('/api/notices/history');
+        return res.data.data || [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
   const onCreateChallenge = async (e) => {
     e.preventDefault();
     try {
@@ -770,59 +783,104 @@ const AdminPanel = () => {
       )}
 
       {activeTab === 'notices' && (
-        <div className="macos-glass p-8 max-w-2xl mx-auto">
-          <div className="space-y-6">
-            <h2 className="text-section-title font-bold">Manage Global Notice</h2>
-            <p className="text-secondary text-sm">
-              The global notice appears at the top of the notice board for <strong>all clans</strong>. 
-              Only one global notice can be active at a time.
-            </p>
-            
-            <form 
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const content = e.target.content.value;
-                if (!content.trim()) return;
-                try {
-                  await api.post('/api/notices', { content });
-                  toast.success('Global notice published!');
-                  e.target.reset();
-                  queryClient.invalidateQueries({ queryKey: ['global-notice'] });
-                } catch {
-                  toast.error('Failed to publish global notice.');
-                }
-              }} 
-              className="space-y-4"
-            >
-              <div>
-                <label className="field-label">Notice Content</label>
-                <textarea 
-                  name="content"
-                  className="field-textarea min-h-[120px]" 
-                  placeholder="Type the global announcement here..."
-                  required
-                />
+        <div className="space-y-6">
+          <Card>
+            <div className="space-y-6 max-w-2xl">
+              <h2 className="text-section-title font-bold">Manage Global Notice</h2>
+              <p className="text-secondary text-sm">
+                The global notice appears at the top of the notice board for <strong>all clans</strong>. 
+                Posting a new notice will add it to the history and update the active announcement.
+              </p>
+              
+              <form 
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const content = e.target.content.value;
+                  if (!content.trim()) return;
+                  try {
+                    await api.post('/api/notices', { content });
+                    toast.success('Global notice published!');
+                    e.target.reset();
+                    queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                    queryClient.invalidateQueries({ queryKey: ['admin-notices-history'] });
+                  } catch {
+                    toast.error('Failed to publish global notice.');
+                  }
+                }} 
+                className="space-y-4"
+              >
+                <div>
+                  <label className="field-label">Notice Content</label>
+                  <textarea 
+                    name="content"
+                    className="field-textarea min-h-[120px]" 
+                    placeholder="Type the global announcement here..."
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn-primary" type="submit">Publish to All Clans</button>
+                </div>
+              </form>
+            </div>
+          </Card>
+
+          <Card>
+            <h2 className="text-section-title font-bold mb-6">Notice History</h2>
+            {noticesHistoryQuery.isLoading ? (
+              <div className="space-y-3"><SkeletonCard /></div>
+            ) : (noticesHistoryQuery.data || []).length === 0 ? (
+              <EmptyState title="No history" description="No global notices have been posted yet." />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="responsive-table">
+                  <thead>
+                    <tr className="text-left border-b border-glass-border text-secondary text-sm">
+                      <th className="py-3">Content</th>
+                      <th className="py-3">Posted By</th>
+                      <th className="py-3">Date</th>
+                      <th className="py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(noticesHistoryQuery.data || []).map((notice) => (
+                      <tr key={notice._id} className="border-b border-glass-border/60 group">
+                        <td className="py-4 max-w-xs pr-4">
+                          <p className="text-sm line-clamp-2" title={notice.content}>{notice.content}</p>
+                        </td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <FiUser className="text-accent" />
+                            <span className="text-sm">{notice.createdBy?.username || 'Admin'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-xs text-secondary">
+                          {new Date(notice.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-4">
+                          <button 
+                            className="p-2 text-secondary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                            onClick={async () => {
+                              try {
+                                await api.delete(`/api/notices/${notice._id}`);
+                                toast.success('Notice removed from history');
+                                queryClient.invalidateQueries({ queryKey: ['admin-notices-history'] });
+                                queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+                              } catch {
+                                toast.error('Failed to delete notice.');
+                              }
+                            }}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex gap-2">
-                <button className="btn-primary" type="submit">Publish to All Clans</button>
-                <button 
-                  type="button"
-                  className="btn-secondary text-red-400 hover:border-red-500/50"
-                  onClick={async () => {
-                    try {
-                      await api.delete('/api/notices');
-                      toast.success('Global notice removed');
-                      queryClient.invalidateQueries({ queryKey: ['global-notice'] });
-                    } catch {
-                      toast.error('Failed to delete notice.');
-                    }
-                  }}
-                >
-                  Clear Global Notice
-                </button>
-              </div>
-            </form>
-          </div>
+            )}
+          </Card>
         </div>
       )}
 

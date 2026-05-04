@@ -198,37 +198,86 @@ const Navbar = ({ onLogout }) => {
         )}
         aria-label="Mobile navigation"
       >
-        <div className="p-4 space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={closeMenu}
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-3 rounded-lg",
-                  active
-                    ? "bg-accent/15 text-accent"
-                    : "text-primary hover:bg-white/10",
-                )}
-              >
-                <Icon />
-                <span className="font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
-          <button
-            onClick={() => {
-              closeMenu();
-              onLogout();
-            }}
-            className="w-full mt-3 flex items-center gap-3 px-3 py-3 rounded-lg text-red-400 hover:bg-red-500/10"
-          >
-            <FiLogOut />
-            <span className="font-medium">Disconnect</span>
-          </button>
+        <div className="p-4 space-y-6">
+          {/* Mobile User Header */}
+          <div className="flex items-center gap-4 px-2 pb-4 border-b border-glass-border/40">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-purple-600 p-0.5 shadow-lg shadow-accent/20">
+              {user?.profilePicture ? (
+                <img src={user.profilePicture} alt="Avatar" className="w-full h-full rounded-[9px] object-cover" />
+              ) : (
+                <div className="w-full h-full rounded-[9px] bg-[#1a1a1c] flex items-center justify-center text-sm text-white font-black uppercase">
+                  {user?.username?.[0] || 'U'}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-primary truncate w-40">{user?.username || 'Guest User'}</span>
+              <span className="text-[10px] text-tertiary uppercase tracking-wider font-bold">{role || 'Member'}</span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-tertiary uppercase tracking-[0.2em] px-3 mb-2">Navigation</p>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={closeMenu}
+                  className={clsx(
+                    "flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                    active
+                      ? "bg-accent/15 text-accent"
+                      : "text-primary hover:bg-white/5",
+                  )}
+                >
+                  <Icon className={active ? "text-accent" : "text-secondary"} />
+                  <span className="font-medium">{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-tertiary uppercase tracking-[0.2em] px-3 mb-2">Account</p>
+            <Link
+              to="/profile"
+              onClick={closeMenu}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                location.pathname === "/profile" ? "bg-accent/15 text-accent" : "text-primary hover:bg-white/5"
+              )}
+            >
+              <FiUser className={location.pathname === "/profile" ? "text-accent" : "text-secondary"} />
+              <span className="font-medium">My Profile</span>
+            </Link>
+            <Link
+              to="/settings"
+              onClick={closeMenu}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                location.pathname === "/settings" ? "bg-accent/15 text-accent" : "text-primary hover:bg-white/5"
+              )}
+            >
+              <FiSettings className={location.pathname === "/settings" ? "text-accent" : "text-secondary"} />
+              <span className="font-medium">Settings</span>
+            </Link>
+          </div>
+
+          <div className="pt-4 border-t border-glass-border/40">
+            <button
+              onClick={() => {
+                closeMenu();
+                onLogout();
+              }}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-all"
+            >
+              <FiLogOut />
+              <span className="font-medium">Sign Out</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>
