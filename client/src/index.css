@@ -14,7 +14,8 @@
     --font-size-h2: clamp(1.2rem, 1.6vw, 1.8rem);
     --font-size-body: 1rem;
     --font-size-caption: 0.85rem;
-
+    --card-shadow-opacity: 0.08;
+    --card-glow-opacity: 0.1;
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -42,6 +43,10 @@
     --fg-tertiary: #a1a1a6;
     --accent-primary: #007aff;
     --accent-glow: rgba(0, 122, 255, 0.25);
+
+    /* Define the raw RGB values without the brackets */
+    --accent-rgb: 0, 122, 255;
+
     --glass-surface: rgba(255, 255, 255, 0.7);
     --glass-border-color: rgba(255, 255, 255, 0.8);
     --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
@@ -49,6 +54,12 @@
     --orb-2: #e6eeff;
     --field-bg: rgba(0, 0, 0, 0.03);
     --field-border: rgba(0, 0, 0, 0.12);
+
+    --glass-spotlight: radial-gradient(
+        600px circle at var(--mouse-x) var(--mouse-y),
+        rgba(255, 255, 255, 0.06),
+        transparent 40%
+    );
 }
 
 [data-theme="dark"] {
@@ -56,9 +67,12 @@
     --bg-app: #050507;
     --bg-sidebar: rgba(20, 20, 25, 0.6);
     --fg-primary: #f5f5f7;
+    --card-shadow-opacity: 0.4;
+    --card-glow-opacity: 0.25;
     --fg-secondary: #86868b;
     --fg-tertiary: #505055;
     --accent-primary: #0a84ff;
+    --accent-rgb: 10, 132, 255;
     --accent-glow: rgba(10, 132, 255, 0.4);
     --glass-surface: rgba(30, 30, 35, 0.6);
     --glass-border-color: rgba(255, 255, 255, 0.08);
@@ -67,6 +81,11 @@
     --orb-2: rgba(172, 50, 255, 0.1);
     --field-bg: rgba(255, 255, 255, 0.05);
     --field-border: rgba(255, 255, 255, 0.1);
+    --glass-spotlight: radial-gradient(
+        600px circle at var(--mouse-x) var(--mouse-y),
+        rgba(10, 132, 255, 0.15),
+        transparent 40%
+    );
 }
 
 * {
@@ -160,7 +179,19 @@ body {
         transform: translate(40px, 20px) scale(1.05);
     }
 }
-
+.blueprint-border {
+    position: relative;
+    background:
+        padding-box,
+        conic-gradient(
+                from var(--border-angle),
+                transparent,
+                var(--accent-primary),
+                transparent
+            )
+            border-box;
+    border: 1px solid transparent;
+}
 .macos-glass {
     background: var(--glass-surface);
     backdrop-filter: blur(2px) saturate(110%);
@@ -240,7 +271,8 @@ body {
     .field-textarea:focus,
     .field-select:focus {
         border-color: var(--accent-primary);
-        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 25%, transparent);
+        box-shadow: 0 0 0 2px
+            color-mix(in srgb, var(--accent-primary) 25%, transparent);
         outline: none;
     }
 
@@ -319,9 +351,11 @@ body {
 
     .chip-btn.active {
         color: var(--fg-primary);
-        border-color: color-mix(in srgb,
-                var(--accent-primary) 90%,
-                var(--glass-border-color));
+        border-color: color-mix(
+            in srgb,
+            var(--accent-primary) 90%,
+            var(--glass-border-color)
+        );
         background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
     }
 
