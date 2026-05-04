@@ -92,6 +92,7 @@ const Settings = () => {
   };
 
   return (
+    <>
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
       <PageHeader 
         title="Rewrite Profile Card" 
@@ -405,6 +406,8 @@ const Settings = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
+  );
+};
 
 export default Settings;
