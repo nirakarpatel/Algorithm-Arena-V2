@@ -18,6 +18,8 @@ const ClanChiefPanel = () => {
     status: 'Pending',
     userId: '',
     challengeId: '',
+    from: '',
+    to: '',
   });
 
   const submissionsQuery = useQuery({
@@ -31,6 +33,8 @@ const ClanChiefPanel = () => {
       if (reviewFilters.status) params.set('status', reviewFilters.status);
       if (reviewFilters.challengeId) params.set('challengeId', reviewFilters.challengeId);
       if (reviewFilters.userId.length === 24) params.set('userId', reviewFilters.userId);
+      if (reviewFilters.from) params.set('from', reviewFilters.from);
+      if (reviewFilters.to) params.set('to', reviewFilters.to);
 
       const res = await api.get(`/api/submissions?${params.toString()}`);
       return {
@@ -88,44 +92,65 @@ const ClanChiefPanel = () => {
       {activeTab === 'review' && (
         <Card className="p-6">
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <FiClock className="text-yellow-500" />
-                Pending Reviews
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
-                <select
-                  className="field-select py-2 text-xs"
-                  value={reviewFilters.status}
-                  onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, status: e.target.value }))}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Accepted">Accepted</option>
-                  <option value="Rejected">Rejected</option>
-                </select>
-                
-                <select
-                  className="field-select py-2 text-xs"
-                  value={reviewFilters.challengeId}
-                  onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, challengeId: e.target.value }))}
-                >
-                  <option value="">All Missions</option>
-                  {(challengesQuery.data || []).map((ch) => (
-                    <option key={ch._id} value={ch._id}>{ch.title}</option>
-                  ))}
-                </select>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FiClock className="text-yellow-500" />
+              Pending Reviews
+            </h2>
 
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
-                  <input
-                    className="field-input pl-9 py-2 text-xs"
-                    placeholder="Search User ID..."
-                    value={reviewFilters.userId}
-                    onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
-                  />
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+              <select
+                className="field-select"
+                value={reviewFilters.status}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, status: e.target.value }))}
+              >
+                <option value="Pending">Pending</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+              
+              <select
+                className="field-select"
+                value={reviewFilters.challengeId}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, challengeId: e.target.value }))}
+              >
+                <option value="">All Challenges</option>
+                {(challengesQuery.data || []).map((ch) => (
+                  <option key={ch._id} value={ch._id}>{ch.title}</option>
+                ))}
+              </select>
+
+              <input
+                className="field-input"
+                placeholder="User ID (24 chars)"
+                value={reviewFilters.userId}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
+              />
+
+              <input
+                className="field-input"
+                type="date"
+                value={reviewFilters.from}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, from: e.target.value }))}
+                aria-label="From date"
+              />
+
+              <input
+                className="field-input"
+                type="date"
+                value={reviewFilters.to}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, to: e.target.value }))}
+                aria-label="To date"
+              />
+
+              <select
+                className="field-select"
+                value={reviewFilters.limit}
+                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, limit: Number(e.target.value) }))}
+              >
+                <option value="10">10 rows</option>
+                <option value="20">20 rows</option>
+                <option value="50">50 rows</option>
+              </select>
             </div>
 
             {submissionsQuery.isLoading ? (
@@ -135,43 +160,93 @@ const ClanChiefPanel = () => {
               </div>
             ) : submissions.length === 0 ? (
               <EmptyState 
-                title="All clear, Chief!" 
-                description="No pending submissions to review right now." 
+                title="No submissions" 
+                description="No submissions match your filters." 
                 icon={FiCheckCircle}
               />
             ) : (
-              <div className="space-y-4">
-                {submissions.map((sub) => (
-                  <div key={sub._id} className="macos-glass p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-white/5 hover:border-accent/30 transition-all">
-                    <div className="flex gap-4 items-center">
-                      <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent font-black">
-                        {sub.userId?.username?.[0] || 'U'}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-primary">{sub.userId?.username || 'Unknown'}</h4>
-                        <p className="text-xs text-secondary flex items-center gap-1">
-                          <FiBookOpen size={12} /> {sub.challengeId?.title || 'Unknown Mission'}
-                        </p>
-                        <p className="text-[10px] text-tertiary mt-1 uppercase font-black tracking-widest">{sub.language}</p>
-                      </div>
-                    </div>
+              <>
+                <div className="hidden md:block overflow-auto">
+                  <table className="responsive-table w-full">
+                    <thead>
+                      <tr className="text-left border-b border-glass-border text-secondary text-sm">
+                        <th className="py-3 px-4">Student</th>
+                        <th className="py-3 px-4">Challenge</th>
+                        <th className="py-3 px-4">Language</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {submissions.map((sub) => (
+                        <tr key={sub._id} className="border-b border-glass-border/60 hover:bg-white/5 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent text-xs font-bold">
+                                {sub.userId?.username?.[0] || 'U'}
+                              </div>
+                              <span className="font-medium text-primary">{sub.userId?.username || 'Unknown'}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-secondary">{sub.challengeId?.title || 'Unknown'}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 rounded bg-glass-surface text-[10px] font-bold text-tertiary uppercase">
+                              {sub.language}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-medium">{sub.status}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => onGrade(sub._id, 'Accepted')}
+                                className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500/20 transition-all"
+                              >
+                                Accept
+                              </button>
+                              <button 
+                                onClick={() => onGrade(sub._id, 'Rejected')}
+                                className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                      <button 
-                        onClick={() => onGrade(sub._id, 'Accepted')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500/20 transition-all border border-green-500/20"
-                      >
-                        <FiCheckCircle /> Accept
-                      </button>
-                      <button 
-                        onClick={() => onGrade(sub._id, 'Rejected')}
-                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-all border border-red-500/20"
-                      >
-                        <FiXCircle /> Reject
-                      </button>
+                {/* Mobile View */}
+                <div className="md:hidden space-y-3">
+                  {submissions.map((sub) => (
+                    <div key={sub._id} className="macos-glass p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-primary">{sub.userId?.username || 'Unknown'}</p>
+                          <p className="text-xs text-secondary">{sub.challengeId?.title || 'Unknown'}</p>
+                        </div>
+                        <span className="px-2 py-1 rounded bg-glass-surface text-[10px] font-bold text-tertiary">
+                          {sub.language}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => onGrade(sub._id, 'Accepted')}
+                          className="flex-1 py-2 bg-green-500/10 text-green-500 rounded-lg text-xs font-bold hover:bg-green-500/20"
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          onClick={() => onGrade(sub._id, 'Rejected')}
+                          className="flex-1 py-2 bg-red-500/10 text-red-500 rounded-lg text-xs font-bold hover:bg-red-500/20"
+                        >
+                          Reject
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-glass-border">
                   <span className="text-xs text-secondary">
@@ -179,14 +254,14 @@ const ClanChiefPanel = () => {
                   </span>
                   <div className="flex gap-2">
                     <button
-                      className="btn-secondary py-1.5 text-xs"
+                      className="btn-secondary py-1.5 text-xs px-4"
                       onClick={() => setReviewFilters((p) => ({ ...p, page: Math.max(1, p.page - 1) }))}
                       disabled={(reviewMeta.page || 1) <= 1}
                     >
                       Prev
                     </button>
                     <button
-                      className="btn-secondary py-1.5 text-xs"
+                      className="btn-secondary py-1.5 text-xs px-4"
                       onClick={() => setReviewFilters((p) => ({ ...p, page: p.page + 1 }))}
                       disabled={(reviewMeta.page || 1) >= (reviewMeta.totalPages || 1)}
                     >
@@ -194,7 +269,7 @@ const ClanChiefPanel = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </Card>
