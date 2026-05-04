@@ -44,6 +44,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  bio: { type: String, default: 'Expert Algorithmist' },
+  branch: { type: String, default: 'B.Tech CSE' },
+  year: { type: String, default: 'Third Year' },
+  section: { type: String, default: 'Section A' },
+  location: { type: String, default: 'Bhubaneswar, India' },
+  github: { type: String, default: '' },
+  twitter: { type: String, default: '' },
+  website: { type: String, default: '' },
 });
 
 // Encrypt password before saving.

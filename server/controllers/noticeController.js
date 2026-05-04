@@ -19,9 +19,6 @@ exports.createGlobalNotice = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Content is required' });
     }
 
-    // Optional: Delete old notices if we only want one active at a time
-    await GlobalNotice.deleteMany({});
-
     const notice = await GlobalNotice.create({
       content,
       createdBy: req.user.id,
@@ -34,9 +31,27 @@ exports.createGlobalNotice = async (req, res) => {
   }
 };
 
+exports.getAllNotices = async (req, res) => {
+  try {
+    const notices = await GlobalNotice.find()
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'username');
+    res.json({ success: true, data: notices });
+  } catch (err) {
+    logger.error('Error fetching notice history:', err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 exports.deleteGlobalNotice = async (req, res) => {
   try {
-    await GlobalNotice.deleteMany({});
+    const { id } = req.params;
+    if (id) {
+      await GlobalNotice.findByIdAndDelete(id);
+    } else {
+      // Fallback for clearing all (if needed)
+      await GlobalNotice.deleteMany({});
+    }
     res.json({ success: true, message: 'Global notice deleted' });
   } catch (err) {
     logger.error('Error deleting global notice:', err);
