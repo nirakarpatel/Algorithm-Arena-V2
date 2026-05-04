@@ -28,7 +28,7 @@ const GridBackground = () => (
   <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
     {/* Perspective grid */}
     <svg
-      className="absolute inset-0 w-full h-full opacity-[0.04] dark:opacity-[0.06]"
+      className="absolute inset-0 w-full h-full opacity-[0] dark:opacity-[0]"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
@@ -117,7 +117,7 @@ const FloatingSnippet = ({ text, style }) => (
   <span
     className="absolute font-mono text-[11px] font-bold select-none pointer-events-none"
     style={{
-      color: `rgba(var(--accent-rgb), 0.18)`,
+      color: `rgba(var(--accent-rgb), 0)`,
       letterSpacing: "0.05em",
       ...style,
     }}
@@ -128,7 +128,7 @@ const FloatingSnippet = ({ text, style }) => (
 
 /* ── Stat pill ── */
 const StatPill = ({ icon: Icon, value, label, color }) => (
-  <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 dark:bg-white/3 border border-black/8 dark:border-white/10 ">
+  <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-black/[0.07] dark:border-white/10 shadow-sm dark:shadow-none">
     <div
       className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
       style={{ background: `rgba(${color}, 0.12)` }}
@@ -165,7 +165,7 @@ const Home = () => {
   const heroRef = useRef(null);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 400], [0, -60]);
-  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0.4]);
+  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0.1]);
 
   const challengesQuery = useQuery({
     queryKey: ["home-challenges"],

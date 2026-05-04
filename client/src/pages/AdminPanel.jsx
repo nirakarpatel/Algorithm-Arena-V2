@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { FiTrash2, FiSearch, FiShield, FiUser, FiX } from 'react-icons/fi';
 import { clsx } from 'clsx';
-import Card from '../components/Card';
+
 import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
@@ -324,30 +324,30 @@ const AdminPanel = () => {
     <div className="space-y-6">
       <h1 className="text-page-title font-extrabold">Creator Studio</h1>
 
-      <div className="macos-glass p-2 inline-flex gap-2">
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'create' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('create')}>
+      <div className="segmented inline-flex flex-wrap gap-1">
+        <button className={`segmented-btn ${ activeTab === 'create' ? 'active' : ''}`} onClick={() => setActiveTab('create')}>
           New Challenge
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'review' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('review')}>
+        <button className={`segmented-btn ${ activeTab === 'review' ? 'active' : ''}`} onClick={() => setActiveTab('review')}>
           Review Work
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'manage' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('manage')}>
+        <button className={`segmented-btn ${ activeTab === 'manage' ? 'active' : ''}`} onClick={() => setActiveTab('manage')}>
           Manage Challenges
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'permissions' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('permissions')}>
+        <button className={`segmented-btn ${ activeTab === 'permissions' ? 'active' : ''}`} onClick={() => setActiveTab('permissions')}>
           Permissions
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'clans' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('clans')}>
+        <button className={`segmented-btn ${ activeTab === 'clans' ? 'active' : ''}`} onClick={() => setActiveTab('clans')}>
           Manage Clans
         </button>
-        <button className={`px-4 py-2 rounded-lg ${activeTab === 'notices' ? 'bg-accent text-white' : ''}`} onClick={() => setActiveTab('notices')}>
+        <button className={`segmented-btn ${ activeTab === 'notices' ? 'active' : ''}`} onClick={() => setActiveTab('notices')}>
           Global Notice
         </button>
       </div>
 
       {activeTab === 'create' && (
-        <Card>
-          <form onSubmit={onCreateChallenge} className="space-y-4 max-w-2xl">
+        <div className="macos-glass p-8 max-w-2xl mx-auto">
+          <form onSubmit={onCreateChallenge} className="space-y-4">
             <h2 className="text-section-title font-bold">Create Challenge</h2>
             <div>
               <label className="field-label">Title</label>
@@ -407,11 +407,11 @@ const AdminPanel = () => {
               Publish Challenge
             </button>
           </form>
-        </Card>
+        </div>
       )}
 
       {activeTab === 'review' && (
-        <Card>
+        <div className="macos-glass p-6">
           <div className="space-y-4">
             <h2 className="text-section-title font-bold">{reviewQueryLabel}</h2>
 
@@ -564,11 +564,11 @@ const AdminPanel = () => {
               </>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
       {activeTab === 'manage' && (
-        <Card>
+        <div className="macos-glass p-6">
           <h2 className="text-section-title font-bold mb-4">Manage Challenges</h2>
 
           {challengesQuery.isLoading ? (
@@ -598,13 +598,13 @@ const AdminPanel = () => {
               ))}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {activeTab === 'clans' && (
         <div className="space-y-6">
-          <Card>
-            <form onSubmit={onCreateClan} className="space-y-4 max-w-2xl">
+          <div className="macos-glass p-8 max-w-2xl mx-auto">
+            <form onSubmit={onCreateClan} className="space-y-4">
               <h2 className="text-section-title font-bold">Create Clan</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
@@ -622,9 +622,9 @@ const AdminPanel = () => {
               </div>
               <button className="btn-primary" type="submit">Create Clan</button>
             </form>
-          </Card>
+          </div>
 
-          <Card>
+          <div className="macos-glass p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
               <h2 className="text-section-title font-bold">Manage Clans</h2>
               <div className="relative w-full md:w-64">
@@ -707,12 +707,12 @@ const AdminPanel = () => {
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         </div>
       )}
 
       {activeTab === 'permissions' && (
-        <Card>
+        <div className="macos-glass p-6">
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
               <h2 className="text-section-title font-bold">Manage Permissions</h2>
@@ -766,12 +766,12 @@ const AdminPanel = () => {
               </div>
             )}
           </div>
-        </Card>
+        </div>
       )}
 
       {activeTab === 'notices' && (
-        <Card>
-          <div className="space-y-6 max-w-2xl">
+        <div className="macos-glass p-8 max-w-2xl mx-auto">
+          <div className="space-y-6">
             <h2 className="text-section-title font-bold">Manage Global Notice</h2>
             <p className="text-secondary text-sm">
               The global notice appears at the top of the notice board for <strong>all clans</strong>. 
@@ -823,7 +823,7 @@ const AdminPanel = () => {
               </div>
             </form>
           </div>
-        </Card>
+        </div>
       )}
 
       <ConfirmDialog

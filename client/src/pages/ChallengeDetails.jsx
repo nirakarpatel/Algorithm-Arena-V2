@@ -302,7 +302,7 @@ const ChallengeDetails = () => {
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-white/10 mb-3 shrink-0">
+      <div className="flex items-center gap-3 pb-3 border-b border-black/10 dark:border-white/10 mb-3 shrink-0">
         <Link
           to="/dashboard"
           className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-sm"
@@ -310,7 +310,7 @@ const ChallengeDetails = () => {
           <FiChevronLeft size={16} />
           <span className="hidden sm:inline">Missions</span>
         </Link>
-        <div className="w-px h-5 bg-white/10" />
+        <div className="w-px h-5 bg-black/10 dark:bg-white/10" />
         <a href={challenge.link}>
           <h1 className="text-lg sm:text-xl font-bold truncate flex flex-row items-center gap-2 hover:text-accent transition-colors">
             {challenge.title} <FiExternalLink />
@@ -333,7 +333,7 @@ const ChallengeDetails = () => {
       <div className="flex flex-col lg:flex-row gap-3 flex-1 min-h-0 w-full">
         {/* LEFT PANEL */}
         <div className="flex-1 flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden">
-          <div className="flex border-b border-white/10 shrink-0">
+          <div className="flex border-b border-black/10 dark:border-white/10 shrink-0">
             <button
               className={`px-4 py-3 text-sm font-semibold relative ${leftTab === "description" ? "text-primary" : "text-secondary"}`}
               onClick={() => setLeftTab("description")}
@@ -361,7 +361,7 @@ const ChallengeDetails = () => {
                 <div className="text-sm leading-relaxed whitespace-pre-wrap text-primary/90">
                   {challenge.description}
                 </div>
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-white/10">
+                <div className="flex flex-wrap gap-2 pt-4 border-t border-black/10 dark:border-white/10">
                   <span
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${difficultyBg} ${difficultyColor}`}
                   >
@@ -378,7 +378,7 @@ const ChallengeDetails = () => {
                   <Link
                     key={sub._id}
                     to={`/submission/${sub._id}`}
-                    className="flex items-center justify-between p-3 rounded-xl border border-white/20 hover:border-accent hover:scale-[99%] transition-all"
+                    className="flex items-center justify-between p-3 rounded-xl border border-black/10 dark:border-white/10 hover:border-accent hover:scale-[99%] transition-all"
                   >
                     <div>
                       <p
@@ -390,7 +390,7 @@ const ChallengeDetails = () => {
                         {new Date(sub.submittedAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-secondary">
+                    <span className="text-xs bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded text-secondary">
                       {sub.language}
                     </span>
                   </Link>
@@ -402,13 +402,13 @@ const ChallengeDetails = () => {
 
         {/* RIGHT PANEL - Editor */}
         <div className="lg:w-1/2 flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-2">
               <FiCode className="text-accent" />
               <span className="text-sm font-semibold">Code Editor</span>
             </div>
             <select
-              className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 py-1 text-primary focus:outline-none"
+              className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg text-xs px-2 py-1 text-primary focus:outline-none"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
             >
@@ -436,7 +436,7 @@ const ChallengeDetails = () => {
             />
           </div>
 
-          <div className="px-4 py-3 border-t border-white/10 shrink-0 space-y-3 bg-black/1">
+          <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3 bg-black/1">
             <div className="flex items-center justify-between text-[11px] text-secondary">
               <span>
                 {codeStats.lines} lines • {codeStats.characters} chars
@@ -456,10 +456,10 @@ const ChallengeDetails = () => {
           </div>
 
           {/* Bottom Submit Section */}
-          <div className="px-4 py-3 border-t border-white/10 shrink-0 space-y-3">
+          <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3">
             {/* GitHub URL Input */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 flex-1 focus-within:border-accent transition-colors">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex-1 focus-within:border-accent transition-colors">
                 <FiGithub size={14} className="text-secondary shrink-0" />
                 <input
                   name="submissionRepositoryUrl"

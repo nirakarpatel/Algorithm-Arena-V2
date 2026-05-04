@@ -238,8 +238,20 @@ const Profile = () => {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {statCards.map((card) => {
               const Icon = card.icon;
+              const diffColor =
+                card.color === 'text-green-400'
+                  ? '34, 197, 94'
+                  : card.color === 'text-accent'
+                    ? undefined
+                    : card.color === 'text-yellow-400'
+                      ? '234, 179, 8'
+                      : '168, 85, 247';
               return (
-                <Card key={card.label} className="group relative overflow-hidden">
+                <Card
+                  key={card.label}
+                  className="group relative overflow-hidden"
+                  difficultyColor={diffColor}
+                >
                   <div className="absolute right-0 top-0 p-4 opacity-5 transition-opacity group-hover:opacity-10">
                     <Icon size={48} />
                   </div>
@@ -251,7 +263,9 @@ const Profile = () => {
             })}
           </div>
 
-          <Card>
+          <div
+            className="rounded-2xl border border-black/[0.07] dark:border-white/[0.07] bg-white/60 dark:bg-white/[0.02] px-6 py-4"
+          >
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="text-secondary">Acceptance Rate</span>
               <span className="font-semibold">{acceptedPct}%</span>
@@ -259,7 +273,7 @@ const Profile = () => {
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full bg-gradient-to-r from-green-400 to-accent" style={{ width: `${acceptedPct}%` }} />
             </div>
-          </Card>
+          </div>
 
           <Card className="flex-grow">
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -304,7 +318,7 @@ const Profile = () => {
                     key={sub._id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="group flex items-center justify-between gap-4 rounded-xl border border-glass-border/40 p-4 transition-all hover:border-accent/40"
+                    className="group flex items-center justify-between gap-4 rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.02] p-4 transition-all hover:border-accent/30 hover:bg-white/70 dark:hover:bg-accent/5"
                   >
                     <div className="flex items-center gap-4">
                       <div
