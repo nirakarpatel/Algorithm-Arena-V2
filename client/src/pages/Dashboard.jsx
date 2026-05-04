@@ -18,12 +18,26 @@ import {
   mockChallenges,
   mockDashboardSummary,
 } from "../lib/mockData";
+import BaseCard from "../components/BaseCard";
+
 import SkeletonCard from "../components/SkeletonCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
+import ChallengeCard from "../components/Card";
 
 const MotionBlock = motion.div;
-
+const getDifficultyRGB = (diff) => {
+  switch (diff) {
+    case "Easy":
+      return "34, 197, 94";
+    case "Medium":
+      return "234, 179, 8";
+    case "Hard":
+      return "239, 68, 68";
+    default:
+      return "0, 122, 255";
+  }
+};
 const buildChallengeQuery = ({
   page,
   limit,
@@ -72,13 +86,25 @@ const Dashboard = () => {
       if (USE_MOCK) {
         let filtered = mockChallenges;
         if (filters.search) {
-          filtered = filtered.filter(c => c.title.toLowerCase().includes(filters.search.toLowerCase()) || c.description.toLowerCase().includes(filters.search.toLowerCase()));
+          filtered = filtered.filter(
+            (c) =>
+              c.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+              c.description
+                .toLowerCase()
+                .includes(filters.search.toLowerCase()),
+          );
         }
         if (filters.difficulty) {
-          filtered = filtered.filter(c => c.difficulty === filters.difficulty);
+          filtered = filtered.filter(
+            (c) => c.difficulty === filters.difficulty,
+          );
         }
         if (filters.category) {
-          filtered = filtered.filter(c => c.category && c.category.toLowerCase().includes(filters.category.toLowerCase()));
+          filtered = filtered.filter(
+            (c) =>
+              c.category &&
+              c.category.toLowerCase().includes(filters.category.toLowerCase()),
+          );
         }
         return filtered.slice(0, filters.limit);
       }
@@ -166,12 +192,19 @@ const Dashboard = () => {
         subtitle="Track progress, jump back into your latest work, and command the arena."
       />
 
-      <MotionBlock
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden macos-glass p-8 md:p-12 border-accent/20 bg-gradient-to-br from-accent/10 via-transparent to-purple-500/10"
+      <ChallengeCard
+        className="relative overflow-hidden rounded-3xl border border-accent/20 p-8 md:p-12"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(var(--accent-rgb),0.08) 0%, rgba(var(--accent-rgb),0.02) 50%, rgba(168,85,247,0.06) 100%)",
+          boxShadow: "0 4px 24px rgba(var(--accent-rgb), 0.08)",
+        }}
       >
-        <div className="relative z-10 max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 max-w-2xl"
+        >
           <span className="mb-4 block text-[10px] font-black uppercase tracking-[0.3em] text-accent">
             Recommended for you
           </span>
@@ -192,16 +225,17 @@ const Dashboard = () => {
             >
               Enter Arena
             </Link>
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs">
+            <div className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs">
               <FiZap className="text-yellow-400" />
               <span className="font-bold">+50 Bonus XP</span>
             </div>
           </div>
-        </div>
+        </motion.div>
         <div className="pointer-events-none absolute right-0 top-1/2 translate-x-1/4 -translate-y-1/2 opacity-10">
           <FiCpu size={400} className="text-accent" />
         </div>
-      </MotionBlock>
+      </ChallengeCard>
+
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((card, index) => {
@@ -212,25 +246,26 @@ const Dashboard = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="group relative overflow-hidden macos-glass p-6 hover:border-accent/40 transition-all"
             >
-              <div className="absolute -bottom-2 -right-2 opacity-5 transition-opacity group-hover:opacity-10">
-                <Icon size={64} />
-              </div>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-tertiary">
-                  {card.label}
-                </h3>
-                <Icon className="text-secondary" size={14} />
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className={`text-3xl font-black ${card.valueClass}`}>
-                  {card.value}
-                </p>
-                <span className="rounded bg-green-500/10 px-1 text-[10px] font-bold text-green-500">
-                  ▲ 2%
-                </span>
-              </div>
+              <BaseCard className="p-6 !rounded-3xl" hover={false} >
+                <div className="absolute -bottom-2 -right-2 opacity-5 transition-opacity group-hover:opacity-10">
+                  <Icon size={64} />
+                </div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-tertiary">
+                    {card.label}
+                  </h3>
+                  <Icon className="text-secondary" size={14} />
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <p className={`text-3xl font-black ${card.valueClass}`}>
+                    {card.value}
+                  </p>
+                  <span className="rounded bg-green-500/10 px-1 text-[10px] font-bold text-green-500">
+                    ▲ 2%
+                  </span>
+                </div>
+              </BaseCard>
             </MotionBlock>
           );
         })}
@@ -251,7 +286,7 @@ const Dashboard = () => {
           </div>
 
           {/* Filter Bar */}
-          <div className="macos-glass p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
+          <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
             <input
               className="field-input md:col-span-2"
               placeholder="Search title or description"
@@ -265,11 +300,13 @@ const Dashboard = () => {
               onChange={(e) => handleFilterChange("category", e.target.value)}
             />
 
-            <div className="flex gap-1 md:gap-2 md:grid md:grid-cols-2 md:col-span-3 items-center text-xs sm:text-base">
+            <div className="flex gap-1 md:gap-3 md:grid md:grid-cols-2 md:col-span-3 items-center text-xs sm:text-base">
               <select
                 className="field-select flex-[1] md:w-full"
                 value={filters.limit}
-                onChange={(e) => handleFilterChange("limit", Number(e.target.value))}
+                onChange={(e) =>
+                  handleFilterChange("limit", Number(e.target.value))
+                }
               >
                 <option value={4}>4 / page</option>
                 <option value={8}>8 / page</option>
@@ -288,7 +325,7 @@ const Dashboard = () => {
               </select>
             </div>
           </div>
-          
+
           <div className="chip-group flex flex-wrap gap-2">
             {difficultyChips.map((chip) => (
               <button
@@ -312,7 +349,7 @@ const Dashboard = () => {
               description="Check back later for new missions."
             />
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               {challenges.map((challenge, index) => (
                 <MotionBlock
                   key={challenge._id}
@@ -324,7 +361,10 @@ const Dashboard = () => {
                     to={`/challenge/${challenge._id}`}
                     className="group block h-full"
                   >
-                    <div className="flex h-full flex-col macos-glass p-5 transition-all duration-300 hover:-translate-y-1 hover:border-accent">
+                    <ChallengeCard
+                      className="h-full p-6"
+                      difficultyColor={getDifficultyRGB(challenge.difficulty)}
+                    >
                       <div className="mb-3 flex items-start justify-between">
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
@@ -347,7 +387,7 @@ const Dashboard = () => {
                       <p className="mt-auto line-clamp-2 text-xs text-secondary">
                         {challenge.description}
                       </p>
-                    </div>
+                    </ChallengeCard>
                   </Link>
                 </MotionBlock>
               ))}
@@ -357,7 +397,7 @@ const Dashboard = () => {
           <div className="pt-2">
             <Link
               to="/missions"
-              className="btn-secondary flex w-full items-center justify-center gap-2 py-3 transition-all hover:border-accent/40 hover:bg-white/5"
+              className={`btn-secondary flex w-full items-center justify-center gap-2 py-3 transition-all hover:border-accent/40 hover:bg-white/5`}
             >
               Explore More Missions <FiArrowRight />
             </Link>
@@ -369,32 +409,34 @@ const Dashboard = () => {
             <FiActivity className="text-accent" />
             Recent Activity
           </h2>
-          <div className="custom-scrollbar space-y-3 overflow-y-auto macos-glass p-4 xl:h-[350px]">
+          <div className="custom-scrollbar space-y-2 overflow-y-auto macos-glass p-4 xl:h-[350px]">
             {sortedActivity.length ? (
               sortedActivity.map((submission) => (
                 <Link
                   key={submission._id}
                   to={`/submission/${submission._id}`}
-                  className="block rounded-xl border border-glass-border bg-white/[0.01] p-4 transition-all hover:border-accent hover:bg-accent/5"
+                  className="group block"
                 >
-                  <p className="line-clamp-1 text-sm font-semibold">
-                    {submission.challengeId?.title || "Unknown Challenge"}
-                  </p>
-                  <div className="mt-2 flex items-end justify-between">
-                    <p className="text-xs text-secondary">
-                      {new Date(submission.submittedAt).toLocaleDateString()}
+                  <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.02] p-4 transition-all hover:border-accent/30 hover:bg-white/70 dark:hover:bg-accent/5">
+                    <p className="line-clamp-1 text-sm font-semibold group-hover:text-accent transition-colors">
+                      {submission.challengeId?.title || "Unknown Challenge"}
                     </p>
-                    <p
-                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
-                        submission.status === "Accepted"
-                          ? "bg-green-500/20 text-green-500"
-                          : submission.status === "Rejected"
-                            ? "bg-red-500/20 text-red-500"
-                            : "bg-yellow-500/20 text-yellow-500"
-                      }`}
-                    >
-                      {submission.status}
-                    </p>
+                    <div className="mt-2 flex items-end justify-between">
+                      <p className="text-xs text-secondary">
+                        {new Date(submission.submittedAt).toLocaleDateString()}
+                      </p>
+                      <p
+                        className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                          submission.status === "Accepted"
+                            ? "bg-green-500/15 text-green-500"
+                            : submission.status === "Rejected"
+                              ? "bg-red-500/15 text-red-500"
+                              : "bg-yellow-500/15 text-yellow-500"
+                        }`}
+                      >
+                        {submission.status}
+                      </p>
+                    </div>
                   </div>
                 </Link>
               ))
