@@ -191,10 +191,21 @@ const logoutAll = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).lean();
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
 
+    // Check if user is a chief of any clan
+    const Clan = require('../models/Clan');
+    const clanWhereChief = await Clan.findOne({ chief: req.user.id });
+    
     return sendSuccess(res, {
-      data: user,
+      data: {
+        ...user,
+        isChief: !!clanWhereChief
+      },
     });
   } catch (err) {
     return next(err);

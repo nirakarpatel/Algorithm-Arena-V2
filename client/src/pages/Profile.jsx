@@ -18,15 +18,6 @@ import { useAuth } from '../context/useAuth';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MotionDiv = motion.div;
 
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?w=400&h=400&fit=crop',
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
-];
-
 // Mock heatmap data generation (365 days starting from simulated join date)
 const generateHeatmapData = () => {
   const data = [];
@@ -216,7 +207,6 @@ const Profile = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [activityFilter, setActivityFilter] = useState('All');
   const [activityQuery, setActivityQuery] = useState('');
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   useSocket('leaderboard_update', () => {
     queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
@@ -253,11 +243,6 @@ const Profile = () => {
     });
   }, [activityFilter, activityQuery, submissions]);
 
-  const handleAvatarSelect = (url) => {
-    updateUser({ profilePicture: url });
-    setShowAvatarPicker(false);
-  };
-
   const handleDownloadProfile = async () => {
     if (!cardRef.current) return;
     setIsExporting(true);
@@ -278,20 +263,6 @@ const Profile = () => {
     } finally {
       setIsExporting(false);
     }
-  };
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      updateUser({ profilePicture: reader.result });
-      setShowAvatarPicker(false);
-    };
-    reader.readAsDataURL(file);
   };
 
   if (profileQuery.isLoading) {
@@ -331,67 +302,9 @@ const Profile = () => {
             >
               <FiDownload /> {isExporting ? 'Generating...' : 'Export Card'}
             </button>
-            <button className="btn-secondary text-sm" onClick={() => setShowAvatarPicker(true)}>
-              Change Avatar
-            </button>
           </div>
         }
       />
-
-      {showAvatarPicker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <MotionDiv
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="macos-glass w-full max-w-md p-8"
-          >
-            <h3 className="mb-6 text-xl font-bold text-primary">Choose an Avatar</h3>
-
-            <div
-              className="group relative mb-8 cursor-pointer rounded-2xl border-2 border-dashed border-glass-border p-6 transition-colors hover:border-accent"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
-                  <FiZap />
-                </div>
-                <p className="text-sm font-bold text-primary">Upload from device</p>
-                <p className="text-[10px] text-tertiary">PNG or JPG up to 2MB</p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                name="profileAvatarUpload"
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileUpload}
-              />
-            </div>
-
-            <div className="mb-8 grid grid-cols-3 gap-4">
-              {PRESET_AVATARS.map((url, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="aspect-square overflow-hidden rounded-xl border-2 border-transparent transition-all hover:border-accent"
-                  onClick={() => handleAvatarSelect(url)}
-                >
-                  <img src={url} alt={`Avatar ${index + 1}`} className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button className="btn-secondary flex-1" onClick={() => setShowAvatarPicker(false)}>
-                Cancel
-              </button>
-              <button className="btn-secondary flex-1 text-red-400" onClick={() => handleAvatarSelect(null)}>
-                Clear
-              </button>
-            </div>
-          </MotionDiv>
-        </div>
-      )}
 
       <div ref={cardRef} className={clsx("space-y-6", isExporting && "p-12 bg-[#050507] rounded-[40px] border border-white/10")}>
         {isExporting && (
@@ -417,8 +330,8 @@ const Profile = () => {
               <FiEdit2 size={16} className="group-hover/edit:rotate-12 transition-transform" />
             </Link>
             
-            <div className="group relative mb-6 inline-block cursor-pointer" onClick={() => setShowAvatarPicker(true)}>
-              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-xl shadow-accent/20">
+            <div className="group relative mb-6 inline-block">
+              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all shadow-xl shadow-accent/20">
                 {user?.profilePicture ? (
                   <img src={user.profilePicture} alt="Profile" className="h-full w-full rounded-[14px] object-cover" />
                 ) : (

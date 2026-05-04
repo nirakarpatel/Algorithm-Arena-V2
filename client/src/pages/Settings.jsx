@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiMapPin, FiGithub, FiTwitter, FiGlobe, FiSave, FiCpu, FiBookOpen, FiLayers, FiGrid, FiAward, FiCalendar, FiLink, FiZap } from 'react-icons/fi';
+import { FiUser, FiMapPin, FiGithub, FiTwitter, FiGlobe, FiSave, FiCpu, FiBookOpen, FiLayers, FiGrid, FiAward, FiCalendar, FiLink, FiZap, FiEdit2 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import { api } from '../lib/api';
@@ -8,8 +8,19 @@ import PageHeader from '../components/PageHeader';
 import toast from 'react-hot-toast';
 import { clsx } from 'clsx';
 
+const PRESET_AVATARS = [
+  'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1628157588553-5eeea00af15c?w=400&h=400&fit=crop',
+  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=400&h=400&fit=crop',
+];
+
 const Settings = () => {
   const { user, updateUser } = useAuth();
+  const fileInputRef = React.useRef(null);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [formData, setFormData] = useState({
     bio: user?.bio || '',
     branch: user?.branch || '',
@@ -43,6 +54,23 @@ const Settings = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleAvatarSelect = (url) => {
+    updateUser({ profilePicture: url });
+    setShowAvatarPicker(false);
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateUser({ profilePicture: reader.result });
+      setShowAvatarPicker(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -64,10 +92,19 @@ const Settings = () => {
   };
 
   return (
+    <>
     <div className="space-y-8 pb-20 max-w-7xl mx-auto">
       <PageHeader 
         title="Rewrite Profile Card" 
         subtitle="Craft your digital identity in the arena. Changes update in real-time below."
+        actions={
+          <button 
+            className="btn-secondary text-sm flex items-center gap-2"
+            onClick={() => setShowAvatarPicker(true)}
+          >
+            <FiZap className="text-accent" /> Change Avatar
+          </button>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -251,8 +288,8 @@ const Settings = () => {
           <Card className="pt-8 text-center relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent border-white/10 shadow-2xl">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
             
-            <div className="mb-6 inline-block">
-              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-accent to-purple-600 p-0.5 shadow-xl shadow-accent/20">
+            <div className="group relative mb-6 inline-block cursor-pointer" onClick={() => setShowAvatarPicker(true)}>
+              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-xl shadow-accent/20">
                 {previewData.profilePicture ? (
                   <img src={previewData.profilePicture} alt="Profile" className="h-full w-full rounded-[14px] object-cover" />
                 ) : (
@@ -262,6 +299,11 @@ const Settings = () => {
                 )}
               </div>
               <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full border-4 border-bg-app bg-green-500 shadow-lg" />
+              
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                <FiEdit2 className="text-white" size={24} />
+              </div>
             </div>
 
             <h2 className="text-2xl font-black text-primary tracking-tight">{previewData.username || 'User'}</h2>
@@ -307,6 +349,64 @@ const Settings = () => {
         </div>
       </div>
     </div>
+      
+      <AnimatePresence>
+        {showAvatarPicker && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="macos-glass w-full max-w-md p-8"
+            >
+              <h3 className="mb-6 text-xl font-bold text-primary">Choose an Avatar</h3>
+
+              <div
+                className="group relative mb-8 cursor-pointer rounded-2xl border-2 border-dashed border-glass-border p-6 transition-colors hover:border-accent"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
+                    <FiZap />
+                  </div>
+                  <p className="text-sm font-bold text-primary">Upload from device</p>
+                  <p className="text-[10px] text-tertiary">PNG or JPG up to 2MB</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                />
+              </div>
+
+              <div className="mb-8 grid grid-cols-3 gap-4">
+                {PRESET_AVATARS.map((url, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className="aspect-square overflow-hidden rounded-xl border-2 border-transparent transition-all hover:border-accent"
+                    onClick={() => handleAvatarSelect(url)}
+                  >
+                    <img src={url} alt={`Avatar ${index + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <button className="btn-secondary flex-1" onClick={() => setShowAvatarPicker(false)}>
+                  Cancel
+                </button>
+                <button className="btn-secondary flex-1 text-red-400" onClick={() => handleAvatarSelect(null)}>
+                  Clear
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

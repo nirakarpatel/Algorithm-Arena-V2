@@ -35,6 +35,10 @@ const Navbar = ({ onLogout }) => {
     navItems.push({ name: 'Admin', path: '/admin', icon: FiShield });
   }
 
+  if (role === 'clan-chief' || user?.isChief) {
+    navItems.push({ name: 'Clan Chief', path: '/chief-panel', icon: FiShield });
+  }
+
   const closeMenu = () => setMenuOpen(false);
 
   return (
@@ -52,7 +56,6 @@ const Navbar = ({ onLogout }) => {
                 AlgoArena
               </span>
             </Link>
-            {/* <ThemeToggle />*/}
             <div className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -210,7 +213,7 @@ const Navbar = ({ onLogout }) => {
                 </div>
               )}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col flex-1">
               <span className="text-sm font-bold text-primary truncate w-40">{user?.username || 'Guest User'}</span>
               <span className="text-[10px] text-tertiary uppercase tracking-wider font-bold">{role || 'Member'}</span>
             </div>

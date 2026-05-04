@@ -10,6 +10,8 @@ import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
 import { USE_MOCK, mockChallenges, filterSubmissions, mockUsers } from '../lib/mockData';
 
+import { useSocket } from '../hooks/useSocket';
+
 const defaultClanForm = { name: '', tag: '', description: '' };
 
 const mockDelay = () => new Promise((r) => setTimeout(r, 400));
@@ -26,6 +28,21 @@ const defaultChallengeForm = {
 const AdminPanel = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('create');
+  
+  // Real-time updates for submissions
+  useSocket('new_submission', (data) => {
+    toast((t) => (
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-xs">NEW</div>
+        <div>
+          <p className="text-xs font-bold">{data.username} submitted code</p>
+          <p className="text-[10px] text-secondary">{data.challengeTitle}</p>
+        </div>
+      </div>
+    ), { position: 'top-right' });
+    queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+  });
+
   const [createForm, setCreateForm] = useState(defaultChallengeForm);
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
