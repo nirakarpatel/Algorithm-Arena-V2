@@ -201,6 +201,37 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const updateMe = async (req, res, next) => {
+  try {
+    const { bio, branch, year, section, location, github, twitter, website, profilePicture } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        $set: {
+          bio,
+          branch,
+          year,
+          section,
+          location,
+          github,
+          twitter,
+          website,
+          profilePicture
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    return sendSuccess(res, {
+      data: user,
+      message: 'Profile updated successfully'
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -208,4 +239,5 @@ module.exports = {
   logout,
   logoutAll,
   getMe,
+  updateMe,
 };

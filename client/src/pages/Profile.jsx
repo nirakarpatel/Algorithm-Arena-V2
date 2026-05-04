@@ -2,7 +2,10 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { FiActivity, FiAward, FiCalendar, FiGithub, FiLink, FiMapPin, FiSearch, FiTwitter, FiUsers, FiZap } from 'react-icons/fi';
+import { FiActivity, FiAward, FiCalendar, FiDownload, FiEdit2, FiGithub, FiLink, FiMapPin, FiSearch, FiTwitter, FiUsers, FiZap } from 'react-icons/fi';
+import { toPng } from 'html-to-image';
+import saveAs from 'file-saver';
+import { clsx } from 'clsx';
 import { useSocket } from '../hooks/useSocket';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -209,6 +212,8 @@ const Profile = () => {
   const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const cardRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [activityFilter, setActivityFilter] = useState('All');
   const [activityQuery, setActivityQuery] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -251,6 +256,28 @@ const Profile = () => {
   const handleAvatarSelect = (url) => {
     updateUser({ profilePicture: url });
     setShowAvatarPicker(false);
+  };
+
+  const handleDownloadProfile = async () => {
+    if (!cardRef.current) return;
+    setIsExporting(true);
+    try {
+      // Small delay to ensure any animations settle
+      await new Promise(r => setTimeout(r, 100));
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        backgroundColor: '#050507',
+        pixelRatio: 2, // Higher quality
+        style: {
+          borderRadius: '24px',
+        }
+      });
+      saveAs(dataUrl, `${user?.username || 'user'}-algoarena-profile.png`);
+    } catch (err) {
+      console.error('Export failed', err);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleFileUpload = (event) => {
@@ -297,6 +324,13 @@ const Profile = () => {
         subtitle={`Role: ${user?.role || 'user'} | Acceptance Rate: ${acceptedPct}%`}
         actions={
           <div className="flex gap-2">
+            <button 
+              className="btn-secondary text-sm flex items-center gap-2" 
+              onClick={handleDownloadProfile}
+              disabled={isExporting}
+            >
+              <FiDownload /> {isExporting ? 'Generating...' : 'Export Card'}
+            </button>
             <button className="btn-secondary text-sm" onClick={() => setShowAvatarPicker(true)}>
               Change Avatar
             </button>
@@ -359,42 +393,76 @@ const Profile = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
+      <div ref={cardRef} className={clsx("space-y-6", isExporting && "p-12 bg-[#050507] rounded-[40px] border border-white/10")}>
+        {isExporting && (
+          <div className="flex items-center justify-between mb-8 pb-8 border-b border-white/10">
+            <div>
+              <h1 className="text-4xl font-black text-white tracking-tighter">AlgoArena <span className="text-accent">Profile</span></h1>
+              <p className="text-secondary">Official Developer Certification</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-tertiary uppercase tracking-widest">Verified on</p>
+              <p className="text-sm font-bold text-primary">{new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
         <div className="flex flex-col gap-6 xl:col-span-1">
-          <Card className="pt-8 text-center">
-            <div className="group relative mb-4 inline-block cursor-pointer" onClick={() => setShowAvatarPicker(true)}>
-              <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-accent to-purple-500 p-1 transition-transform group-hover:scale-105">
+          <Card className="pt-8 text-center relative overflow-hidden" id="profile-main-card">
+            <Link 
+              to="/settings" 
+              className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 border border-white/10 text-secondary hover:text-accent hover:bg-accent/10 transition-all shadow-sm group/edit"
+              title="Edit Profile"
+            >
+              <FiEdit2 size={16} className="group-hover/edit:rotate-12 transition-transform" />
+            </Link>
+            
+            <div className="group relative mb-6 inline-block cursor-pointer" onClick={() => setShowAvatarPicker(true)}>
+              <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-xl shadow-accent/20">
                 {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt="Profile" className="h-full w-full rounded-xl object-cover" />
+                  <img src={user.profilePicture} alt="Profile" className="h-full w-full rounded-[14px] object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-xl bg-bg-app text-4xl font-black uppercase text-accent">
+                  <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[#1a1a1c] text-4xl font-black uppercase text-white">
                     {user?.username?.[0] || 'U'}
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 h-6 w-6 rounded-full border-4 border-bg-app bg-green-500 shadow-lg" />
+              <div className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full border-4 border-bg-app bg-green-500 shadow-lg ring-2 ring-green-500/20" />
             </div>
 
-            <h2 className="text-2xl font-black text-primary">{user?.username || 'User'}</h2>
-            <p className="mb-6 mt-1 text-sm text-secondary">Expert Algorithmist</p>
+            <h2 className="text-2xl font-black text-primary tracking-tight">{user?.username || 'User'}</h2>
+            <p className="mb-6 mt-1 text-sm font-medium text-secondary">
+              {user?.branch || 'B.Tech CSE'} {user?.section ? `| ${user.section}` : ''}
+            </p>
 
-            <div className="space-y-3 text-left">
+            <div className="space-y-3.5 text-left bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-3 text-sm text-secondary">
+                <FiAward className="text-accent" />
+                <span>{user?.bio || 'Expert Algorithmist'}</span>
+              </div>
               <div className="flex items-center gap-3 text-sm text-secondary">
                 <FiMapPin className="text-accent" />
-                <span>San Francisco, CA</span>
+                <span>{user?.year || 'Third Year Student'}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-secondary">
                 <FiCalendar className="text-accent" />
-                <span>Joined April 2026</span>
+                <span>Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'April 2026'}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-secondary">
+              <div className="flex items-center gap-3 text-sm text-secondary pt-2 border-t border-white/5">
                 <FiLink className="text-accent" />
-                <span className="truncate text-accent">arena.dev/{user?.username}</span>
+                <span className="truncate text-accent font-medium">
+                  {user?.website ? user.website.replace(/^https?:\/\//, '') : `arena.dev/${user?.username}`}
+                </span>
               </div>
             </div>
+            
             <div className="flex justify-center gap-4 border-t border-glass-border pt-6 mt-8">
-              <FiGithub className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
-              <FiTwitter className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
+              <a href={user?.github ? `https://github.com/${user.github}` : '#'} target="_blank" rel="noreferrer">
+                <FiGithub className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
+              </a>
+              <a href={user?.twitter ? `https://twitter.com/${user.twitter}` : '#'} target="_blank" rel="noreferrer">
+                <FiTwitter className="cursor-pointer text-secondary transition-colors hover:text-white" size={20} />
+              </a>
             </div>
           </Card>
 
@@ -533,6 +601,7 @@ const Profile = () => {
               <EmptyState title="No activities" description="Time to solve some missions!" />
             )}
           </Card>
+        </div>
         </div>
       </div>
     </div>
