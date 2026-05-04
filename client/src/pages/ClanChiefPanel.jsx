@@ -9,9 +9,25 @@ import PageHeader from '../components/PageHeader';
 import { api } from '../lib/api';
 import { USE_MOCK, filterSubmissions, mockChallenges } from '../lib/mockData';
 
+import { useSocket } from '../hooks/useSocket';
+
 const ClanChiefPanel = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('review');
+
+  // Real-time updates
+  useSocket('new_submission', (data) => {
+    toast((t) => (
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-xs">NEW</div>
+        <div>
+          <p className="text-xs font-bold">{data.username} submitted code</p>
+          <p className="text-[10px] text-secondary">{data.challengeTitle}</p>
+        </div>
+      </div>
+    ), { position: 'top-right' });
+    queryClient.invalidateQueries({ queryKey: ['chief-submissions'] });
+  });
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
     limit: 10,

@@ -37,6 +37,13 @@ const submitCode = async (req, res, next) => {
       language: language || 'javascript',
     });
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('new_submission', {
+      submissionId: submission._id,
+      username: req.user.username,
+      challengeTitle: challenge.title,
+    });
+
     return sendSuccess(res, {
       statusCode: 201,
       data: submission,

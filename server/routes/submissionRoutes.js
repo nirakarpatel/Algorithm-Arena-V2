@@ -10,7 +10,7 @@ const {
   updateSubmissionStatus,
 } = require('../controllers/SubmissionController');
 
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, chiefOrAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const {
   submissionIdParamsSchema,
@@ -23,7 +23,7 @@ const {
 
 router
   .route('/')
-  .get(protect, admin, validate(submissionQuerySchema), getSubmissions)
+  .get(protect, chiefOrAdmin, validate(submissionQuerySchema), getSubmissions)
   .post(protect, validate(submissionCreateSchema), submitCode);
 
 router.get('/my-submissions', protect, validate(mySubmissionQuerySchema), getMySubmissions);
@@ -32,7 +32,7 @@ router.get('/leaderboard', protect, validate(leaderboardQuerySchema), getLeaderb
 router
   .route('/:id')
   .get(protect, validate(submissionIdParamsSchema), getSubmissionById)
-  .put(protect, admin, validate(submissionIdParamsSchema), validate(submissionUpdateSchema), updateSubmissionStatus);
+  .put(protect, chiefOrAdmin, validate(submissionIdParamsSchema), validate(submissionUpdateSchema), updateSubmissionStatus);
 
 module.exports = router;
 
