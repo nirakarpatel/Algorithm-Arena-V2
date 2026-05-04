@@ -4,6 +4,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
+import ClanChiefRoute from './components/ClanChiefRoute';
 import LoadingScreen from './components/LoadingScreen';
 import ThemeToggle from './components/ThemeToggle';
 import NotificationListener from './components/NotificationListener';
@@ -19,6 +20,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Clans = lazy(() => import('./pages/Clans'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const ClanChiefPanel = lazy(() => import('./pages/ClanChiefPanel'));
 const Missions = lazy(() => import('./pages/Missions'));
 const PendingTasks = lazy(() => import('./pages/PendingTasks'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -70,6 +72,14 @@ function App() {
                   <AdminPanel />
                 </AdminRoute>
               }
+            />
+            <Route 
+              path="/chief-panel" 
+              element={
+                <ClanChiefRoute>
+                  <ClanChiefPanel />
+                </ClanChiefRoute>
+              } 
             />
           </Route>
 

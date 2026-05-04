@@ -35,6 +35,10 @@ const Navbar = ({ onLogout }) => {
     navItems.push({ name: 'Admin', path: '/admin', icon: FiShield });
   }
 
+  if (role === 'clan-chief' || user?.isChief) {
+    navItems.push({ name: 'Clan Chief', path: '/chief-panel', icon: FiShield });
+  }
+
   const closeMenu = () => setMenuOpen(false);
 
   return (
