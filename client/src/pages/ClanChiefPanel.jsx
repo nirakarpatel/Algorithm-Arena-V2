@@ -33,8 +33,8 @@ const ClanChiefPanel = () => {
       if (reviewFilters.status) params.set('status', reviewFilters.status);
       if (reviewFilters.challengeId) params.set('challengeId', reviewFilters.challengeId);
       if (reviewFilters.userId.length === 24) params.set('userId', reviewFilters.userId);
-      if (reviewFilters.from) params.set('from', reviewFilters.from);
-      if (reviewFilters.to) params.set('to', reviewFilters.to);
+      if (reviewFilters.from) params.set('from', new Date(`${reviewFilters.from}T00:00:00.000Z`).toISOString());
+      if (reviewFilters.to) params.set('to', new Date(`${reviewFilters.to}T23:59:59.999Z`).toISOString());
 
       const res = await api.get(`/api/submissions?${params.toString()}`);
       return {
@@ -48,7 +48,7 @@ const ClanChiefPanel = () => {
     queryKey: ['chief-challenges'],
     queryFn: async () => {
       try {
-        const res = await api.get('/api/challenges?page=1&limit=100');
+        const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
         return res.data.data || mockChallenges;
       } catch {
         return mockChallenges;
@@ -59,12 +59,13 @@ const ClanChiefPanel = () => {
   const onGrade = async (id, status) => {
     try {
       if (USE_MOCK) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 400));
       } else {
         await api.put(`/api/submissions/${id}`, { status });
       }
       toast.success(`Submission marked ${status}`);
       queryClient.invalidateQueries({ queryKey: ['chief-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to grade submission');
     }
