@@ -56,7 +56,6 @@ const Navbar = ({ onLogout }) => {
                 AlgoArena
               </span>
             </Link>
-            {/* <ThemeToggle />*/}
             <div className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -85,6 +84,7 @@ const Navbar = ({ onLogout }) => {
             </div>
 
             <div className="flex items-center gap-2 md:gap-4">
+              <ThemeToggle />
               <div className="relative">
                  <button 
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
@@ -214,10 +214,11 @@ const Navbar = ({ onLogout }) => {
                 </div>
               )}
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-primary truncate w-40">{user?.username || 'Guest User'}</span>
+            <div className="flex flex-col flex-1">
+              <span className="text-sm font-bold text-primary truncate w-32">{user?.username || 'Guest User'}</span>
               <span className="text-[10px] text-tertiary uppercase tracking-wider font-bold">{role || 'Member'}</span>
             </div>
+            <ThemeToggle />
           </div>
 
           <div className="space-y-1">
