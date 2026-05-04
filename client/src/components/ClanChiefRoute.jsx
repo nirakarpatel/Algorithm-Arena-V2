@@ -4,7 +4,7 @@ import { useAuth } from '../context/useAuth';
 import LoadingScreen from './LoadingScreen';
 
 const ClanChiefRoute = ({ children }) => {
-  const { isAuthenticated, role, loading } = useAuth();
+  const { isAuthenticated, role, loading, user } = useAuth();
 
   if (loading) {
     return <LoadingScreen label="Verifying command..." />;
