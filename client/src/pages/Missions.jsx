@@ -81,14 +81,14 @@ const Missions = () => {
         const qs = buildChallengeQuery(filters);
         const res = await api.get(`/api/challenges?${qs}`);
         const data = res.data.data || [];
-        
+
         if (data.length > 0) {
           return {
             data,
             meta: res.data.meta || { page: 1, totalPages: 1, total: data.length },
           };
         }
-        
+
         const filteredMock = getFilteredMockData();
         return {
           data: filteredMock,

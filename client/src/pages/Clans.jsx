@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
+import BaseCard from '../components/BaseCard';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -100,7 +101,7 @@ const StatCard = ({ icon, label, value, color }) => {
 };
 
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
-/* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
+
 const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, onRemove, onAddNotice, onRemoveNotice, globalNotice }) => {
   const isChief = userId && (clan.chief?._id || clan.chief) === userId;
   const isAdmin = userRole === 'admin' || userRole === 'super-admin';
@@ -213,7 +214,7 @@ const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, o
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Notice Board */}
         <div className="xl:col-span-1 h-full">
-          <Card className="h-full flex flex-col min-h-[400px]">
+          <BaseCard variant="solid" hover={false} className="h-full flex flex-col min-h-[400px]">
             <h3 className="text-section-title font-bold flex items-center gap-2 mb-4 shrink-0">
               <FiMessageSquare className="text-accent" />
               Notice Board
@@ -286,12 +287,12 @@ const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, o
                 </div>
               )}
             </div>
-          </Card>
+          </BaseCard>
         </div>
 
         {/* Members List */}
-        <div className="xl:col-span-2">
-          <Card>
+        <div className="xl:col-span-2 h-full">
+          <BaseCard variant='solid'className="h-full" hover={false}>
             <h3 className="text-section-title font-bold flex items-center gap-2 mb-4">
               <FiUsers className="text-accent" />
               Roster
@@ -352,7 +353,7 @@ const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, o
                 );
               })}
             </div>
-          </Card>
+          </BaseCard>
         </div>
       </div>
     </div>

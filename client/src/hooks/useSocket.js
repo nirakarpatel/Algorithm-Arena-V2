@@ -6,7 +6,7 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 export const useSocket = (event, callback) => {
   const socketRef = useRef(null);
   const callbackRef = useRef(callback);
-
+  
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
