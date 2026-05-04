@@ -18,8 +18,6 @@ import { useAuth } from '../context/useAuth';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const MotionDiv = motion.div;
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 // Mock heatmap data generation (365 days starting from simulated join date)
 const generateHeatmapData = () => {
   const data = [];
