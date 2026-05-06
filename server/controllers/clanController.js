@@ -116,6 +116,10 @@ const createClan = async (req, res, next) => {
   try {
     const { name, tag, description } = req.body;
     const clan = await Clan.create({ name, tag, description });
+    
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
+    
     return sendSuccess(res, { statusCode: 201, data: clan, message: 'Clan created' });
   } catch (err) {
     if (err.code === 11000) {
@@ -141,6 +145,9 @@ const updateClan = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Clan not found' });
     }
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
+
     return sendSuccess(res, { data: clan, message: 'Clan updated' });
   } catch (err) {
     return next(err);
@@ -162,6 +169,10 @@ const deleteClan = async (req, res, next) => {
     );
 
     await Clan.findByIdAndDelete(req.params.id);
+    
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', null);
+
     return sendSuccess(res, { message: 'Clan deleted' });
   } catch (err) {
     return next(err);
@@ -187,6 +198,9 @@ const joinClan = async (req, res, next) => {
     // Push to requests instead of members
     clan.requests.push(req.user._id);
     await clan.save();
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
 
     return sendSuccess(res, { message: `Request sent to join clan ${clan.name}` });
   } catch (err) {
@@ -216,6 +230,9 @@ const leaveClan = async (req, res, next) => {
     await clan.save();
     await User.findByIdAndUpdate(req.user._id, { $unset: { clan: '' } });
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
+
     return sendSuccess(res, { message: `Left clan ${clan.name}` });
   } catch (err) {
     return next(err);
@@ -242,6 +259,9 @@ const assignChief = async (req, res, next) => {
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
       .populate('members', 'username email');
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', populated);
 
     return sendSuccess(res, { data: populated, message: 'Clan chief assigned' });
   } catch (err) {
@@ -277,6 +297,9 @@ const addMember = async (req, res, next) => {
       .populate('chief', 'username email')
       .populate('members', 'username email');
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', populated);
+
     return sendSuccess(res, { data: populated, message: 'Member added' });
   } catch (err) {
     return next(err);
@@ -309,6 +332,9 @@ const removeMember = async (req, res, next) => {
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
       .populate('members', 'username email');
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', populated);
 
     return sendSuccess(res, { data: populated, message: 'Member removed' });
   } catch (err) {
@@ -350,6 +376,9 @@ const approveJoinRequest = async (req, res, next) => {
 
     await User.findByIdAndUpdate(userId, { clan: clan._id });
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
+
     return sendSuccess(res, { message: 'Request approved' });
   } catch (err) {
     return next(err);
@@ -369,6 +398,9 @@ const rejectJoinRequest = async (req, res, next) => {
 
     clan.requests.pull(req.params.userId);
     await clan.save();
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
 
     return sendSuccess(res, { message: 'Request rejected' });
   } catch (err) {
@@ -391,6 +423,9 @@ const addClanNotice = async (req, res, next) => {
     clan.notices.push(notice);
     await clan.save();
 
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
+
     return sendSuccess(res, { data: clan.notices, message: 'Notice posted' });
   } catch (err) {
     return next(err);
@@ -411,6 +446,9 @@ const removeClanNotice = async (req, res, next) => {
 
     clan.notices.splice(index, 1);
     await clan.save();
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('clan_update', clan);
 
     return sendSuccess(res, { data: clan.notices, message: 'Notice removed' });
   } catch (err) {

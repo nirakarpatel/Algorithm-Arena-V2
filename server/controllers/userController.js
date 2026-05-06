@@ -21,7 +21,7 @@ const updateUserRole = async (req, res, next) => {
     const { role } = req.body;
     
     // Ensure role is valid
-    if (!['user', 'moderator', 'admin', 'super-admin'].includes(role)) {
+    if (!['user', 'admin', 'super-admin', 'clan-chief'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
@@ -32,6 +32,9 @@ const updateUserRole = async (req, res, next) => {
 
     user.role = role;
     await user.save();
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('user_update', user);
 
     return sendSuccess(res, { data: user, message: 'User role updated successfully' });
   } catch (err) {

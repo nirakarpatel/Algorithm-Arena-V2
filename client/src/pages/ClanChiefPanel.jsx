@@ -28,12 +28,23 @@ const ClanChiefPanel = () => {
     ), { position: 'top-right' });
     queryClient.invalidateQueries({ queryKey: ['chief-submissions'] });
   });
+
+  useSocket('clan_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+    queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+  });
+
+  useSocket('challenge_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['chief-challenges'] });
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+  });
   const [reviewFilters, setReviewFilters] = useState({
     page: 1,
     limit: 10,
     status: 'Pending',
     userId: '',
     challengeId: '',
+    range: 'all',
     from: '',
     to: '',
   });
@@ -49,6 +60,7 @@ const ClanChiefPanel = () => {
       if (reviewFilters.status) params.set('status', reviewFilters.status);
       if (reviewFilters.challengeId) params.set('challengeId', reviewFilters.challengeId);
       if (reviewFilters.userId.length === 24) params.set('userId', reviewFilters.userId);
+      if (reviewFilters.range) params.set('range', reviewFilters.range);
       if (reviewFilters.from) params.set('from', new Date(`${reviewFilters.from}T00:00:00.000Z`).toISOString());
       if (reviewFilters.to) params.set('to', new Date(`${reviewFilters.to}T23:59:59.999Z`).toISOString());
 
@@ -142,22 +154,37 @@ const ClanChiefPanel = () => {
                 value={reviewFilters.userId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
               />
+              
+              <select
+                className="field-select"
+                value={reviewFilters.range}
+                onChange={(e) => setReviewFilters(p => ({ ...p, range: e.target.value }))}
+              >
+                <option value="all">All Time</option>
+                <option value="weekly">Last 7 Days</option>
+                <option value="monthly">Last 30 Days</option>
+                <option value="custom">Custom Range</option>
+              </select>
 
-              <input
-                className="field-input"
-                type="date"
-                value={reviewFilters.from}
-                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, from: e.target.value }))}
-                aria-label="From date"
-              />
+              {reviewFilters.range === 'custom' && (
+                <>
+                  <input
+                    className="field-input"
+                    type="date"
+                    value={reviewFilters.from}
+                    onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, from: e.target.value }))}
+                    aria-label="From date"
+                  />
 
-              <input
-                className="field-input"
-                type="date"
-                value={reviewFilters.to}
-                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, to: e.target.value }))}
-                aria-label="To date"
-              />
+                  <input
+                    className="field-input"
+                    type="date"
+                    value={reviewFilters.to}
+                    onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, to: e.target.value }))}
+                    aria-label="To date"
+                  />
+                </>
+              )}
 
               <select
                 className="field-select"

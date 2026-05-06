@@ -8,6 +8,8 @@ import { mockChallenges } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
+import { useSocket } from '../hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 
 const buildChallengeQuery = ({
   page,
@@ -51,6 +53,12 @@ const Missions = () => {
   const [viewMode, setViewMode] = useState(
     () => localStorage.getItem("missions:view") || "grid",
   );
+
+  const queryClient = useQueryClient();
+
+  useSocket('challenge_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+  });
 
   useEffect(() => {
     localStorage.setItem("missions:view", viewMode);
