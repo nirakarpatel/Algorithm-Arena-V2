@@ -8,6 +8,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import { api } from '../lib/api';
+import Card from '../components/Card';
 import { USE_MOCK, mockChallenges, filterSubmissions, mockUsers } from '../lib/mockData';
 
 import { useSocket } from '../hooks/useSocket';
@@ -43,6 +44,25 @@ const AdminPanel = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
   });
 
+  useSocket('global_notice_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-notices-history'] });
+    queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+  });
+
+  useSocket('challenge_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-manage-challenges'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-challenges'] });
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+  });
+
+  useSocket('clan_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
+  });
+
+  useSocket('user_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+  });
+
   const [createForm, setCreateForm] = useState(defaultChallengeForm);
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -60,6 +80,20 @@ const AdminPanel = () => {
     status: 'Pending',
     userId: '',
     challengeId: '',
+    range: 'all',
+    from: '',
+    to: '',
+  });
+  const [noticeFilters, setNoticeFilters] = useState({
+    search: '',
+    range: 'all',
+    from: '',
+    to: '',
+  });
+
+  const [challengeFilters, setChallengeFilters] = useState({
+    search: '',
+    range: 'all',
     from: '',
     to: '',
   });
@@ -76,6 +110,7 @@ const AdminPanel = () => {
       if (reviewFilters.status) params.set('status', reviewFilters.status);
       if (reviewFilters.challengeId) params.set('challengeId', reviewFilters.challengeId);
       if (reviewFilters.userId.length === 24) params.set('userId', reviewFilters.userId);
+      if (reviewFilters.range) params.set('range', reviewFilters.range);
       if (reviewFilters.from) params.set('from', new Date(`${reviewFilters.from}T00:00:00.000Z`).toISOString());
       if (reviewFilters.to) params.set('to', new Date(`${reviewFilters.to}T23:59:59.999Z`).toISOString());
 
@@ -86,13 +121,36 @@ const AdminPanel = () => {
       };
     },
   });
-
   const challengesQuery = useQuery({
     queryKey: ['admin-challenges'],
     enabled: activeTab === 'manage' || activeTab === 'review',
     queryFn: async () => {
       try {
         const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
+        const data = res.data.data || [];
+        return data.length > 0 ? data : mockChallenges;
+      } catch {
+        return mockChallenges;
+      }
+    },
+  });
+
+  const manageChallengesQuery = useQuery({
+    queryKey: ['admin-manage-challenges', challengeFilters],
+    enabled: activeTab === 'manage',
+    queryFn: async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        params.set('limit', '100');
+        params.set('sortBy', 'createdAt');
+        params.set('sortDir', 'desc');
+        if (challengeFilters.search) params.set('search', challengeFilters.search);
+        if (challengeFilters.range) params.set('range', challengeFilters.range);
+        if (challengeFilters.from) params.set('from', challengeFilters.from);
+        if (challengeFilters.to) params.set('to', challengeFilters.to);
+
+        const res = await api.get(`/api/challenges?${params.toString()}`);
         const data = res.data.data || [];
         return data.length > 0 ? data : mockChallenges;
       } catch {
@@ -164,11 +222,17 @@ const AdminPanel = () => {
   });
 
   const noticesHistoryQuery = useQuery({
-    queryKey: ['admin-notices-history'],
+    queryKey: ['admin-notices-history', noticeFilters],
     enabled: activeTab === 'notices',
     queryFn: async () => {
       try {
-        const res = await api.get('/api/notices/history');
+        const params = new URLSearchParams();
+        if (noticeFilters.search) params.set('search', noticeFilters.search);
+        if (noticeFilters.range) params.set('range', noticeFilters.range);
+        if (noticeFilters.from) params.set('from', noticeFilters.from);
+        if (noticeFilters.to) params.set('to', noticeFilters.to);
+
+        const res = await api.get(`/api/notices/history?${params.toString()}`);
         return res.data.data || [];
       } catch {
         return [];
@@ -354,7 +418,7 @@ const AdminPanel = () => {
     <div className="space-y-6">
       <h1 className="text-page-title font-extrabold">Creator Studio</h1>
 
-      <div className="segmented inline-flex flex-wrap gap-1">
+      <div className="segmented flex flex-wrap justify-center gap-1">
         <button className={`segmented-btn ${ activeTab === 'create' ? 'active' : ''}`} onClick={() => setActiveTab('create')}>
           New Challenge
         </button>
@@ -476,22 +540,36 @@ const AdminPanel = () => {
                 value={reviewFilters.userId}
                 onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, userId: e.target.value.trim() }))}
               />
-              <input
-                name="reviewFromDate"
-                className="field-input"
-                type="date"
-                value={reviewFilters.from}
-                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, from: e.target.value }))}
-                aria-label="From date"
-              />
-              <input
-                name="reviewToDate"
-                className="field-input"
-                type="date"
-                value={reviewFilters.to}
-                onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, to: e.target.value }))}
-                aria-label="To date"
-              />
+              <select
+                className="field-select"
+                value={reviewFilters.range}
+                onChange={(e) => setReviewFilters(p => ({ ...p, range: e.target.value }))}
+              >
+                <option value="all">All Time</option>
+                <option value="weekly">Last 7 Days</option>
+                <option value="monthly">Last 30 Days</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              {reviewFilters.range === 'custom' && (
+                <>
+                  <input
+                    name="reviewFromDate"
+                    className="field-input"
+                    type="date"
+                    value={reviewFilters.from}
+                    onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, from: e.target.value }))}
+                    aria-label="From date"
+                  />
+                  <input
+                    name="reviewToDate"
+                    className="field-input"
+                    type="date"
+                    value={reviewFilters.to}
+                    onChange={(e) => setReviewFilters((p) => ({ ...p, page: 1, to: e.target.value }))}
+                    aria-label="To date"
+                  />
+                </>
+              )}
               <select
                 name="reviewPageSize"
                 className="field-select"
@@ -601,16 +679,56 @@ const AdminPanel = () => {
         <div className="macos-glass p-6">
           <h2 className="text-section-title font-bold mb-4">Manage Challenges</h2>
 
-          {challengesQuery.isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+              <input
+                className="field-input pl-10"
+                placeholder="Search challenges..."
+                value={challengeFilters.search}
+                onChange={(e) => setChallengeFilters(p => ({ ...p, search: e.target.value }))}
+              />
+            </div>
+            <select
+              className="field-select"
+              value={challengeFilters.range}
+              onChange={(e) => setChallengeFilters(p => ({ ...p, range: e.target.value }))}
+            >
+              <option value="all">All Time</option>
+              <option value="weekly">Last 7 Days</option>
+              <option value="monthly">Last 30 Days</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            {challengeFilters.range === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  className="field-input"
+                  value={challengeFilters.from}
+                  onChange={(e) => setChallengeFilters(p => ({ ...p, from: e.target.value }))}
+                  aria-label="From Date"
+                />
+                <input
+                  type="date"
+                  className="field-input"
+                  value={challengeFilters.to}
+                  onChange={(e) => setChallengeFilters(p => ({ ...p, to: e.target.value }))}
+                  aria-label="To Date"
+                />
+              </>
+            )}
+          </div>
+
+          {manageChallengesQuery.isLoading ? (
             <div className="space-y-3">
               <SkeletonCard />
               <SkeletonCard />
             </div>
-          ) : (challengesQuery.data || []).length === 0 ? (
-            <EmptyState title="No challenges yet" description="Create your first challenge from the New Challenge tab." />
+          ) : (manageChallengesQuery.data || []).length === 0 ? (
+            <EmptyState title="No challenges match" description="Adjust your filters or create a new challenge." />
           ) : (
             <div className="space-y-3">
-              {(challengesQuery.data || []).map((challenge) => (
+              {(manageChallengesQuery.data || []).map((challenge) => (
                 <div key={challenge._id} className="border border-glass-border rounded-xl p-4 flex flex-wrap gap-3 justify-between items-start">
                   <div>
                     <h3 className="font-semibold">{challenge.title}</h3>
@@ -786,7 +904,7 @@ const AdminPanel = () => {
                         onChange={(e) => onUpdateUserRole(user._id, e.target.value)}
                       >
                         <option value="user">Member</option>
-                        <option value="moderator">Moderator</option>
+                        <option value="clan-chief">Clan Chief</option>
                         <option value="admin">Admin</option>
                         <option value="super-admin">Super Admin</option>
                       </select>
@@ -844,6 +962,46 @@ const AdminPanel = () => {
 
           <Card>
             <h2 className="text-section-title font-bold mb-6">Notice History</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
+                <input
+                  className="field-input pl-10"
+                  placeholder="Search notices..."
+                  value={noticeFilters.search}
+                  onChange={(e) => setNoticeFilters(p => ({ ...p, search: e.target.value }))}
+                />
+              </div>
+              <select
+                className="field-select"
+                value={noticeFilters.range}
+                onChange={(e) => setNoticeFilters(p => ({ ...p, range: e.target.value }))}
+              >
+                <option value="all">All Time</option>
+                <option value="weekly">Last 7 Days</option>
+                <option value="monthly">Last 30 Days</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              {noticeFilters.range === 'custom' && (
+                <>
+                  <input
+                    type="date"
+                    className="field-input"
+                    value={noticeFilters.from}
+                    onChange={(e) => setNoticeFilters(p => ({ ...p, from: e.target.value }))}
+                    aria-label="From Date"
+                  />
+                  <input
+                    type="date"
+                    className="field-input"
+                    value={noticeFilters.to}
+                    onChange={(e) => setNoticeFilters(p => ({ ...p, to: e.target.value }))}
+                    aria-label="To Date"
+                  />
+                </>
+              )}
+            </div>
             {noticesHistoryQuery.isLoading ? (
               <div className="space-y-3"><SkeletonCard /></div>
             ) : (noticesHistoryQuery.data || []).length === 0 ? (
