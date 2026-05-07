@@ -24,6 +24,9 @@ import SkeletonCard from "../components/SkeletonCard";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import ChallengeCard from "../components/Card";
+import { useSocket } from "../hooks/useSocket";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../context/useAuth";
 
 const MotionBlock = motion.div;
 const getDifficultyRGB = (diff) => {
@@ -38,84 +41,36 @@ const getDifficultyRGB = (diff) => {
       return "0, 122, 255";
   }
 };
-const buildChallengeQuery = ({
-  page,
-  limit,
-  search,
-  difficulty,
-  category,
-  sortBy,
-  sortDir,
-}) => {
-  const params = new URLSearchParams();
-  params.set("page", page);
-  params.set("limit", limit);
-  params.set("sortBy", sortBy);
-  params.set("sortDir", sortDir);
-  if (search) params.set("search", search);
-  if (difficulty) params.set("difficulty", difficulty);
-  if (category) params.set("category", category);
-  return params.toString();
-};
-
-const difficultyChips = [
-  { value: "", label: "All" },
-  { value: "Easy", label: "Easy" },
-  { value: "Medium", label: "Medium" },
-  { value: "Hard", label: "Hard" },
-];
 
 const Dashboard = () => {
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 4,
-    search: "",
-    difficulty: "",
-    category: "",
-    sortBy: "createdAt",
-    sortDir: "desc",
+  const { user } = useAuth();
+  const [limit] = useState(4);
+
+  const queryClient = useQueryClient();
+
+  useSocket("challenge_update", () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-challenges"] });
+    queryClient.invalidateQueries({ queryKey: ["challenges"] });
   });
 
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
-  };
+  useSocket("leaderboard_update", () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+  });
+
 
   const challengesQuery = useQuery({
-    queryKey: ["dashboard-challenges", filters],
+    queryKey: ["dashboard-challenges", limit],
     queryFn: async () => {
       if (USE_MOCK) {
-        let filtered = mockChallenges;
-        if (filters.search) {
-          filtered = filtered.filter(
-            (c) =>
-              c.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-              c.description
-                .toLowerCase()
-                .includes(filters.search.toLowerCase()),
-          );
-        }
-        if (filters.difficulty) {
-          filtered = filtered.filter(
-            (c) => c.difficulty === filters.difficulty,
-          );
-        }
-        if (filters.category) {
-          filtered = filtered.filter(
-            (c) =>
-              c.category &&
-              c.category.toLowerCase().includes(filters.category.toLowerCase()),
-          );
-        }
-        return filtered.slice(0, filters.limit);
+        return mockChallenges.slice(0, limit);
       }
 
       try {
-        const qs = buildChallengeQuery(filters);
-        const res = await api.get(`/api/challenges?${qs}`);
+        const res = await api.get(`/api/challenges?limit=${limit}&sortBy=createdAt&sortDir=desc`);
         const data = res.data.data || [];
-        return data.length > 0 ? data : mockChallenges.slice(0, filters.limit);
+        return data.length > 0 ? data : mockChallenges.slice(0, limit);
       } catch {
-        return mockChallenges.slice(0, filters.limit);
+        return mockChallenges.slice(0, limit);
       }
     },
   });
@@ -185,10 +140,17 @@ const Dashboard = () => {
     });
   }, [recentActivity]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Mission Control"
+        title={`${getGreeting()}, ${user?.username || "Commander"}`}
         subtitle="Track progress, jump back into your latest work, and command the arena."
       />
 
@@ -285,58 +247,6 @@ const Dashboard = () => {
             </Link>
           </div>
 
-          {/* Filter Bar */}
-          <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-6 gap-3 text-xs sm:text-base">
-            <input
-              className="field-input md:col-span-2"
-              placeholder="Search title or description"
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-            />
-            <input
-              className="field-input md:col-span-1"
-              placeholder="Category"
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-            />
-
-            <div className="flex gap-1 md:gap-3 md:grid md:grid-cols-2 md:col-span-3 items-center text-xs sm:text-base">
-              <select
-                className="field-select flex-[1] md:w-full"
-                value={filters.limit}
-                onChange={(e) =>
-                  handleFilterChange("limit", Number(e.target.value))
-                }
-              >
-                <option value={4}>4 / page</option>
-                <option value={8}>8 / page</option>
-                <option value={12}>12 / page</option>
-              </select>
-
-              <select
-                className="field-select flex-1 min-w-[70px] md:w-full px-3 py-2 sm:px-3 sm:py-3"
-                value={filters.sortBy}
-                onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-              >
-                <option value="createdAt">Date (Newest)</option>
-                <option value="points">XP Points</option>
-                <option value="difficulty">Difficulty</option>
-                <option value="title">Title</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="chip-group flex flex-wrap gap-2">
-            {difficultyChips.map((chip) => (
-              <button
-                key={chip.label}
-                className={`chip-btn ${filters.difficulty === chip.value ? "active" : ""}`}
-                onClick={() => handleFilterChange("difficulty", chip.value)}
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
 
           {challengesQuery.isLoading ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

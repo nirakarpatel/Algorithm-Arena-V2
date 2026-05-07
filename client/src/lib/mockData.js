@@ -3,7 +3,7 @@
 // Set USE_MOCK to false when your backend is ready.
 // ─────────────────────────────────────────────────────────────
 
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'false';
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 // ─── Users ──────────────────────────────────────────────────
 
@@ -219,7 +219,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 2 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending",
+    _id: "sub_002_pending_1",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -229,7 +229,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending",
+    _id: "sub_002_pending_2",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -239,7 +239,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending",
+    _id: "sub_002_pending_3",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -249,7 +249,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending",
+    _id: "sub_002_pending_4",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -393,7 +393,7 @@ export const mockClanMembers = [
     _id: "cm_002",
     username: "algoQueen",
     email: "algoqueen@iter.ac.in",
-    role: "moderator",
+    role: "clan-chief",
   },
   {
     _id: "cm_003",

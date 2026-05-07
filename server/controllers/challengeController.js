@@ -10,6 +10,9 @@ const getChallenges = async (req, res, next) => {
       search,
       difficulty,
       category,
+      range,
+      from,
+      to,
       sortBy = 'createdAt',
       sortDir = 'desc',
     } = req.query;
@@ -22,6 +25,21 @@ const getChallenges = async (req, res, next) => {
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
       ];
+    }
+
+    if (range && range !== 'all') {
+      const now = new Date();
+      if (range === 'weekly') {
+        filter.createdAt = { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
+      } else if (range === 'monthly') {
+        filter.createdAt = { $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) };
+      }
+    }
+
+    if (from || to) {
+      filter.createdAt = filter.createdAt || {};
+      if (from) filter.createdAt.$gte = new Date(from);
+      if (to) filter.createdAt.$lte = new Date(to);
     }
 
     const sortOrder = sortDir === 'asc' ? 1 : -1;
@@ -86,6 +104,8 @@ const createChallenge = async (req, res, next) => {
       difficulty: challenge.difficulty,
     });
 
+    emitEvent('challenge_update', challenge);
+
     return sendSuccess(res, {
       statusCode: 201,
       data: challenge,
@@ -120,6 +140,9 @@ const updateChallenge = async (req, res, next) => {
       data: challenge,
       message: 'Challenge updated successfully',
     });
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('challenge_update', challenge);
   } catch (err) {
     return next(err);
   }
@@ -150,6 +173,9 @@ const deleteChallenge = async (req, res, next) => {
       data: null,
       message: 'Challenge removed successfully',
     });
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('challenge_update', null);
   } catch (err) {
     return next(err);
   }

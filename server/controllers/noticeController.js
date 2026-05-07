@@ -25,6 +25,10 @@ exports.createGlobalNotice = async (req, res) => {
     });
 
     res.status(201).json({ success: true, data: notice });
+    
+    // Notify clients of update
+    const { emitEvent } = require('../config/socket');
+    emitEvent('global_notice_update', notice);
   } catch (err) {
     logger.error('Error creating global notice:', err);
     res.status(500).json({ success: false, message: 'Server Error' });
@@ -33,7 +37,29 @@ exports.createGlobalNotice = async (req, res) => {
 
 exports.getAllNotices = async (req, res) => {
   try {
-    const notices = await GlobalNotice.find()
+    const { search, range, from, to } = req.query;
+    const filter = {};
+
+    if (search) {
+      filter.content = { $regex: search, $options: 'i' };
+    }
+
+    if (range && range !== 'all') {
+      const now = new Date();
+      if (range === 'weekly') {
+        filter.createdAt = { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
+      } else if (range === 'monthly') {
+        filter.createdAt = { $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) };
+      }
+    }
+
+    if (from || to) {
+      filter.createdAt = filter.createdAt || {};
+      if (from) filter.createdAt.$gte = new Date(from);
+      if (to) filter.createdAt.$lte = new Date(to);
+    }
+
+    const notices = await GlobalNotice.find(filter)
       .sort({ createdAt: -1 })
       .populate('createdBy', 'username');
     res.json({ success: true, data: notices });
@@ -53,6 +79,10 @@ exports.deleteGlobalNotice = async (req, res) => {
       await GlobalNotice.deleteMany({});
     }
     res.json({ success: true, message: 'Global notice deleted' });
+
+    // Notify clients of update
+    const { emitEvent } = require('../config/socket');
+    emitEvent('global_notice_update', null);
   } catch (err) {
     logger.error('Error deleting global notice:', err);
     res.status(500).json({ success: false, message: 'Server Error' });

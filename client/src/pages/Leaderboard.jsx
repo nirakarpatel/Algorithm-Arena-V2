@@ -272,7 +272,7 @@ const Leaderboard = () => {
         </select>
       </div>
 
-      <Podium items={topThree} leaderType={leaderType} />
+      {!search.trim() && <Podium items={topThree} leaderType={leaderType} />}
 
       {myRow && leaderType === "individual" && (
         <MotionDiv

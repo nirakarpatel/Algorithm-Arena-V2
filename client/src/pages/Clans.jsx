@@ -26,6 +26,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
 import { USE_MOCK, mockGlobalNotice } from '../lib/mockData';
+import { useSocket } from '../hooks/useSocket';
 
 /* ─── Mock clans for fallback ─────────────────────────────── */
 const mockClans = [
@@ -475,6 +476,19 @@ const Clans = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [leaving, setLeaving] = useState(false);
+
+  useSocket('global_notice_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['global-notice'] });
+  });
+
+  useSocket('clan_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+    queryClient.invalidateQueries({ queryKey: ['clan-leaderboard'] });
+  });
+
+  useSocket('challenge_update', () => {
+    queryClient.invalidateQueries({ queryKey: ['challenges'] });
+  });
 
   // Fetch all clans
   const clansQuery = useQuery({

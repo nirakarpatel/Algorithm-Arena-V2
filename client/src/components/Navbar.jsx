@@ -99,7 +99,9 @@ const Navbar = ({ onLogout }) => {
                     )}
                   </div>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors">Account</span>
+                    <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate max-w-[80px]">
+                      {user?.username || "Account"}
+                    </span>
                     <FiChevronDown className={clsx("text-secondary text-sm transition-transform duration-300", userDropdownOpen && "rotate-180")} />
                   </div>
                  </button>
