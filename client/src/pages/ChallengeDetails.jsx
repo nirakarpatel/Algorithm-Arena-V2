@@ -186,20 +186,27 @@ const ChallengeDetails = () => {
         if (!found) throw new Error("Challenge not found");
         return found;
       }
-      const res = await api.get(`/api/challenges/${id}`);
-      return res.data.data;
+      try {
+        const res = await api.get(`/api/challenges/${id}`);
+        return res.data.data;
+      } catch (err) {
+        throw new Error("Challenge not found");
+      }
     },
   });
 
   const historyQuery = useQuery({
     queryKey: ["my-submissions", id],
     queryFn: async () => {
-      if (USE_MOCK)
-        return mockSubmissions.filter((s) => s.challengeId._id === id);
-      const res = await api.get(
-        `/api/submissions/my-submissions?challengeId=${id}&limit=8`,
-      );
-      return res.data.data || [];
+      if (USE_MOCK) return mockSubmissions.filter((s) => s.challengeId._id === id);
+      try {
+        const res = await api.get(
+          `/api/submissions/my-submissions?challengeId=${id}&limit=8`,
+        );
+        return res.data.data || [];
+      } catch {
+        return [];
+      }
     },
   });
 

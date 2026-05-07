@@ -81,11 +81,9 @@ async function seedDatabase() {
 }
 
 if (require.main === module) {
-  require('dotenv').config();
-  const dns = require('dns');
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
+  const { env } = require('./config/env');
 
-  mongoose.connect(process.env.MONGO_URI)
+  mongoose.connect(env.MONGO_URI)
     .then(async () => {
       console.log('🌱 Connected to MongoDB (via Google DNS)...');
       await seedDatabase();

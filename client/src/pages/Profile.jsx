@@ -215,11 +215,13 @@ const Profile = () => {
   const profileQuery = useQuery({
     queryKey: ['profile-stats'],
     queryFn: async () => {
-      if (USE_MOCK) {
-        return mockProfileStats;
+      if (USE_MOCK) return mockProfileStats;
+      try {
+        const res = await api.get('/api/profile/stats');
+        return res.data.data;
+      } catch {
+        return {};
       }
-      const res = await api.get('/api/profile/stats');
-      return res.data.data;
     },
   });
 

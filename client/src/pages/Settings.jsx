@@ -75,7 +75,11 @@ const Settings = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await api.put('/api/auth/update-me', formData);
+      const payload = { ...formData };
+      if (user?.profilePicture) {
+        payload.profilePicture = user.profilePicture;
+      }
+      const res = await api.put('/api/auth/update-me', payload);
       updateUser(res.data.data);
       toast.success('Profile card updated successfully!');
     } catch (err) {

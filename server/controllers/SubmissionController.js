@@ -3,8 +3,79 @@ const Submission = require('../models/Submission');
 const Challenge = require('../models/Challenge');
 const { sendSuccess } = require('../utils/response');
 const { logAudit } = require('../utils/audit');
+const axios = require('axios');
 
 const VALID_STATUSES = ['Pending', 'Accepted', 'Rejected'];
+
+const processSubmissionAsync = async (submissionId) => {
+  try {
+    const submission = await Submission.findById(submissionId).populate('challengeId').populate('userId');
+    if (!submission || submission.status !== 'Pending') return;
+
+    const { code, language, challengeId, userId } = submission;
+    let status = 'Accepted';
+    let stdErr = '';
+
+    const judgeUrl = process.env.JUDGE0_API_URL;
+    const judgeKey = process.env.JUDGE0_API_KEY;
+
+    if (judgeUrl && judgeKey) {
+      const langMap = { javascript: 63, python: 71, cpp: 54, java: 62 };
+      const language_id = langMap[language] || 63;
+      try {
+        const response = await axios.post(`${judgeUrl}/submissions?base64_encoded=false&wait=true`, {
+          source_code: code,
+          language_id,
+        }, {
+          headers: {
+            'X-RapidAPI-Host': new URL(judgeUrl).host,
+            'X-RapidAPI-Key': judgeKey,
+            'Content-Type': 'application/json'
+          }
+        });
+        const result = response.data;
+        if (result.status && result.status.id !== 3) {
+           status = 'Rejected';
+           stdErr = result.stderr || result.compile_output || 'Failed';
+        }
+      } catch (err) {
+        console.error('Judge0 API Error:', err.message);
+        status = 'Rejected';
+        stdErr = 'Execution failed on Judge0 server';
+      }
+    } else {
+      // Mock processing
+      await new Promise(res => setTimeout(res, 2000));
+      status = code && code.length > 10 ? 'Accepted' : 'Rejected';
+      if (status === 'Rejected') stdErr = 'Code is too short or invalid.';
+    }
+
+    submission.status = status;
+    if (stdErr) {
+       // Assuming we can save stderr in a 'logs' or 'feedback' field if we had one.
+    }
+    await submission.save();
+
+    if (status === 'Accepted' && challengeId && userId) {
+       const User = require('../models/User');
+       await User.findByIdAndUpdate(userId._id, { $inc: { totalPoints: challengeId.points } });
+
+       if (userId.clan) {
+         const Clan = require('../models/Clan');
+         await Clan.findByIdAndUpdate(userId.clan, { $inc: { totalPoints: challengeId.points } });
+       }
+    }
+
+    const { emitEvent } = require('../config/socket');
+    emitEvent('leaderboard_update', {
+      submissionId: submission._id,
+      userId: userId._id,
+      status: submission.status,
+    });
+  } catch (err) {
+    console.error('Submission Processing Error:', err);
+  }
+};
 
 const submitCode = async (req, res, next) => {
   try {
@@ -43,6 +114,9 @@ const submitCode = async (req, res, next) => {
       username: req.user.username,
       challengeTitle: challenge.title,
     });
+
+    // Start background Judge0 process
+    processSubmissionAsync(submission._id);
 
     return sendSuccess(res, {
       statusCode: 201,

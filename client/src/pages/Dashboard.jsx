@@ -112,10 +112,9 @@ const Dashboard = () => {
       try {
         const qs = buildChallengeQuery(filters);
         const res = await api.get(`/api/challenges?${qs}`);
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockChallenges.slice(0, filters.limit);
+        return res.data.data || [];
       } catch {
-        return mockChallenges.slice(0, filters.limit);
+        return [];
       }
     },
   });
@@ -129,17 +128,15 @@ const Dashboard = () => {
 
       try {
         const res = await api.get("/api/dashboard/summary");
-        return res.data.data || mockDashboardSummary;
+        return res.data.data || null;
       } catch {
-        return mockDashboardSummary;
+        return null;
       }
     },
   });
 
   const challenges = challengesQuery.data || [];
-  const recentActivity = summaryQuery.data?.recentActivity?.length
-    ? summaryQuery.data.recentActivity
-    : mockDashboardSummary.recentActivity;
+  const recentActivity = summaryQuery.data?.recentActivity || [];
   const solvedRate = summaryQuery.data?.totalChallenges
     ? Math.round(
         (summaryQuery.data.solved / summaryQuery.data.totalChallenges) * 100,

@@ -39,6 +39,10 @@ const clanSchema = new mongoose.Schema({
   notices: [{
     type: String,
   }],
+  totalPoints: {
+    type: Number,
+    default: 0,
+  },
   status: {
     type: String,
     enum: ['active', 'archived'],

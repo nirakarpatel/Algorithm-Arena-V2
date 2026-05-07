@@ -133,18 +133,22 @@ const Leaderboard = () => {
         };
       }
 
-      const params = new URLSearchParams({
-        window: filters.window,
-        page: String(filters.page),
-        limit: String(filters.limit),
-      });
-      const res = await api.get(
-        `/api/submissions/leaderboard?${params.toString()}`,
-      );
-      return {
-        data: res.data.data || [],
-        meta: res.data.meta || {},
-      };
+      try {
+        const params = new URLSearchParams({
+          window: filters.window,
+          page: String(filters.page),
+          limit: String(filters.limit),
+        });
+        const res = await api.get(
+          `/api/submissions/leaderboard?${params.toString()}`,
+        );
+        return {
+          data: res.data.data || [],
+          meta: res.data.meta || {},
+        };
+      } catch {
+        return { data: [], meta: {} };
+      }
     },
   });
 
@@ -155,10 +159,14 @@ const Leaderboard = () => {
       if (USE_MOCK) {
         return mockClans;
       }
-      const res = await api.get(
-        `/api/clans/leaderboard?window=${filters.window}`,
-      );
-      return res.data.data || [];
+      try {
+        const res = await api.get(
+          `/api/clans/leaderboard?window=${filters.window}`,
+        );
+        return res.data.data || [];
+      } catch {
+        return [];
+      }
     },
   });
 

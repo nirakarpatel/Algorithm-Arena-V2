@@ -31,6 +31,10 @@ async function runStandalone() {
 
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
+    process.on('SIGUSR2', async () => {
+      await shutdown();
+      process.kill(process.pid, 'SIGUSR2');
+    });
     
   } catch (err) {
     logger.error('Failed to start standalone server', { error: err });

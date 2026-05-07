@@ -63,11 +63,12 @@ const ClanChiefPanel = () => {
   const challengesQuery = useQuery({
     queryKey: ['chief-challenges'],
     queryFn: async () => {
+      if (USE_MOCK) return mockChallenges;
       try {
         const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
-        return res.data.data || mockChallenges;
+        return res.data.data || [];
       } catch {
-        return mockChallenges;
+        return [];
       }
     },
   });

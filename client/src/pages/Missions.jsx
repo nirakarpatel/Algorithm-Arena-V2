@@ -61,7 +61,7 @@ const Missions = () => {
   const challengesQuery = useQuery({
     queryKey,
     queryFn: async () => {
-      const getFilteredMockData = () => {
+      if (USE_MOCK) {
         let filtered = mockChallenges;
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
@@ -74,37 +74,31 @@ const Missions = () => {
           const categoryLower = filters.category.toLowerCase();
           filtered = filtered.filter(c => c.category && c.category.toLowerCase().includes(categoryLower));
         }
-        return filtered;
-      };
+        return {
+          data: filtered,
+          meta: { page: 1, totalPages: Math.ceil(filtered.length / filters.limit) || 1, total: filtered.length },
+        };
+      }
 
       try {
         const qs = buildChallengeQuery(filters);
         const res = await api.get(`/api/challenges?${qs}`);
         const data = res.data.data || [];
 
-        if (data.length > 0) {
-          return {
-            data,
-            meta: res.data.meta || { page: 1, totalPages: 1, total: data.length },
-          };
-        }
-
-        const filteredMock = getFilteredMockData();
         return {
-          data: filteredMock,
-          meta: { page: 1, totalPages: Math.ceil(filteredMock.length / filters.limit) || 1, total: filteredMock.length },
+          data,
+          meta: res.data.meta || { page: 1, totalPages: 1, total: data.length },
         };
       } catch {
-        const filteredMock = getFilteredMockData();
         return {
-          data: filteredMock,
-          meta: { page: 1, totalPages: Math.ceil(filteredMock.length / filters.limit) || 1, total: filteredMock.length },
+          data: [],
+          meta: { page: 1, totalPages: 1, total: 0 },
         };
       }
     },
   });
 
-  const challenges = challengesQuery.data?.data?.length ? challengesQuery.data.data : mockChallenges;
+  const challenges = challengesQuery.data?.data || [];
   const meta = challengesQuery.data?.meta || { page: 1, totalPages: 1, total: challenges.length };
 
   const groupedChallenges = useMemo(() => {

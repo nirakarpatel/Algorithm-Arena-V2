@@ -47,11 +47,11 @@ const GridBackground = () => (
     {/* Orbs */}
     <div
       className="orb orb-1"
-      style={{ filter: "blur(80px)", opacity: 0.35 }}
+      style={{ opacity: 0.35 }}
     />
     <div
       className="orb orb-2"
-      style={{ filter: "blur(100px)", opacity: 0.25 }}
+      style={{ opacity: 0.25 }}
     />
 
     {/* Accent cross-hair lines */}

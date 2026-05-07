@@ -91,12 +91,12 @@ const AdminPanel = () => {
     queryKey: ['admin-challenges'],
     enabled: activeTab === 'manage' || activeTab === 'review',
     queryFn: async () => {
+      if (USE_MOCK) return mockChallenges;
       try {
         const res = await api.get('/api/challenges?page=1&limit=100&sortBy=createdAt&sortDir=desc');
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockChallenges;
+        return res.data.data || [];
       } catch {
-        return mockChallenges;
+        return [];
       }
     },
   });
@@ -136,12 +136,12 @@ const AdminPanel = () => {
     queryKey: ['admin-clans'],
     enabled: activeTab === 'clans',
     queryFn: async () => {
+      if (USE_MOCK) return mockAdminClans;
       try {
         const res = await api.get('/api/clans');
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockAdminClans;
+        return res.data.data || [];
       } catch {
-        return mockAdminClans;
+        return [];
       }
     },
   });
@@ -150,15 +150,12 @@ const AdminPanel = () => {
     queryKey: ['admin-users'],
     enabled: activeTab === 'permissions',
     queryFn: async () => {
-      if (USE_MOCK) {
-        return mockUsers;
-      }
-
+      if (USE_MOCK) return mockUsers;
       try {
         const res = await api.get('/api/users');
         return res.data.data || [];
       } catch {
-        return mockUsers;
+        return [];
       }
     },
   });
@@ -786,7 +783,7 @@ const AdminPanel = () => {
                         onChange={(e) => onUpdateUserRole(user._id, e.target.value)}
                       >
                         <option value="user">Member</option>
-                        <option value="moderator">Moderator</option>
+                        <option value="clan-chief">Clan Chief</option>
                         <option value="admin">Admin</option>
                         <option value="super-admin">Super Admin</option>
                       </select>

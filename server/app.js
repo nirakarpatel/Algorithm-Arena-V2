@@ -21,6 +21,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const clanRoutes = require('./routes/clanRoutes');
 const userRoutes = require('./routes/userRoutes');
 const noticeRoutes = require('./routes/noticeRoutes');
+const scrapeRoutes = require('./routes/scrapeRoutes');
 
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -72,6 +73,7 @@ const createApp = () => {
   app.use('/api/clans', clanRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/notices', noticeRoutes);
+  app.use('/api/scrape-leetcode', scrapeRoutes);
   app.use('/api/docs', express.static(path.join(__dirname, 'docs')));
 
   app.get('/', (req, res) => {

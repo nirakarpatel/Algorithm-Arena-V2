@@ -239,6 +239,12 @@ const assignChief = async (req, res, next) => {
     clan.chief = userId;
     await clan.save();
 
+    const targetUser = await User.findById(userId);
+    if (targetUser && !['admin', 'super-admin'].includes(targetUser.role)) {
+      targetUser.role = 'clan-chief';
+      await targetUser.save();
+    }
+
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
       .populate('members', 'username email');

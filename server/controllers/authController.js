@@ -10,6 +10,16 @@ const {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
 } = require('../utils/tokens');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary if environment variables are available
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+}
 
 const toAuthPayload = (user, accessToken) => ({
   _id: user._id,
@@ -216,6 +226,19 @@ const updateMe = async (req, res, next) => {
   try {
     const { bio, branch, year, section, location, github, twitter, website, profilePicture } = req.body;
     
+    let finalProfilePicture = profilePicture;
+
+    if (profilePicture && profilePicture.startsWith('data:image')) {
+      if (process.env.CLOUDINARY_CLOUD_NAME) {
+        const uploadResponse = await cloudinary.uploader.upload(profilePicture, {
+          folder: 'algoarena_avatars',
+          transformation: [{ width: 400, height: 400, crop: 'limit' }]
+        });
+        finalProfilePicture = uploadResponse.secure_url;
+      }
+      // If no cloudinary config, it falls back to saving base64 string
+    }
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       {
@@ -228,7 +251,7 @@ const updateMe = async (req, res, next) => {
           github,
           twitter,
           website,
-          profilePicture
+          profilePicture: finalProfilePicture
         }
       },
       { new: true, runValidators: true }

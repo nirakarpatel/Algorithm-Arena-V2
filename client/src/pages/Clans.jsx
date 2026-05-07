@@ -480,12 +480,12 @@ const Clans = () => {
   const clansQuery = useQuery({
     queryKey: ['clans-list'],
     queryFn: async () => {
+      if (USE_MOCK) return mockClans;
       try {
         const res = await api.get('/api/clans');
         return res.data.data || [];
-      } catch (err) {
-        if (USE_MOCK) return mockClans;
-        throw err;
+      } catch {
+        return [];
       }
     },
   });
@@ -499,11 +499,12 @@ const Clans = () => {
   const globalNoticeQuery = useQuery({
     queryKey: ['global-notice'],
     queryFn: async () => {
+      if (USE_MOCK) return mockGlobalNotice;
       try {
         const res = await api.get('/api/notices');
-        return res.data.data || (USE_MOCK ? mockGlobalNotice : null);
+        return res.data.data || null;
       } catch {
-        return USE_MOCK ? mockGlobalNotice : null;
+        return null;
       }
     },
   });
