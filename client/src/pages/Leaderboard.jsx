@@ -15,7 +15,7 @@ import SkeletonCard from "../components/SkeletonCard";
 import PageHeader from "../components/PageHeader";
 import { useSocket } from "../hooks/useSocket";
 import { api } from "../lib/api";
-import { USE_MOCK, mockClans, mockLeaderboardMembers } from "../lib/mockData";
+import { USE_MOCK, mockLeaderboardMembers } from "../lib/mockData";
 import { useAuth } from "../context/useAuth";
 
 const MotionDiv = motion.div;
@@ -152,13 +152,14 @@ const Leaderboard = () => {
     queryKey: ["clan-leaderboard", filters.window],
     enabled: leaderType === "clans",
     queryFn: async () => {
-      if (USE_MOCK) {
-        return mockClans;
+      try {
+        const res = await api.get(
+          `/api/clans/leaderboard?window=${filters.window}`,
+        );
+        return res.data.data || [];
+      } catch {
+        return [];
       }
-      const res = await api.get(
-        `/api/clans/leaderboard?window=${filters.window}`,
-      );
-      return res.data.data || [];
     },
   });
 

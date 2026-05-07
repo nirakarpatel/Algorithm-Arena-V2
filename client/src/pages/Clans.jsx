@@ -28,62 +28,7 @@ import { useAuth } from '../context/useAuth';
 import { USE_MOCK, mockGlobalNotice } from '../lib/mockData';
 import { useSocket } from '../hooks/useSocket';
 
-/* ─── Mock clans for fallback ─────────────────────────────── */
-const mockClans = [
-  {
-    _id: '60d5ecb8b5d3a51f0c000001',
-    name: 'Alpha Coders',
-    tag: 'AC',
-    description: 'The elite squad of algorithm masters. We push boundaries and solve the unsolvable.',
-    chief: { _id: 'u_001', username: 'Nirakar' },
-    members: [
-      { _id: 'u_001', username: 'Nirakar' },
-      { _id: 'u_002', username: 'Ashutosh' },
-      { _id: 'u_004', username: 'Priyanka' },
-      { _id: 'u_006', username: 'recursionKing' },
-    ],
-    status: 'active',
-    notices: [
-      'Weekly contest every Saturday at 8PM IST',
-      'New challenge set: Dynamic Programming Sprint',
-    ],
-    totalPoints: 11200,
-    requests: [
-      { _id: 'u_005', username: 'stackOverflow_fan' },
-      { _id: 'u_009', username: 'bitManipulator' },
-    ],
-  },
-  {
-    _id: '60d5ecb8b5d3a51f0c000002',
-    name: 'Byte Knights',
-    tag: 'BK',
-    description: 'Honour. Code. Conquer. A clan for those who code with discipline.',
-    chief: { _id: 'u_003', username: 'binaryBoss' },
-    members: [
-      { _id: 'u_003', username: 'binaryBoss' },
-      { _id: 'u_005', username: 'stackOverflow_fan' },
-      { _id: 'u_007', username: 'dpWizard' },
-    ],
-    status: 'active',
-    notices: ['Pair programming sessions every Wednesday'],
-    totalPoints: 8400,
-  },
-  {
-    _id: '60d5ecb8b5d3a51f0c000003',
-    name: 'Stack Overlords',
-    tag: 'SO',
-    description: 'We overflow — with solutions. Competitive programming at its finest.',
-    chief: { _id: 'u_008', username: 'Soumya' },
-    members: [
-      { _id: 'u_008', username: 'Soumya' },
-      { _id: 'u_009', username: 'bitManipulator' },
-      { _id: 'u_010', username: 'heapHero' },
-    ],
-    status: 'active',
-    notices: ['Recruiting! Apply now to join the overlords.'],
-    totalPoints: 6800,
-  },
-];
+
 
 /* ─── Stat Card for the Clan Dashboard ────────────────────── */
 const StatCard = ({ icon, label, value, color }) => {
@@ -498,8 +443,7 @@ const Clans = () => {
         const res = await api.get('/api/clans');
         return res.data.data || [];
       } catch (err) {
-        if (USE_MOCK) return mockClans;
-        throw err;
+        return [];
       }
     },
   });

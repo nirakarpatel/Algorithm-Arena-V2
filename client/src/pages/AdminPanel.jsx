@@ -159,36 +159,7 @@ const AdminPanel = () => {
     },
   });
 
-  const mockAdminClans = [
-    {
-      _id: 'clan_01', name: 'Alpha Coders', tag: 'AC', description: 'The elite squad of algorithm masters.',
-      chief: { _id: 'u_001', username: 'Nirakar' },
-      members: [
-        { _id: 'u_001', username: 'Nirakar' },
-        { _id: 'u_002', username: 'Ashutosh' },
-        { _id: 'u_004', username: 'Priyanka' },
-        { _id: 'u_006', username: 'recursionKing' },
-      ],
-    },
-    {
-      _id: 'clan_02', name: 'Byte Knights', tag: 'BK', description: 'Honour. Code. Conquer.',
-      chief: { _id: 'u_003', username: 'binaryBoss' },
-      members: [
-        { _id: 'u_003', username: 'binaryBoss' },
-        { _id: 'u_005', username: 'stackOverflow_fan' },
-        { _id: 'u_007', username: 'dpWizard' },
-      ],
-    },
-    {
-      _id: 'clan_03', name: 'Stack Overlords', tag: 'SO', description: 'We overflow — with solutions.',
-      chief: { _id: 'u_008', username: 'Soumya' },
-      members: [
-        { _id: 'u_008', username: 'Soumya' },
-        { _id: 'u_009', username: 'bitManipulator' },
-        { _id: 'u_010', username: 'heapHero' },
-      ],
-    },
-  ];
+
 
   const clansQuery = useQuery({
     queryKey: ['admin-clans'],
@@ -196,10 +167,9 @@ const AdminPanel = () => {
     queryFn: async () => {
       try {
         const res = await api.get('/api/clans');
-        const data = res.data.data || [];
-        return data.length > 0 ? data : mockAdminClans;
+        return res.data.data || [];
       } catch {
-        return mockAdminClans;
+        return [];
       }
     },
   });
