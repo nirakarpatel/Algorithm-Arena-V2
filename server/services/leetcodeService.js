@@ -43,8 +43,16 @@ exports.fetchLeetCodeChallenges = async (slug) => {
       console.error("GQL Logic Errors:", response.data.errors);
       throw new Error(response.data.errors[0].message);
     }
+    const SUPPORTED_LANG_SLUGS = ['javascript', 'python3', 'java', 'cpp'];
 
-    return response.data.data.question;
+    const question = response.data.data.question;
+    if (question && question.codeSnippets) {
+      question.codeSnippets = question.codeSnippets.filter(
+        (s) => SUPPORTED_LANG_SLUGS.includes(s.langSlug)
+      );
+    }
+
+    return question;
   } catch (error) {
     if (error.response) {
       console.error("LeetCode Response Data:", error.response.data);

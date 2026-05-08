@@ -29,11 +29,14 @@ const defaultChallengeForm = {
   difficulty: "Easy",
   points: 100,
   category: "Logic",
+  tags: [],
+  codeSnippets: [],
 };
 
 const AdminPanel = () => {
   const [leetcodeInput, setLeetcodeInput] = useState("");
   const [isFetching, setIsFetching] = useState(false);
+  const [snippetPreviewLang, setSnippetPreviewLang] = useState("");
 
   const handleAutoFill = async () => {
     if (!leetcodeInput) return toast.error("Please enter a slug or URL");
@@ -49,16 +52,25 @@ const AdminPanel = () => {
       const res = await api.get(
         `/api/challenges/fetch-leetcode-details?slug=${slug}`,
       );
-      const { title, content, difficulty, topicTags } = res.data.data;
+      const { title, content, difficulty, topicTags, codeSnippets } =
+        res.data.data;
+
+      const tags = (topicTags || []).map((t) => t.name);
 
       setCreateForm((prev) => ({
         ...prev,
         title: title,
-        description: content, // This is the HTML string
+        description: content,
         difficulty: difficulty,
-        category: topicTags?.[0]?.name || prev.category,
+        category: tags[0] || prev.category,
         link: `https://leetcode.com/problems/${slug}/`,
+        tags,
+        codeSnippets: codeSnippets || [],
       }));
+
+      if (codeSnippets?.length) {
+        setSnippetPreviewLang(codeSnippets[0].langSlug);
+      }
 
       toast.success("Details fetched successfully!");
     } catch (err) {
@@ -616,6 +628,68 @@ const AdminPanel = () => {
                   />
                 </div>
               </div>
+
+              {/* Tags Section */}
+              {createForm.tags.length > 0 && (
+                <div>
+                  <label className="field-label">Topic Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {createForm.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent border border-accent/20"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          className="ml-0.5 hover:text-red-400 transition-colors"
+                          onClick={() =>
+                            setCreateForm((p) => ({
+                              ...p,
+                              tags: p.tags.filter((t) => t !== tag),
+                            }))
+                          }
+                        >
+                          <FiX size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Code Snippets Preview */}
+              {createForm.codeSnippets.length > 0 && (
+                <div>
+                  <label className="field-label">
+                    Starter Code Snippets ({createForm.codeSnippets.length}{" "}
+                    languages)
+                  </label>
+                  <div className="flex gap-2 mb-2 flex-wrap">
+                    {createForm.codeSnippets.map((s) => (
+                      <button
+                        key={s.langSlug}
+                        type="button"
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                          snippetPreviewLang === s.langSlug
+                            ? "bg-accent text-white"
+                            : "bg-black/5 dark:bg-white/5 text-secondary hover:text-primary"
+                        }`}
+                        onClick={() => setSnippetPreviewLang(s.langSlug)}
+                      >
+                        {s.lang}
+                      </button>
+                    ))}
+                  </div>
+                  <pre className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-4 text-xs overflow-x-auto max-h-48 overflow-y-auto font-mono">
+                    <code>
+                      {createForm.codeSnippets.find(
+                        (s) => s.langSlug === snippetPreviewLang,
+                      )?.code || "Select a language above"}
+                    </code>
+                  </pre>
+                </div>
+              )}
 
               <div className="flex justify-end pt-4">
                 <button type="submit" className="btn-primary">

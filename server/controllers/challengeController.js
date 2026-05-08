@@ -11,6 +11,7 @@ const getChallenges = async (req, res, next) => {
       search,
       difficulty,
       category,
+      tag,
       range,
       from,
       to,
@@ -21,10 +22,12 @@ const getChallenges = async (req, res, next) => {
     const filter = {};
     if (difficulty) filter.difficulty = difficulty;
     if (category) filter.category = category;
+    if (tag) filter.tags = { $regex: tag, $options: "i" };
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: "i" } },
         { description: { $regex: search, $options: "i" } },
+        { tags: { $regex: search, $options: "i" } },
       ];
     }
 
