@@ -409,3 +409,160 @@ body {
     background: var(--accent-primary);
     background-clip: border-box;
 }
+
+/* ============================================
+   LeetCode Description Rendered HTML Styles
+   ============================================ */
+.leetcode-description {
+    line-height: 1.75;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.leetcode-description p {
+    margin-bottom: 1em;
+}
+
+.leetcode-description h1,
+.leetcode-description h2,
+.leetcode-description h3 {
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    line-height: 1.3;
+}
+
+.leetcode-description h1 { font-size: 1.4em; }
+.leetcode-description h2 { font-size: 1.2em; }
+.leetcode-description h3 { font-size: 1.05em; }
+
+.leetcode-description ul,
+.leetcode-description ol {
+    padding-left: 1.75em;
+    margin-bottom: 1em;
+}
+
+.leetcode-description ul { list-style-type: disc; }
+.leetcode-description ol { list-style-type: decimal; }
+
+.leetcode-description li {
+    margin-bottom: 0.35em;
+}
+
+.leetcode-description li > ul,
+.leetcode-description li > ol {
+    margin-top: 0.35em;
+    margin-bottom: 0;
+}
+
+.leetcode-description code {
+    font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.88em;
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--accent-primary);
+}
+
+[data-theme="dark"] .leetcode-description code {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.leetcode-description pre {
+    margin: 1em 0;
+    padding: 1em;
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--field-border);
+    overflow-x: auto;
+    font-size: 0.85em;
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .leetcode-description pre {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.leetcode-description pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+}
+
+.leetcode-description strong,
+.leetcode-description b {
+    font-weight: 700;
+    color: var(--fg-primary);
+}
+
+.leetcode-description em,
+.leetcode-description i {
+    font-style: italic;
+}
+
+.leetcode-description a {
+    color: var(--accent-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.leetcode-description a:hover {
+    opacity: 0.8;
+}
+
+.leetcode-description img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin: 0.75em 0;
+}
+
+.leetcode-description blockquote {
+    border-left: 3px solid var(--accent-primary);
+    padding-left: 1em;
+    margin: 1em 0;
+    color: var(--fg-secondary);
+    font-style: italic;
+}
+
+.leetcode-description table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.9em;
+}
+
+.leetcode-description th,
+.leetcode-description td {
+    border: 1px solid var(--field-border);
+    padding: 0.6em 0.8em;
+    text-align: left;
+}
+
+.leetcode-description th {
+    background: rgba(0, 0, 0, 0.04);
+    font-weight: 700;
+}
+
+[data-theme="dark"] .leetcode-description th {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.leetcode-description hr {
+    border: none;
+    border-top: 1px solid var(--field-border);
+    margin: 1.5em 0;
+}
+
+.leetcode-description sup {
+    font-size: 0.75em;
+    vertical-align: super;
+    line-height: 0;
+}
+
+.leetcode-description sub {
+    font-size: 0.75em;
+    vertical-align: sub;
+    line-height: 0;
+}
+

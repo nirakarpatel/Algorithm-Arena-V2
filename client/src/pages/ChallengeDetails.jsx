@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import DOMPurify from "dompurify";
 import {
   FiClipboard,
   FiRefreshCw,
@@ -89,12 +90,21 @@ const arenaLightTheme = EditorView.theme(
   { dark: false },
 );
 
-const starterByLanguage = {
+// Fallback starters for challenges without LeetCode snippets
+const defaultStarterByLanguage = {
   javascript:
     "function solve(input) {\n  // TODO: implement\n  return input;\n}\n",
   python: "def solve(data):\n    # TODO: implement\n    return data\n",
   java: "class Solution {\n    public static void solve() {\n        // TODO: implement\n    }\n}\n",
   cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // TODO: implement\n    return 0;\n}\n",
+};
+
+// Map LeetCode langSlugs to our editor language keys
+const langSlugToEditorLang = {
+  javascript: "javascript",
+  python3: "python",
+  java: "java",
+  cpp: "cpp",
 };
 
 const ChallengeDetails = () => {
@@ -191,6 +201,26 @@ const ChallengeDetails = () => {
     },
   });
 
+  // Logic: Populate editor with starter snippets from DB
+  useEffect(() => {
+    if (!challengeQuery.data) return;
+    // Don't overwrite if user already has a draft saved
+    const hasDraft = localStorage.getItem(draftKey);
+    if (hasDraft) return;
+
+    const challenge = challengeQuery.data;
+    if (challenge.codeSnippets && challenge.codeSnippets.length > 0) {
+      const snippetMap = {};
+      challenge.codeSnippets.forEach((s) => {
+        const editorLang = langSlugToEditorLang[s.langSlug];
+        if (editorLang && !snippetMap[editorLang]) {
+          snippetMap[editorLang] = s.code;
+        }
+      });
+      setCodeByLang(snippetMap);
+    }
+  }, [challengeQuery.data, draftKey]);
+
   const historyQuery = useQuery({
     queryKey: ["my-submissions", id],
     queryFn: async () => {
@@ -211,8 +241,19 @@ const ChallengeDetails = () => {
     [codeSnippet],
   );
 
-  const handleInsertStarter = () =>
-    setCodeSnippet(starterByLanguage[language] || starterByLanguage.javascript);
+  // Build starter code from DB snippets or fall back to defaults
+  const getStarterCode = () => {
+    const challenge = challengeQuery.data;
+    if (challenge?.codeSnippets?.length > 0) {
+      const match = challenge.codeSnippets.find(
+        (s) => langSlugToEditorLang[s.langSlug] === language,
+      );
+      if (match) return match.code;
+    }
+    return defaultStarterByLanguage[language] || defaultStarterByLanguage.javascript;
+  };
+
+  const handleInsertStarter = () => setCodeSnippet(getStarterCode());
 
   const handleCopyCode = async () => {
     if (!codeSnippet.trim()) return toast.error("No code to copy");
@@ -257,6 +298,15 @@ const ChallengeDetails = () => {
       setSubmitting(false);
     }
   };
+
+  // Sanitize the HTML description for safe rendering
+  const sanitizedDescription = useMemo(() => {
+    if (!challengeQuery.data?.description) return "";
+    return DOMPurify.sanitize(challengeQuery.data.description, {
+      ADD_TAGS: ["img"],
+      ADD_ATTR: ["target"],
+    });
+  }, [challengeQuery.data?.description]);
 
   if (challengeQuery.isLoading)
     return (
@@ -358,9 +408,13 @@ const ChallengeDetails = () => {
           <div className="flex-1 overflow-y-auto p-5">
             {leftTab === "description" ? (
               <div className="space-y-4">
-                <div className="text-sm leading-relaxed whitespace-pre-wrap text-primary/90">
-                  {challenge.description}
-                </div>
+                {/* Rendered HTML Description */}
+                <div
+                  className="leetcode-description text-sm leading-relaxed text-primary/90"
+                  dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                />
+
+                {/* Tags & Meta */}
                 <div className="flex flex-wrap gap-2 pt-4 border-t border-black/10 dark:border-white/10">
                   <span
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${difficultyBg} ${difficultyColor}`}
@@ -370,6 +424,14 @@ const ChallengeDetails = () => {
                   <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent">
                     {challenge.points} XP
                   </span>
+                  {challenge.tags?.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 text-blue-400 dark:text-blue-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
             ) : (
