@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { FiTrash2, FiSearch, FiShield, FiUser, FiX } from "react-icons/fi";
@@ -850,7 +851,12 @@ const AdminPanel = () => {
                             {sub.userId?.username || "Unknown"}
                           </td>
                           <td className="py-3">
-                            {sub.challengeId?.title || "Unknown"}
+                            <Link
+                              to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                              className="text-accent hover:underline font-medium"
+                            >
+                              {sub.challengeId?.title || "Unknown"}
+                            </Link>
                           </td>
                           <td className="py-3">{sub.language || "-"}</td>
                           <td className="py-3">{sub.status}</td>
@@ -887,7 +893,12 @@ const AdminPanel = () => {
                           {sub.userId?.username || "Unknown"}
                         </p>
                         <p className="text-secondary text-sm">
-                          {sub.challengeId?.title || "Unknown challenge"}
+                          <Link
+                            to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                            className="text-accent hover:underline"
+                          >
+                            {sub.challengeId?.title || "Unknown challenge"}
+                          </Link>
                         </p>
                       </div>
                       <div className="flex justify-between text-sm">

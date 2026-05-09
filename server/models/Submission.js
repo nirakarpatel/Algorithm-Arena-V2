@@ -19,6 +19,12 @@ const submissionSchema = new mongoose.Schema({
     enum: ['Pending', 'Accepted', 'Rejected'], 
     default: 'Pending' 
   },
+  reviewComment: { type: String },
+  reviewedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  reviewedAt: { type: Date },
   submittedAt: { type: Date, default: Date.now }
 });
 

@@ -23,6 +23,7 @@ const submissionCreateSchema = {
 const submissionUpdateSchema = {
   body: z.object({
     status: z.enum(['Pending', 'Accepted', 'Rejected']),
+    reviewComment: z.string().trim().max(2000).optional().min(1, { message: 'Comment cannot be empty' }),
   }),
 };
 
