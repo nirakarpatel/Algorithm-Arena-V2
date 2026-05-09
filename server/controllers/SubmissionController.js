@@ -233,7 +233,8 @@ const getSubmissionById = async (req, res, next) => {
   try {
     const submission = await Submission.findById(req.params.id)
       .populate('userId', 'username email role')
-      .populate('challengeId', 'title difficulty points');
+      .populate('challengeId', 'title difficulty points')
+      .populate('reviewedBy', 'username role');
 
     if (!submission) {
       res.status(404);
@@ -256,20 +257,30 @@ const getSubmissionById = async (req, res, next) => {
 
 const updateSubmissionStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, reviewComment } = req.body;
 
     if (!VALID_STATUSES.includes(status)) {
       res.status(400);
       throw new Error(`Status must be one of: ${VALID_STATUSES.join(', ')}`);
     }
 
+    const updateFields = {
+      status,
+      reviewedBy: req.user.id,
+      reviewedAt: new Date(),
+    };
+    if (reviewComment !== undefined) {
+      updateFields.reviewComment = reviewComment;
+    }
+
     const submission = await Submission.findByIdAndUpdate(
       req.params.id,
-      { status },
+      updateFields,
       { new: true, runValidators: true }
     )
       .populate('userId', 'username email role')
-      .populate('challengeId', 'title difficulty points');
+      .populate('challengeId', 'title difficulty points')
+      .populate('reviewedBy', 'username role');
 
     if (!submission) {
       res.status(404);

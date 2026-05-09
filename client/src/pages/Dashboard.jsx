@@ -11,6 +11,7 @@ import {
   FiTarget,
   FiTrendingUp,
   FiZap,
+  FiMessageSquare,
 } from "react-icons/fi";
 import { api } from "../lib/api";
 import {
@@ -335,17 +336,25 @@ const Dashboard = () => {
                       <p className="text-xs text-secondary">
                         {new Date(submission.submittedAt).toLocaleDateString()}
                       </p>
-                      <p
-                        className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
-                          submission.status === "Accepted"
-                            ? "bg-green-500/15 text-green-500"
-                            : submission.status === "Rejected"
-                              ? "bg-red-500/15 text-red-500"
-                              : "bg-yellow-500/15 text-yellow-500"
-                        }`}
-                      >
-                        {submission.status}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        {submission.status === "Rejected" && submission.reviewComment && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 text-[9px] font-bold">
+                            <FiMessageSquare size={9} />
+                            Feedback
+                          </span>
+                        )}
+                        <p
+                          className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                            submission.status === "Accepted"
+                              ? "bg-green-500/15 text-green-500"
+                              : submission.status === "Rejected"
+                                ? "bg-red-500/15 text-red-500"
+                                : "bg-yellow-500/15 text-yellow-500"
+                          }`}
+                        >
+                          {submission.status}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </Link>

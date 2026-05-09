@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import DOMPurify from "dompurify";
@@ -14,6 +14,10 @@ import {
   FiChevronLeft,
   FiSend,
   FiExternalLink,
+  FiCheck,
+  FiXCircle,
+  FiMessageSquare,
+  FiUser,
 } from "react-icons/fi";
 
 // CodeMirror Imports
@@ -23,6 +27,7 @@ import { python } from "@codemirror/lang-python";
 import { java } from "@codemirror/lang-java";
 import { cpp } from "@codemirror/lang-cpp";
 import { EditorView } from "@codemirror/view";
+import { EditorState } from "@codemirror/state";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
@@ -30,6 +35,7 @@ import { tags as t } from "@lezer/highlight";
 import SkeletonCard from "../components/SkeletonCard";
 import { api } from "../lib/api";
 import { USE_MOCK, mockChallenges, mockSubmissions } from "../lib/mockData";
+import { useAuth } from "../context/useAuth";
 
 // --- THEME & HIGHLIGHT DEFINITIONS ---
 
@@ -109,15 +115,26 @@ const langSlugToEditorLang = {
 
 const ChallengeDetails = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const reviewSubmissionId = searchParams.get("review");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const draftKey = `challenge-draft:${id}`;
+
+  const isReviewer = ["admin", "super-admin", "clan-chief"].includes(user?.role);
+  const isReviewMode = Boolean(reviewSubmissionId) && isReviewer;
 
   const [repoUrl, setRepoUrl] = useState("");
   const [codeByLang, setCodeByLang] = useState({});
   const [language, setLanguage] = useState("javascript");
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState("description");
+
+  // Review mode state
+  const [reviewComment, setReviewComment] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [grading, setGrading] = useState(false);
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark",
   );
@@ -185,8 +202,10 @@ const ChallengeDetails = () => {
       ? [arenaDarkTheme, syntaxHighlighting(algoArenaDarkHighlight)]
       : [arenaLightTheme, syntaxHighlighting(algoArenaLightHighlight)];
 
-    return [...langExt, ...themeExt];
-  }, [language, isDark]);
+    const readOnlyExt = isReviewMode ? [EditorState.readOnly.of(true)] : [];
+
+    return [...langExt, ...themeExt, ...readOnlyExt];
+  }, [language, isDark, isReviewMode]);
 
   const challengeQuery = useQuery({
     queryKey: ["challenge", id],
@@ -223,6 +242,7 @@ const ChallengeDetails = () => {
 
   const historyQuery = useQuery({
     queryKey: ["my-submissions", id],
+    enabled: !isReviewMode,
     queryFn: async () => {
       if (USE_MOCK)
         return mockSubmissions.filter((s) => s.challengeId._id === id);
@@ -232,6 +252,46 @@ const ChallengeDetails = () => {
       return res.data.data || [];
     },
   });
+
+  // Review mode: fetch the submission being reviewed
+  const reviewQuery = useQuery({
+    queryKey: ["review-submission", reviewSubmissionId],
+    enabled: isReviewMode && Boolean(reviewSubmissionId),
+    queryFn: async () => {
+      const res = await api.get(`/api/submissions/${reviewSubmissionId}`);
+      return res.data.data;
+    },
+  });
+
+  // Pre-load submitted code into editor when in review mode
+  useEffect(() => {
+    if (!isReviewMode || !reviewQuery.data) return;
+    const sub = reviewQuery.data;
+    if (sub.code) {
+      setCodeByLang({ [sub.language || "javascript"]: sub.code });
+      setLanguage(sub.language || "javascript");
+    }
+  }, [isReviewMode, reviewQuery.data]);
+
+  // Review mode: grade a submission
+  const handleGrade = async (status) => {
+    setGrading(true);
+    try {
+      await api.put(`/api/submissions/${reviewSubmissionId}`, {
+        status,
+        reviewComment: status === "Rejected" ? reviewComment.trim() || undefined : undefined,
+      });
+      toast.success(`Submission ${status.toLowerCase()}`);
+      queryClient.invalidateQueries({ queryKey: ["admin-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["chief-submissions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      navigate(-1);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to grade submission");
+    } finally {
+      setGrading(false);
+    }
+  };
 
   const codeStats = useMemo(
     () => ({
@@ -467,7 +527,14 @@ const ChallengeDetails = () => {
           <div className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-2">
               <FiCode className="text-accent" />
-              <span className="text-sm font-semibold">Code Editor</span>
+              <span className="text-sm font-semibold">
+                {isReviewMode ? "Submitted Code (Read-only)" : "Code Editor"}
+              </span>
+              {isReviewMode && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/15 text-yellow-500 uppercase tracking-wider">
+                  Review Mode
+                </span>
+              )}
             </div>
             <select
               className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg text-xs px-2 py-1 text-primary focus:outline-none"
@@ -487,7 +554,8 @@ const ChallengeDetails = () => {
               value={codeSnippet}
               height="100%"
               extensions={editorExtensions}
-              onChange={(value) => setCodeSnippet(value)}
+              onChange={isReviewMode ? undefined : (value) => setCodeSnippet(value)}
+              editable={!isReviewMode}
               className="text-sm h-full"
               basicSetup={{
                 lineNumbers: true,
@@ -498,50 +566,140 @@ const ChallengeDetails = () => {
             />
           </div>
 
-          <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3 bg-black/1">
-            <div className="flex items-center justify-between text-[11px] text-secondary">
-              <span>
-                {codeStats.lines} lines • {codeStats.characters} chars
-              </span>
-              <div className="flex gap-2">
-                <button onClick={handleInsertStarter}>
-                  <FiRefreshCw />
-                </button>
-                <button onClick={handleCopyCode}>
-                  <FiClipboard />
-                </button>
-                <button onClick={handleClearDraft}>
-                  <FiTrash2 />
-                </button>
-              </div>
-            </div>
-          </div>
+          {isReviewMode ? (
+            /* ---- REVIEW MODE PANEL ---- */
+            <div className="px-4 py-4 border-t border-black/10 dark:border-white/10 shrink-0 space-y-4">
+              {/* Submitter info */}
+              {reviewQuery.data && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                  <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center text-accent font-bold text-xs">
+                    <FiUser size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">
+                      {reviewQuery.data.userId?.username || "Unknown"}
+                    </p>
+                    <p className="text-[10px] text-secondary">
+                      Submitted {new Date(reviewQuery.data.submittedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    reviewQuery.data.status === "Pending"
+                      ? "bg-yellow-500/15 text-yellow-500"
+                      : reviewQuery.data.status === "Accepted"
+                        ? "bg-green-500/15 text-green-500"
+                        : "bg-red-500/15 text-red-500"
+                  }`}>
+                    {reviewQuery.data.status}
+                  </span>
+                </div>
+              )}
 
-          {/* Bottom Submit Section */}
-          <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3">
-            {/* GitHub URL Input */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex-1 focus-within:border-accent transition-colors">
-                <FiGithub size={14} className="text-secondary shrink-0" />
-                <input
-                  name="submissionRepositoryUrl"
-                  type="text"
-                  placeholder="GitHub repository URL (optional)"
-                  className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"
-                  value={repoUrl}
-                  onChange={(e) => setRepoUrl(e.target.value)}
-                />
+              {/* Reject comment textarea */}
+              {showRejectForm && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-secondary">
+                    <FiMessageSquare size={12} />
+                    Rejection Feedback
+                  </label>
+                  <textarea
+                    className="w-full rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 p-3 text-sm text-primary placeholder:text-secondary/50 focus:outline-none focus:border-accent transition-colors resize-none"
+                    rows={3}
+                    placeholder="Explain what can be improved..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleGrade("Accepted")}
+                  disabled={grading}
+                  className="flex-1 py-2.5 flex items-center justify-center gap-2 rounded-xl bg-green-500/10 text-green-500 text-sm font-bold hover:bg-green-500/20 transition-all disabled:opacity-50 border border-green-500/20"
+                >
+                  <FiCheck size={16} />
+                  {grading ? "Processing..." : "Accept"}
+                </button>
+                {!showRejectForm ? (
+                  <button
+                    onClick={() => setShowRejectForm(true)}
+                    disabled={grading}
+                    className="flex-1 py-2.5 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold hover:bg-red-500/20 transition-all disabled:opacity-50 border border-red-500/20"
+                  >
+                    <FiXCircle size={16} />
+                    Reject
+                  </button>
+                ) : (
+                  <div className="flex-1 flex gap-2">
+                    <button
+                      onClick={() => handleGrade("Rejected")}
+                      disabled={grading}
+                      className="flex-1 py-2.5 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-500 text-sm font-bold hover:bg-red-500/20 transition-all disabled:opacity-50 border border-red-500/20"
+                    >
+                      <FiXCircle size={16} />
+                      {grading ? "Processing..." : "Confirm Reject"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowRejectForm(false);
+                        setReviewComment("");
+                      }}
+                      className="px-3 py-2.5 rounded-xl text-xs font-semibold text-secondary hover:text-primary bg-black/5 dark:bg-white/5 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <FiSend size={14} />{" "}
-              {submitting ? "Transmitting..." : "Submit Solution"}
-            </button>
-          </div>
+          ) : (
+            /* ---- NORMAL SUBMIT PANEL ---- */
+            <>
+              <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3 bg-black/1">
+                <div className="flex items-center justify-between text-[11px] text-secondary">
+                  <span>
+                    {codeStats.lines} lines • {codeStats.characters} chars
+                  </span>
+                  <div className="flex gap-2">
+                    <button onClick={handleInsertStarter}>
+                      <FiRefreshCw />
+                    </button>
+                    <button onClick={handleCopyCode}>
+                      <FiClipboard />
+                    </button>
+                    <button onClick={handleClearDraft}>
+                      <FiTrash2 />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex-1 focus-within:border-accent transition-colors">
+                    <FiGithub size={14} className="text-secondary shrink-0" />
+                    <input
+                      name="submissionRepositoryUrl"
+                      type="text"
+                      placeholder="GitHub repository URL (optional)"
+                      className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"
+                      value={repoUrl}
+                      onChange={(e) => setRepoUrl(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <FiSend size={14} />{" "}
+                  {submitting ? "Transmitting..." : "Submit Solution"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { FiSearch, FiClock, FiCheckCircle, FiXCircle, FiBookOpen } from 'react-icons/fi';
@@ -232,7 +233,14 @@ const ClanChiefPanel = () => {
                               <span className="font-medium text-primary">{sub.userId?.username || 'Unknown'}</span>
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-secondary">{sub.challengeId?.title || 'Unknown'}</td>
+                          <td className="py-3 px-4 text-secondary">
+                            <Link
+                              to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                              className="text-accent hover:underline font-medium"
+                            >
+                              {sub.challengeId?.title || 'Unknown'}
+                            </Link>
+                          </td>
                           <td className="py-3 px-4">
                             <span className="px-2 py-1 rounded bg-glass-surface text-[10px] font-bold text-tertiary uppercase">
                               {sub.language}
@@ -268,7 +276,14 @@ const ClanChiefPanel = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-bold text-primary">{sub.userId?.username || 'Unknown'}</p>
-                          <p className="text-xs text-secondary">{sub.challengeId?.title || 'Unknown'}</p>
+                          <p className="text-xs text-secondary">
+                            <Link
+                              to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                              className="text-accent hover:underline"
+                            >
+                              {sub.challengeId?.title || 'Unknown'}
+                            </Link>
+                          </p>
                         </div>
                         <span className="px-2 py-1 rounded bg-glass-surface text-[10px] font-bold text-tertiary">
                           {sub.language}
