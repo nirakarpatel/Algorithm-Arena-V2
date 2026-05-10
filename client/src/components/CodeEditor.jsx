@@ -328,7 +328,6 @@ const CodeEditor = ({
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
     setupCustomValidator(editor, monaco, language);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
   // Cleanup on unmount

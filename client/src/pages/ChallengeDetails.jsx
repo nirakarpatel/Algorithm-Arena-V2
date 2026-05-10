@@ -18,9 +18,11 @@ import {
   FiXCircle,
   FiMessageSquare,
   FiUser,
+  FiPlay,
 } from "react-icons/fi";
 
 import CodeEditor from "../components/CodeEditor";
+import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 
 // Local Project Imports
 import SkeletonCard from "../components/SkeletonCard";
@@ -28,11 +30,36 @@ import { api } from "../lib/api";
 import { USE_MOCK, mockChallenges, mockSubmissions } from "../lib/mockData";
 import { useAuth } from "../context/useAuth";
 
+// ─── Judge0 CE (free, no API key) ────────────────────────────────────────────
+const JUDGE0_URL =
+  import.meta.env.VITE_JUDGE0_API_URL || "https://ce.judge0.com";
+
+const b64Encode = (str) =>
+  btoa(
+    encodeURIComponent(str).replace(/%([0-9A-F]{2})/gi, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    ),
+  );
+const b64Decode = (str) => {
+  if (!str) return "";
+  try {
+    return decodeURIComponent(
+      atob(str)
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+  } catch {
+    return str;
+  }
+};
+
 const defaultStarterByLanguage = {
   javascript: `function main() {\n\n}\n\nmain();\n`,
   python: `def main():\n    pass\n\nif __name__ == "__main__":\n    main()\n`,
   java: `public class Main {\n\n    public static void main(String[] args) {\n\n    }\n}\n`,
   cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n\n    return 0;\n}\n`,
+  c: `#include <stdio.h>\n\nint main() {\n\n    return 0;\n}\n`,
 };
 
 const ChallengeDetails = () => {
@@ -52,6 +79,12 @@ const ChallengeDetails = () => {
   const [language, setLanguage] = useState("javascript");
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState("description");
+
+  // Input / Output panel state
+  const [bottomTab, setBottomTab] = useState("input");
+  const [stdin, setStdin] = useState("");
+  const [runOutput, setRunOutput] = useState(null);
+  const [running, setRunning] = useState(false);
 
   // Review mode state
   const [reviewComment, setReviewComment] = useState("");
@@ -207,6 +240,50 @@ const ChallengeDetails = () => {
     setCodeByLang({});
     localStorage.removeItem(draftKey);
     toast.success("Draft cleared");
+  };
+
+  // ─── Judge0 run (CE free instance – wait=true, no API key) ──────────────────
+
+  const handleRun = async () => {
+    if (!codeSnippet.trim()) return toast.error("No code to run.");
+    setRunning(true);
+    setBottomTab("output");
+    setRunOutput(null);
+    try {
+      const res = await fetch(
+        `${JUDGE0_URL}/submissions?wait=true&base64_encoded=true`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            language_id: LANGUAGE_MAP[language]?.id ?? 63,
+            source_code: b64Encode(codeSnippet),
+            stdin: b64Encode(stdin),
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Judge0 error ${res.status}: ${text}`);
+      }
+
+      const result = await res.json();
+
+      setRunOutput({
+        stdout: b64Decode(result.stdout),
+        stderr: b64Decode(result.stderr),
+        compile_output: b64Decode(result.compile_output),
+        status: result.status,
+        time: result.time,
+        memory: result.memory,
+      });
+    } catch (err) {
+      toast.error(err.message || "Failed to reach Judge0.");
+      setRunOutput({ error: err.message || "Execution engine unreachable." });
+    } finally {
+      setRunning(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -418,10 +495,9 @@ const ChallengeDetails = () => {
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
             >
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
+              {LANGUAGE_OPTIONS.map(({ key, label }) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
 
@@ -430,11 +506,82 @@ const ChallengeDetails = () => {
             <CodeEditor
               value={codeSnippet}
               onChange={(value) => setCodeSnippet(value ?? "")}
-              language={language}
+              language={LANGUAGE_MAP[language]?.monacoLang ?? language}
               isDark={isDark}
               readOnly={isReviewMode}
             />
           </div>
+
+          {/* ── Test / Result Panel (normal mode only) ── */}
+          {!isReviewMode && (
+            <div className="h-44 flex flex-col border-t border-black/10 dark:border-white/10 shrink-0">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-black/10 dark:border-white/10 shrink-0">
+                <div className="flex gap-0.5">
+                  {[
+                    { key: "input", label: "Test" },
+                    { key: "output", label: "Result" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setBottomTab(key)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                        bottomTab === key
+                          ? "bg-accent/15 text-accent"
+                          : "text-secondary hover:text-primary"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleRun}
+                  disabled={running}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-500/15 text-green-400 text-xs font-bold hover:bg-green-500/25 transition-all disabled:opacity-60 border border-green-500/20"
+                >
+                  {running ? (
+                    <FiRefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <FiPlay size={11} />
+                  )}
+                  {running ? "Running…" : "Run"}
+                </button>
+              </div>
+
+              {/* Panel body */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {bottomTab === "input" ? (
+                  <textarea
+                    className="w-full h-full resize-none bg-transparent px-3 py-2 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                    placeholder="Enter stdin input here…"
+                    value={stdin}
+                    onChange={(e) => setStdin(e.target.value)}
+                    spellCheck={false}
+                  />
+                ) : (
+                  <div className="h-full overflow-y-auto px-3 py-2">
+                    {!runOutput ? (
+                      <p className="text-secondary/40 text-xs font-mono">
+                        Press Run to see output here…
+                      </p>
+                    ) : runOutput.error ? (
+                      <pre className="text-red-400 text-xs font-mono whitespace-pre-wrap">
+                        {runOutput.error}
+                      </pre>
+                    ) : (
+                      <pre className="text-xs font-mono text-primary whitespace-pre-wrap break-all">
+                        {runOutput.stdout ||
+                          runOutput.compile_output ||
+                          runOutput.stderr ||
+                          "(no output)"}
+                      </pre>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {isReviewMode ? (
             /* ---- REVIEW MODE PANEL ---- */
