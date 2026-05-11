@@ -45,22 +45,47 @@ async function seedDatabase() {
   try {
     console.log('🌱 Seeding database...');
     
-    // Clear existing challenges
-    await Challenge.deleteMany({});
-    console.log('🧹 Cleared old challenges...');
+    // Seed challenges (upsert — only creates missing ones)
+    let challengeCount = 0;
+    for (const challenge of challenges) {
+      const existing = await Challenge.findOne({ title: challenge.title });
+      if (!existing) {
+        await Challenge.create(challenge);
+        challengeCount++;
+      }
+    }
+    console.log(`✅ Seeded ${challengeCount} new challenges (${challenges.length - challengeCount} already existed).`);
 
-    // Insert new ones
-    await Challenge.insertMany(challenges);
-    console.log('✅ Database Seeded with 5 Pro Challenges!');
+    // Clean up any corrupt/empty clan entries
+    const deleted = await Clan.deleteMany({
+      $or: [
+        { name: { $exists: false } },
+        { name: '' },
+        { name: null },
+        { tag: { $exists: false } },
+        { tag: '' },
+        { tag: null }
+      ]
+    });
+    if (deleted.deletedCount > 0) {
+      console.log(`🧹 Removed ${deleted.deletedCount} corrupt/empty clan entries.`);
+    }
 
-    // Seed some initial clans
-    await Clan.deleteMany({});
-    await Clan.insertMany([
+    // Seed initial clans (upsert — won't destroy existing member data)
+    const seedClans = [
       { name: 'Alpha Coders', tag: 'AC', description: 'The elite squad of algorithm masters.' },
       { name: 'Byte Knights', tag: 'BK', description: 'Honour. Code. Conquer.' },
       { name: 'Stack Overlords', tag: 'SO', description: 'We overflow — with solutions.' }
-    ]);
-    console.log('✅ Database Seeded with 3 Clans!');
+    ];
+    let clanCount = 0;
+    for (const clan of seedClans) {
+      const existing = await Clan.findOne({ tag: clan.tag });
+      if (!existing) {
+        await Clan.create(clan);
+        clanCount++;
+      }
+    }
+    console.log(`✅ Seeded ${clanCount} new clans (${seedClans.length - clanCount} already existed).`);
 
     // Seed a default admin user if it doesn't exist
     const adminEmail = 'devmaster@iter.ac.in';

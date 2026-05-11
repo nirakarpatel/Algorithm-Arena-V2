@@ -21,6 +21,10 @@ const startServer = async () => {
   try {
     await connectDB();
     
+    // Ensure seed clans exist on every deploy (safe upsert)
+    const { seedDatabase } = require('./seed');
+    await seedDatabase();
+    
     // Initialize Socket.io
     initSocket(server);
     
