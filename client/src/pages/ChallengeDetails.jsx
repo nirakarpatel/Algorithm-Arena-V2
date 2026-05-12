@@ -286,7 +286,7 @@ const ChallengeDetails = () => {
       testCases.length > 0
         ? testCases.map((tc) => ({
             label: tc.label,
-            stdinValue: tc.args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join("\n"),
+            stdinValue: argsToStdin(tc.args),
             expected: tc.expected ?? null,
           }))
         : [{ label: "Run", stdinValue: stdin, expected: null }];
@@ -295,38 +295,87 @@ const ChallengeDetails = () => {
     setBottomTab("output");
     setRunOutput(null);
 
-    try {
-      const runOne = async ({ label, stdinValue, expected }) => {
-        const res = await fetch(
-          `${JUDGE0_URL}/submissions?wait=true&base64_encoded=true`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              language_id: LANGUAGE_MAP[language]?.id ?? 63,
-              source_code: b64Encode(codeSnippet),
-              stdin: b64Encode(stdinValue),
-            }),
-          },
-        );
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Judge0 error ${res.status}: ${text}`);
-        }
-        const result = await res.json();
-        return {
-          label,
-          expected,
-          stdout: b64Decode(result.stdout),
-          stderr: b64Decode(result.stderr),
-          compile_output: b64Decode(result.compile_output),
-          status: result.status,
-          time: result.time,
-          memory: result.memory,
-        };
-      };
+    const langId = LANGUAGE_MAP[language]?.id ?? 63;
+    // Each case gets a unique nonce comment to force a fresh execution even
+    // if Judge0 caches by source-code hash.
+    const commentChar = language === "python" ? "#" : "//";
+    const freshSource = (idx) =>
+      b64Encode(
+        `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      );
 
-      const results = await Promise.all(runs.map(runOne));
+    try {
+      // ── 1. Batch submit: one independent submission per test case ────────────
+      const batchRes = await fetch(
+        `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            submissions: runs.map((run, idx) => ({
+              language_id: langId,
+              source_code: freshSource(idx),
+              stdin: b64Encode(run.stdinValue),
+            })),
+          }),
+        },
+      );
+      if (!batchRes.ok) {
+        const text = await batchRes.text();
+        throw new Error(`Judge0 batch submit error ${batchRes.status}: ${text}`);
+      }
+      const batchTokens = await batchRes.json();
+      const tokens = batchTokens.map((t) => t.token);
+
+      // ── 2. Poll until every submission is finished ───────────────────────────
+      const tokenList = tokens.join(",");
+      let results = tokens.map(() => null);
+
+      for (let attempt = 0; attempt < 30; attempt++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const pollRes = await fetch(
+          `${JUDGE0_URL}/submissions/batch?tokens=${tokenList}&base64_encoded=true`,
+        );
+        if (!pollRes.ok) continue;
+        const { submissions } = await pollRes.json();
+
+        submissions.forEach((sub, i) => {
+          const statusId = sub?.status?.id;
+          if (statusId !== 1 && statusId !== 2) {
+            results[i] = {
+              label: runs[i].label,
+              expected: runs[i].expected,
+              stdinValue: runs[i].stdinValue,
+              token: tokens[i],
+              stdout: b64Decode(sub.stdout),
+              stderr: b64Decode(sub.stderr),
+              compile_output: b64Decode(sub.compile_output),
+              status: sub.status,
+              time: sub.time,
+              memory: sub.memory,
+            };
+          }
+        });
+
+        const ready = results.filter(Boolean);
+        if (ready.length > 0) setRunOutput({ cases: ready });
+        if (results.every(Boolean)) break;
+      }
+
+      // Mark any that timed out
+      results = results.map((r, i) =>
+        r ?? {
+          label: runs[i].label,
+          expected: runs[i].expected,
+          stdinValue: runs[i].stdinValue,
+          stdout: "",
+          stderr: "Timed out waiting for Judge0 result.",
+          compile_output: "",
+          status: { description: "Timeout" },
+          time: null,
+          memory: null,
+        },
+      );
       setRunOutput({ cases: results });
     } catch (err) {
       toast.error(err.message || "Failed to reach Judge0.");
@@ -603,17 +652,17 @@ const ChallengeDetails = () => {
               <div className="flex-1 min-h-0 overflow-hidden">
                 {bottomTab === "input" ? (
                   /* ── Test tab ── */
-                  <div className="h-full flex flex-col px-3 py-2 gap-2">
-                    {challenge.testCases?.length > 0 && (
+                  <div className="h-full flex flex-col px-3 py-2 gap-2 overflow-y-auto">
+                    {challenge.testCases?.length > 0 ? (
                       <>
-                        {/* Case selector — clicking one sets stdin to that case's args */}
+                        {/* Case selector */}
                         <div className="flex gap-1 flex-wrap shrink-0">
                           {challenge.testCases.map((tc, i) => (
                             <button
                               key={i}
                               onClick={() => {
                                 setSelectedCaseIdx(i);
-                                setStdin(tc.args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join("\n"));
+                                setStdin(argsToStdin(tc.args));
                               }}
                               className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors ${
                                 selectedCaseIdx === i
@@ -625,21 +674,54 @@ const ChallengeDetails = () => {
                             </button>
                           ))}
                         </div>
-                      </>
-                    )}
 
-                    {/* Stdin — editable, pre-filled when a case is selected */}
-                    <textarea
-                      className="flex-1 resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
-                      placeholder={
-                        challenge.testCases?.length > 0
-                          ? "Select a case above or type stdin manually…"
-                          : "Enter stdin input here…"
-                      }
-                      value={stdin}
-                      onChange={(e) => setStdin(e.target.value)}
-                      spellCheck={false}
-                    />
+                        {/* Selected case: input + expected side-by-side */}
+                        {(() => {
+                          const tc = challenge.testCases[selectedCaseIdx];
+                          if (!tc) return null;
+                          const inputStr = argsToStdin(tc.args);
+                          return (
+                            <div className="flex gap-2 shrink-0">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Input</p>
+                                <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
+                                  {inputStr || "(empty)"}
+                                </pre>
+                              </div>
+                              {tc.expected && (
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Expected</p>
+                                  <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
+                                    {tc.expected}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Editable stdin for custom runs */}
+                        <div className="shrink-0">
+                          <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Custom stdin</p>
+                          <textarea
+                            className="w-full resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                            rows={2}
+                            placeholder="Override stdin for a custom run…"
+                            value={stdin}
+                            onChange={(e) => setStdin(e.target.value)}
+                            spellCheck={false}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <textarea
+                        className="flex-1 resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                        placeholder="Enter stdin input here…"
+                        value={stdin}
+                        onChange={(e) => setStdin(e.target.value)}
+                        spellCheck={false}
+                      />
+                    )}
                   </div>
                 ) : (
                   /* ── Result tab ── */
@@ -705,6 +787,14 @@ const ChallengeDetails = () => {
                               {/* Output */}
                               {!hasError && (
                                 <>
+                                  {c.stdinValue != null && (
+                                    <div>
+                                      <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Input (stdin)</p>
+                                      <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                                        {c.stdinValue || "(empty)"}
+                                      </pre>
+                                    </div>
+                                  )}
                                   <div>
                                     <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Output</p>
                                     <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
