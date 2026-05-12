@@ -3,7 +3,7 @@
 // Set USE_MOCK to false when your backend is ready.
 // ─────────────────────────────────────────────────────────────
 
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+export const USE_MOCK = false;
 
 // ─── Users ──────────────────────────────────────────────────
 
@@ -219,7 +219,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 2 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending_1",
+    _id: "sub_002_pending",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -229,7 +229,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending_2",
+    _id: "sub_002_pending",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -239,7 +239,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending_3",
+    _id: "sub_002_pending",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -249,7 +249,7 @@ export const mockSubmissions = [
     submittedAt: new Date(NOW - 0.1 * DAY).toISOString(),
   },
   {
-    _id: "sub_002_pending_4",
+    _id: "sub_002_pending",
     userId: mockUsers[0], // u_001
     challengeId: mockChallenges[1],
     language: "javascript",
@@ -325,33 +325,48 @@ export const mockSubmissions = [
 export const mockClans = [
   {
     _id: "clan_001",
-    name: "Alpha Coders",
-    tag: "AC",
-    description: "The elite squad of algorithm masters.",
-    memberCount: 0,
-    solvedCount: 0,
-    totalPoints: 0,
+    name: "Code Crusaders",
+    tag: "CC",
+    memberCount: 12,
+    solvedCount: 48,
+    totalPoints: 4200,
     rank: 1,
   },
   {
     _id: "clan_002",
-    name: "Byte Knights",
-    tag: "BK",
-    description: "Honour. Code. Conquer.",
-    memberCount: 0,
-    solvedCount: 0,
-    totalPoints: 0,
+    name: "Binary Beasts",
+    tag: "BB",
+    memberCount: 9,
+    solvedCount: 35,
+    totalPoints: 3100,
     rank: 2,
   },
   {
     _id: "clan_003",
-    name: "Stack Overlords",
-    tag: "SO",
-    description: "We overflow — with solutions.",
-    memberCount: 0,
-    solvedCount: 0,
-    totalPoints: 0,
+    name: "Stack Smashers",
+    tag: "SS",
+    memberCount: 15,
+    solvedCount: 30,
+    totalPoints: 2750,
     rank: 3,
+  },
+  {
+    _id: "clan_004",
+    name: "Heap Heroes",
+    tag: "HH",
+    memberCount: 7,
+    solvedCount: 22,
+    totalPoints: 1900,
+    rank: 4,
+  },
+  {
+    _id: "clan_005",
+    name: "Graph Gangsters",
+    tag: "GG",
+    memberCount: 11,
+    solvedCount: 18,
+    totalPoints: 1500,
+    rank: 5,
   },
 ];
 
@@ -378,7 +393,7 @@ export const mockClanMembers = [
     _id: "cm_002",
     username: "algoQueen",
     email: "algoqueen@iter.ac.in",
-    role: "clan-chief",
+    role: "moderator",
   },
   {
     _id: "cm_003",

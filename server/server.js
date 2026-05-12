@@ -7,12 +7,23 @@ const { logger } = require('./utils/logger');
 
 const http = require('http');
 const { initSocket } = require('./config/socket');
+const { seedDatabase } = require('./seed');
 
 const app = createApp();
 const server = http.createServer(app);
 
 const connectDB = async () => {
-  const conn = await mongoose.connect(env.MONGO_URI);
+  let uri = env.MONGO_URI;
+  if (process.env.NODE_ENV !== 'production') {
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongod = await MongoMemoryServer.create();
+    uri = mongod.getUri();
+    logger.info('Started MongoDB Memory Server at ' + uri);
+  } else {
+    const dns = require('dns');
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+  }
+  const conn = await mongoose.connect(uri);
   logger.info('MongoDB connected', { host: conn.connection.host });
   return conn;
 };
@@ -20,6 +31,12 @@ const connectDB = async () => {
 const startServer = async () => {
   try {
     await connectDB();
+    
+    // Seed database if requested (same as standalone)
+    if (process.env.SEED_ON_START === 'true') {
+      logger.info('SEED_ON_START is true, seeding database...');
+      await seedDatabase(true); // true passed to not exit process
+    }
     
     // Initialize Socket.io
     initSocket(server);

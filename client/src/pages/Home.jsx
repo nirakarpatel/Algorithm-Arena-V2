@@ -14,12 +14,7 @@ import Card from "../components/Card";
 import SkeletonCard from "../components/SkeletonCard";
 import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
-import {
-  USE_MOCK,
-  mockChallenges,
-  mockSubmissions,
-  mockCurrentUser,
-} from "../lib/mockData";
+
 
 const MotionBlock = motion.div;
 
@@ -170,7 +165,6 @@ const Home = () => {
   const challengesQuery = useQuery({
     queryKey: ["home-challenges"],
     queryFn: async () => {
-      if (USE_MOCK) return mockChallenges.slice(0, 6);
       const res = await api.get(
         "/api/challenges?page=1&limit=6&sortBy=createdAt&sortDir=desc",
       );
@@ -183,19 +177,12 @@ const Home = () => {
   const submissionsQuery = useQuery({
     queryKey: ["home-pending-tasks"],
     queryFn: async () => {
-      if (USE_MOCK) {
-        return mockSubmissions.filter(
-          (s) =>
-            s.status === "Pending" &&
-            (s.userId._id === mockCurrentUser.id ||
-              s.userId === mockCurrentUser.id),
-        );
-      }
       const res = await api.get("/api/submissions?status=Pending");
       return res.data.data || [];
     },
     enabled: isAuthenticated,
   });
+
 
   const pendingTasks = submissionsQuery.data || [];
 
@@ -287,20 +274,25 @@ const Home = () => {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <span
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black tracking-[0.15em] uppercase backdrop-blur-md"
-            style={{
-              background: `rgba(var(--accent-rgb), 0.1)`,
-              border: `1px solid rgba(var(--accent-rgb), 0.25)`,
-              color: `rgb(var(--accent-rgb))`,
-            }}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: `rgb(var(--accent-rgb))` }}
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src="/bg-logo.jpeg"
+              alt="Google Developer Group SOA ITER"
+              className="w-24 h-24 object-contain rounded-2xl"
+              style={{ filter: "drop-shadow(0 0 20px rgba(var(--accent-rgb),0.3))" }}
             />
-            GDG on Campus · SOA ITER
-          </span>
+            <span
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black tracking-[0.15em] uppercase backdrop-blur-md"
+              style={{
+                background: `rgba(var(--accent-rgb), 0.1)`,
+                border: `1px solid rgba(var(--accent-rgb), 0.25)`,
+                color: `rgb(var(--accent-rgb))`,
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: `rgb(var(--accent-rgb))` }} />
+              GDG on Campus · SOA ITER
+            </span>
+          </div>
         </motion.div>
 
         {/* Headline */}
@@ -616,18 +608,19 @@ const Home = () => {
 
       {/* ── Footer ── */}
       <footer
-        className="relative z-10 mt-auto py-6 text-center w-full"
+        className="relative z-10 mt-auto py-6 w-full"
         style={{
           borderTop: `1px solid rgba(var(--accent-rgb), 0.08)`,
           background: `rgba(var(--accent-rgb), 0.02)`,
         }}
       >
-        <p className="text-xs text-secondary tracking-wide">
-          © 2026 Algorithm Arena ·{" "}
-          <span className="text-primary font-bold">
-            GDG On Campus – SOA ITER
-          </span>
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <img src="/gdg-logo.png" alt="GDG" className="w-6 h-6 object-contain opacity-70" />
+          <p className="text-xs text-secondary tracking-wide text-center">
+            © 2026 Algorithm Arena ·{" "}
+            <span className="text-primary font-bold">GDG On Campus – SOA ITER</span>
+          </p>
+        </div>
       </footer>
     </div>
   );

@@ -11,7 +11,11 @@ import {
   FiX,
   FiShield,
   FiSettings,
-  FiChevronDown
+  FiChevronDown,
+  FiFolder,
+  FiStar,
+  FiMessageSquare,
+  FiRadio
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
@@ -26,12 +30,13 @@ const Navbar = ({ onLogout }) => {
   const { role, user } = useAuth();
 
   const navItems = [
-    { name: "Mission Control", path: "/dashboard", icon: FiGrid },
+    { name: "Dashboard", path: "/dashboard", icon: FiGrid },
     { name: "Leaderboard", path: "/leaderboard", icon: FiAward },
     { name: "Clan", path: "/clans", icon: FiUsers },
+    { name: "Archives", path: "/resources", icon: FiFolder },
   ];
 
-  if (role === 'admin' || role === 'super-admin') {
+  if (role === 'admin') {
     navItems.push({ name: 'Admin', path: '/admin', icon: FiShield });
   }
 
@@ -47,13 +52,17 @@ const Navbar = ({ onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 gap-10">
             <Link
-
               to="/"
-              className="flex items-center gap-2 group"
+              className="flex items-center gap-2.5 group"
               onClick={closeMenu}
             >
-              <span className="font-bold text-xl tracking-tight text-primary group-hover:text-accent transition-colors">
-                AlgoArena
+              <img
+                src="/gdg-logo.png"
+                alt="GDG"
+                className="w-7 h-7 object-contain transition-transform group-hover:scale-110 duration-200"
+              />
+              <span className="font-black text-lg tracking-tight text-primary group-hover:text-accent transition-colors">
+                Algo<span className="text-accent">Arena</span>
               </span>
             </Link>
             <div className="hidden md:flex items-center space-x-1">
@@ -99,9 +108,7 @@ const Navbar = ({ onLogout }) => {
                     )}
                   </div>
                   <div className="flex flex-col items-start text-left">
-                    <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors truncate max-w-[80px]">
-                      {user?.username || "Account"}
-                    </span>
+                    <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors">Account</span>
                     <FiChevronDown className={clsx("text-secondary text-sm transition-transform duration-300", userDropdownOpen && "rotate-180")} />
                   </div>
                  </button>
@@ -119,11 +126,11 @@ const Navbar = ({ onLogout }) => {
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           className="absolute right-0 mt-3 w-64 macos-glass p-2 z-50 border-accent/20 shadow-2xl origin-top-right overflow-hidden"
                         >
-                         <div className="px-4 py-3 bg-white/[0.03] rounded-xl mb-2 border border-white/5">
-                            <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-1">Signed in as</p>
-                            <p className="text-sm font-bold text-primary truncate">{user?.username}</p>
-                            <p className="text-[10px] text-tertiary truncate">{user?.email || 'Authenticated User'}</p>
-                         </div>
+                         <Link to="/profile" onClick={() => setUserDropdownOpen(false)} className="block px-4 py-3 bg-white/[0.03] rounded-xl mb-2 border border-white/5 hover:border-accent/30 hover:bg-accent/5 transition-all group">
+                             <p className="text-[10px] font-black text-accent uppercase tracking-[0.2em] mb-1">Signed in as</p>
+                             <p className="text-sm font-bold text-primary group-hover:text-accent truncate transition-colors">{user?.username}</p>
+                             <p className="text-[10px] text-tertiary truncate">{user?.email || 'Authenticated User'}</p>
+                          </Link>
                          
                          <div className="space-y-1">
                            <Link 
@@ -215,10 +222,10 @@ const Navbar = ({ onLogout }) => {
                 </div>
               )}
             </div>
-            <div className="flex flex-col flex-1">
-              <span className="text-sm font-bold text-primary truncate w-40">{user?.username || 'Guest User'}</span>
+            <Link to="/profile" onClick={closeMenu} className="flex flex-col flex-1">
+              <span className="text-sm font-bold text-primary hover:text-accent transition-colors truncate w-40">{user?.username || 'Guest User'}</span>
               <span className="text-[10px] text-tertiary uppercase tracking-wider font-bold">{role || 'Member'}</span>
-            </div>
+            </Link>
           </div>
 
           <div className="space-y-1">

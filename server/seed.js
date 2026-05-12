@@ -1,7 +1,15 @@
 const mongoose = require('mongoose');
-const Challenge = require('./models/Challenge');
-const Clan = require('./models/Clan');
-const User = require('./models/User');
+const bcrypt = require('bcryptjs');
+require('dotenv').config();
+
+const User = require('./src/features/users/User.model');
+const Clan = require('./src/features/clans/Clan.model');
+const Challenge = require('./src/features/challenges/Challenge.model');
+const GlobalNotice = require('./src/features/notices/GlobalNotice.model');
+const Badge = require('./src/features/badges/Badge.model');
+const Resource = require('./src/features/resources/Resource.model');
+const ChatMessage = require('./src/features/chat/ChatMessage.model');
+const Submission = require('./src/features/submissions/Submission.model'); // Assumed path based on patterns
 
 const challenges = [
   {
@@ -26,13 +34,6 @@ const challenges = [
     category: "Strings"
   },
   {
-    title: "Valid Parentheses",
-    description: "Given a string `s` containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.\n\nAn input string is valid if:\n1. Open brackets must be closed by the same type of brackets.\n2. Open brackets must be closed in the correct order.",
-    difficulty: "Easy",
-    points: 50,
-    category: "Stacks"
-  },
-  {
     title: "Merge k Sorted Lists",
     description: "You are given an array of `k` linked-lists lists, each linked-list is sorted in ascending order.\n\nMerge all the linked-lists into one sorted linked-list and return it.",
     difficulty: "Hard",
@@ -41,60 +42,107 @@ const challenges = [
   }
 ];
 
-async function seedDatabase() {
+const badges = [
+  { name: "First Blood", icon: "🩸", color: "red", rarity: "COMMON", description: "First successful submission in the arena." },
+  { name: "Flawless Execution", icon: "✨", color: "gold", rarity: "EPIC", description: "Solved a hard problem on the first attempt." },
+  { name: "Night Owl", icon: "🦉", color: "purple", rarity: "RARE", description: "Submitted a valid solution between 12 AM and 4 AM." },
+  { name: "Algorithm Master", icon: "👑", color: "gold", rarity: "LEGENDARY", description: "Solved 100 consecutive problems." }
+];
+
+const resources = [
+  { title: "Dynamic Programming Foundations", folder: "DP", type: "PDF", url: "https://example.com/dp-guide.pdf", sizeBytes: 1540000 },
+  { title: "Graph Theory Masterclass", folder: "Graphs", type: "JSON", url: "https://example.com/graphs.json", sizeBytes: 52000 },
+  { title: "Advanced Tree Traversal", folder: "Trees", type: "LINK", url: "https://example.com/trees-link", sizeBytes: 0 }
+];
+
+async function seedDatabase(isStandalone = false) {
   try {
-    console.log('🌱 Seeding database...');
-    
-    // Clear existing challenges
-    await Challenge.deleteMany({});
-    console.log('🧹 Cleared old challenges...');
-
-    // Insert new ones
-    await Challenge.insertMany(challenges);
-    console.log('✅ Database Seeded with 5 Pro Challenges!');
-
-    // Seed some initial clans
-    await Clan.deleteMany({});
-    await Clan.insertMany([
-      { name: 'Alpha Coders', tag: 'AC', description: 'The elite squad of algorithm masters.' },
-      { name: 'Byte Knights', tag: 'BK', description: 'Honour. Code. Conquer.' },
-      { name: 'Stack Overlords', tag: 'SO', description: 'We overflow — with solutions.' }
-    ]);
-    console.log('✅ Database Seeded with 3 Clans!');
-
-    // Seed a default admin user if it doesn't exist
-    const adminEmail = 'devmaster@iter.ac.in';
-    const existingAdmin = await User.findOne({ email: adminEmail });
-    if (!existingAdmin) {
-      await User.create({
-        username: 'devmaster',
-        email: adminEmail,
-        password: 'admin123',
-        role: 'admin'
-      });
-      console.log('✅ Default Admin User created (devmaster@iter.ac.in / admin123)');
+    if (!isStandalone) {
+      const dns = require('dns');
+      dns.setServers(['8.8.8.8', '8.8.4.4']);
+      console.log('🌱 Connecting to database...');
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log('✅ Connected to MongoDB Atlas');
     }
+
+    console.log('🧹 Clearing old data...');
+    await Promise.all([
+      User.deleteMany({}),
+      Clan.deleteMany({}),
+      Challenge.deleteMany({}),
+      GlobalNotice.deleteMany({}),
+      Badge.deleteMany({}),
+      Resource.deleteMany({}),
+      ChatMessage.deleteMany({}),
+      Submission.deleteMany({}) // Assumed Model exists
+    ]).catch(e => console.log('Notice: Some collections might not exist yet, continuing...'));
+
+    console.log('🌱 Seeding Challenges...');
+    await Challenge.insertMany(challenges);
+
+    console.log('🌱 Seeding Badges...');
+    await Badge.insertMany(badges);
+
+    console.log('🌱 Seeding Users & Clans...');
+
+    const devmaster = await User.create({
+      username: 'devmaster',
+      email: 'devmaster@iter.ac.in',
+      password: 'admin123',
+      role: 'admin',
+      isNewUser: false
+    });
+
+    const clanChief = await User.create({
+      username: 'chief1',
+      email: 'chief1@iter.ac.in',
+      password: 'admin123',
+      role: 'clan-chief',
+      isNewUser: false
+    });
+
+    const standardUser = await User.create({
+      username: 'operative1',
+      email: 'operative1@iter.ac.in',
+      password: 'admin123',
+      role: 'user',
+      isNewUser: false
+    });
+
+    const clan = await Clan.create({
+      name: 'Alpha Coders',
+      tag: 'AC',
+      description: 'The elite squad of algorithm masters.',
+      chief: clanChief._id,
+      members: [clanChief._id, standardUser._id]
+    });
+
+    await User.findByIdAndUpdate(clanChief._id, { clan: clan._id });
+    await User.findByIdAndUpdate(standardUser._id, { clan: clan._id });
+
+    console.log('🌱 Seeding Global Notices...');
+    await GlobalNotice.create({
+      title: "Operation Initialization",
+      content: "Welcome to Algorithm Arena V2. All operatives please report to your designated clan chiefs.",
+      type: "Standard",
+      createdBy: devmaster._id
+    });
+
+    console.log('🌱 Seeding Resources...');
+    const mappedResources = resources.map(r => ({ ...r, uploadedBy: devmaster._id }));
+    await Resource.insertMany(mappedResources);
+
+    console.log('✅ Seeding Complete! Database is fully populated.');
+    if (!isStandalone) process.exit(0);
   } catch (err) {
     console.error('❌ Seeding failed:', err);
+    if (!isStandalone) process.exit(1);
     throw err;
   }
 }
 
 if (require.main === module) {
-  require('dotenv').config();
-  const dns = require('dns');
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
-
-  mongoose.connect(process.env.MONGO_URI)
-    .then(async () => {
-      console.log('🌱 Connected to MongoDB (via Google DNS)...');
-      await seedDatabase();
-      process.exit(0);
-    })
-    .catch(err => {
-      console.error(err);
-      process.exit(1);
-    });
+  seedDatabase();
 }
 
-module.exports = { seedDatabase };
+module.exports = { seedDatabase };

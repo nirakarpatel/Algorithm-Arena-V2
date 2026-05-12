@@ -15,8 +15,9 @@ import SkeletonCard from "../components/SkeletonCard";
 import PageHeader from "../components/PageHeader";
 import { useSocket } from "../hooks/useSocket";
 import { api } from "../lib/api";
-import { USE_MOCK, mockLeaderboardMembers } from "../lib/mockData";
+
 import { useAuth } from "../context/useAuth";
+import MemberHoverCard from "../components/MemberHoverCard";
 
 const MotionDiv = motion.div;
 const MotionRow = motion.tr;
@@ -126,13 +127,6 @@ const Leaderboard = () => {
     queryKey: ["leaderboard", filters],
     enabled: leaderType === "individual",
     queryFn: async () => {
-      if (USE_MOCK) {
-        return {
-          data: mockLeaderboardMembers,
-          meta: { page: 1, totalPages: 1 },
-        };
-      }
-
       const params = new URLSearchParams({
         window: filters.window,
         page: String(filters.page),
@@ -152,16 +146,13 @@ const Leaderboard = () => {
     queryKey: ["clan-leaderboard", filters.window],
     enabled: leaderType === "clans",
     queryFn: async () => {
-      try {
-        const res = await api.get(
-          `/api/clans/leaderboard?window=${filters.window}`,
-        );
-        return res.data.data || [];
-      } catch {
-        return [];
-      }
+      const res = await api.get(
+        `/api/clans/leaderboard?window=${filters.window}`,
+      );
+      return res.data.data || [];
     },
   });
+
 
   const rows = useMemo(() => {
     return leaderType === "clans"
@@ -206,31 +197,43 @@ const Leaderboard = () => {
         subtitle="Celebrate the top rankers and elite clans of the arena."
       />
 
-      <div className="grid grid-cols-1 gap-4 macos-glass p-4 md:grid-cols-[auto_1fr_auto_auto] md:items-center">
-        <div className="segmented inline-flex">
+      <div className="grid grid-cols-1 gap-4 macos-glass p-4 md:flex md:items-center">
+        <div className="segmented inline-flex w-full md:w-auto overflow-x-auto">
           <button
             type="button"
-            className={`segmented-btn flex items-center gap-2 ${leaderType === "individual" ? "active" : ""}`}
-            onClick={() => setLeaderType("individual")}
+            className={`segmented-btn flex-1 whitespace-nowrap flex items-center justify-center gap-2 ${leaderType === "individual" && filters.window === "all" ? "active" : ""}`}
+            onClick={() => { setLeaderType("individual"); setFilters(p => ({...p, page: 1, window: "all"})); }}
           >
-            <FiUser size={14} />
-            Individuals
+            Overall
           </button>
           <button
             type="button"
-            className={`segmented-btn flex items-center gap-2 ${leaderType === "clans" ? "active" : ""}`}
-            onClick={() => setLeaderType("clans")}
+            className={`segmented-btn flex-1 whitespace-nowrap flex items-center justify-center gap-2 ${leaderType === "individual" && filters.window === "30d" ? "active" : ""}`}
+            onClick={() => { setLeaderType("individual"); setFilters(p => ({...p, page: 1, window: "30d"})); }}
           >
-            <FiUsers size={14} />
-            Clans
+            Monthly
+          </button>
+          <button
+            type="button"
+            className={`segmented-btn flex-1 whitespace-nowrap flex items-center justify-center gap-2 ${leaderType === "individual" && filters.window === "7d" ? "active" : ""}`}
+            onClick={() => { setLeaderType("individual"); setFilters(p => ({...p, page: 1, window: "7d"})); }}
+          >
+            Weekly
+          </button>
+          <button
+            type="button"
+            className={`segmented-btn flex-1 whitespace-nowrap flex items-center justify-center gap-2 ${leaderType === "clans" ? "active" : ""}`}
+            onClick={() => { setLeaderType("clans"); setFilters(p => ({...p, page: 1, window: "all"})); }}
+          >
+            <FiUsers size={14} /> Clans
           </button>
         </div>
 
-        <div className="relative">
+        <div className="relative flex-1 min-w-[200px]">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
             name="leaderboardSearch"
-            className="field-input pl-9"
+            className="field-input pl-9 w-full"
             placeholder={
               leaderType === "individual"
                 ? "Search coders..."
@@ -240,19 +243,6 @@ const Leaderboard = () => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-
-        <select
-          name="leaderboardWindow"
-          className="field-select"
-          value={filters.window}
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, page: 1, window: e.target.value }))
-          }
-        >
-          <option value="all">All Time</option>
-          <option value="30d">Last 30 Days</option>
-          <option value="7d">Last 7 Days</option>
-        </select>
 
         <select
           name="leaderboardLimit"
@@ -273,7 +263,7 @@ const Leaderboard = () => {
         </select>
       </div>
 
-      {!search.trim() && <Podium items={topThree} leaderType={leaderType} />}
+      <Podium items={topThree} leaderType={leaderType} />
 
       {myRow && leaderType === "individual" && (
         <MotionDiv
@@ -375,7 +365,13 @@ const Leaderboard = () => {
                             </div>
                             <div>
                               <div className="flex items-center gap-2 font-bold text-primary">
-                                {item.username || item.name}
+                                {leaderType === "individual" ? (
+                                  <MemberHoverCard userId={item._id} username={item.username}>
+                                    <span className="hover:text-accent transition-colors cursor-pointer">{item.username || item.name}</span>
+                                  </MemberHoverCard>
+                                ) : (
+                                  <span>{item.name}</span>
+                                )}
                                 {isMe && (
                                   <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] italic text-white">
                                     YOU
@@ -425,9 +421,13 @@ const Leaderboard = () => {
                         <span className="text-2xl font-black text-secondary">
                           #{rank}
                         </span>
-                        <span className="text-lg font-bold">
-                          {item.username || item.name}
-                        </span>
+                        {leaderType === "individual" ? (
+                          <MemberHoverCard userId={item._id} username={item.username}>
+                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer">{item.username || item.name}</span>
+                          </MemberHoverCard>
+                        ) : (
+                          <span className="text-lg font-bold">{item.name}</span>
+                        )}
                       </div>
                       <span className="font-black text-accent">
                         {item.totalPoints} pts

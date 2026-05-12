@@ -189,3 +189,5 @@ The following items were mentioned in product context but are **not implemented 
 - Primary audience today is **DSA event participants**, with leads/admins acting as operational users.
 - The platform currently seeds **10 clans (`0` to `9`)** and supports clan-chief / lead / mod / super-admin style access.
 - The present release is best understood as a **workflow and review management platform** for coding events, not yet a full competitive programming judge or wider workplace suite.
+
+# DSA

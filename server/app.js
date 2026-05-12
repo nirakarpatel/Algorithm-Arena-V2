@@ -13,14 +13,18 @@ const { env } = require('./config/env');
 const { logger } = require('./utils/logger');
 const { requestContext } = require('./middleware/requestContext');
 
-const authRoutes = require('./routes/authRoutes');
-const challengeRoutes = require('./routes/challengeRoutes');
-const submissionRoutes = require('./routes/submissionRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const clanRoutes = require('./routes/clanRoutes');
-const userRoutes = require('./routes/userRoutes');
-const noticeRoutes = require('./routes/noticeRoutes');
+const authRoutes = require('./src/features/auth/auth.routes');
+const challengeRoutes = require('./src/features/challenges/challenge.routes');
+const questionSetRoutes = require('./src/features/challenges/questionSet.routes');
+const submissionRoutes = require('./src/features/submissions/submission.routes');
+const dashboardRoutes = require('./src/features/dashboard/dashboard.routes');
+const profileRoutes = require('./src/features/profile/profile.routes');
+const clanRoutes = require('./src/features/clans/clan.routes');
+const userRoutes = require('./src/features/users/user.routes');
+const noticeRoutes = require('./src/features/notices/notice.routes');
+const resourceRoutes = require('./src/features/resources/resource.routes');
+const badgeRoutes = require('./src/features/badges/badge.routes');
+const chatRoutes = require('./src/features/chat/chat.routes');
 
 try {
   dns.setServers(['8.8.8.8', '8.8.4.4']);
@@ -38,7 +42,9 @@ const createApp = () => {
   });
 
   app.use(requestContext);
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for easier deployment of React SPA
+  }));
   app.use(
     cors({
       origin(origin, callback) {
@@ -66,15 +72,19 @@ const createApp = () => {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/challenges', challengeRoutes);
+  app.use('/api/sets', questionSetRoutes);
   app.use('/api/submissions', submissionRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api/clans', clanRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/notices', noticeRoutes);
+  app.use('/api/resources', resourceRoutes);
+  app.use('/api/badges', badgeRoutes);
+  app.use('/api/chat', chatRoutes);
   app.use('/api/docs', express.static(path.join(__dirname, 'docs')));
 
-  app.get('/', (req, res) => {
+  app.get('/api', (req, res) => {
     res.status(200).json({
       success: true,
       data: {
@@ -86,6 +96,19 @@ const createApp = () => {
       message: 'Algorithm Arena API is running',
     });
   });
+
+  // Serve static assets in production (SPA deep-link fix)
+  if (process.env.NODE_ENV === 'production') {
+    const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+    app.use(express.static(clientDistPath));
+
+    app.use((req, res, next) => {
+      if (req.method !== 'GET') return next();
+      // Let /api/* fall through to 404 handler
+      if (req.path.startsWith('/api')) return next();
+      res.sendFile(path.join(clientDistPath, 'index.html'));
+    });
+  }
 
   app.use((err, req, res, next) => {
     logger.error('Unhandled error', {

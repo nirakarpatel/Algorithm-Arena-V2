@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { api, setUnauthorizedHandler } from '../lib/api';
-import { USE_MOCK, mockCurrentUser } from '../lib/mockData';
 import AuthContext from './context';
 
 const getStoredUser = () => {
@@ -25,21 +25,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const refreshMe = useCallback(async () => {
-    if (USE_MOCK) {
-      localStorage.setItem('user', JSON.stringify(mockCurrentUser));
-      setUser(mockCurrentUser);
-      setLoading(false);
-      return mockCurrentUser;
-    }
     try {
       const res = await api.get('/api/auth/me');
       const me = res.data?.data;
       const normalizedUser = {
+        ...me,
         id: me?._id,
         username: me?.username,
         role: me?.role,
+        status: me?.status,
+        points: me?.points,
         profilePicture: me?.profilePicture,
         isChief: me?.isChief,
+        clanId: me?.clanId,
       };
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
@@ -65,11 +63,15 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((payload) => {
     const token = payload?.token || payload?.accessToken;
     const normalizedUser = {
+      ...payload,
       id: payload?._id,
       username: payload?.username,
       role: payload?.role,
+      status: payload?.status,
+      points: payload?.points,
       profilePicture: payload?.profilePicture,
       isChief: payload?.isChief,
+      clanId: payload?.clanId,
     };
 
     if (token) {
@@ -77,6 +79,25 @@ export const AuthProvider = ({ children }) => {
     }
     localStorage.setItem('user', JSON.stringify(normalizedUser));
     setUser(normalizedUser);
+
+    // Show daily XP bonus toast if awarded
+    if (payload?.dailyXpAwarded) {
+      setTimeout(() => {
+        toast.success('🔥 +50 XP Daily Login Bonus!', {
+          duration: 4000,
+          style: {
+            background: '#0f1115',
+            color: '#fff',
+            border: '1px solid rgba(168,85,247,0.3)',
+            boxShadow: '0 0 20px rgba(168,85,247,0.2)',
+          },
+          iconTheme: {
+            primary: '#a855f7',
+            secondary: '#fff',
+          },
+        });
+      }, 800);
+    }
   }, []);
 
   const logout = useCallback(() => {

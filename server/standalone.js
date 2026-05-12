@@ -18,7 +18,7 @@ async function runStandalone() {
     const { seedDatabase } = require('./seed');
 
     await connectDB();
-    await seedDatabase();
+    await seedDatabase(true);
     await startServer();
     
     // Handle graceful shutdown

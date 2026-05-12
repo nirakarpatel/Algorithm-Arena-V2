@@ -16,6 +16,7 @@ import {
   FiTarget,
   FiX,
   FiTrash2,
+  FiSend,
 } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
@@ -23,12 +24,91 @@ import BaseCard from '../components/BaseCard';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import ConfirmDialog from '../components/ConfirmDialog';
+import MemberHoverCard from '../components/MemberHoverCard';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
-import { USE_MOCK, mockGlobalNotice } from '../lib/mockData';
-import { useSocket } from '../hooks/useSocket';
 
+const InternalClanChat = ({ clanId }) => {
+  const { user } = useAuth();
+  const [message, setMessage] = useState('');
+  
+  const queryClient = useQueryClient();
 
+  const { data: messages = [], isLoading } = useQuery({
+    queryKey: ['chat', clanId],
+    queryFn: async () => {
+      if (!clanId) return [];
+      const res = await api.get(`/api/chat/${clanId}`);
+      return res.data.data;
+    },
+    enabled: !!clanId,
+    refetchInterval: 5000
+  });
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    const text = message;
+    setMessage('');
+    try {
+      await api.post(`/api/chat/${clanId}`, { content: text });
+      queryClient.invalidateQueries(['chat', clanId]);
+    } catch {
+      setMessage(text); // restore on error
+      toast.error('Failed to send message');
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col relative">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar max-h-[400px]">
+        {isLoading ? (
+          <p className="text-secondary text-sm text-center">Establishing secure connection...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-secondary text-sm text-center">No transmissions yet. Be the first.</p>
+        ) : (
+          messages.map(msg => {
+            const isMe = msg.sender?._id === user?.id;
+            return (
+              <div key={msg._id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase text-tertiary">
+                    {msg.sender?.username || 'Unknown'}
+                  </span>
+                  {msg.sender?.role === 'clan-chief' && (
+                    <span className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Chief</span>
+                  )}
+                </div>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${isMe ? 'bg-accent/20 text-primary border border-accent/30 rounded-tr-none' : 'bg-white/5 text-secondary border border-white/5 rounded-tl-none'}`}>
+                  {msg.content}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      
+      <div className="p-3 border-t border-glass-border/40 mt-auto">
+        <form onSubmit={handleSend} className="relative">
+          <input
+            type="text"
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Transmit message..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-3 pr-10 text-sm text-primary placeholder-tertiary focus:outline-none focus:border-accent/50 transition-colors"
+          />
+          <button 
+            type="submit"
+            disabled={!message.trim()}
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg bg-accent/20 text-accent hover:bg-accent hover:text-white disabled:opacity-50 disabled:hover:bg-accent/20 disabled:hover:text-accent transition-colors"
+          >
+            <FiSend className="text-sm" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 /* ─── Stat Card for the Clan Dashboard ────────────────────── */
 const StatCard = ({ icon, label, value, color }) => {
@@ -48,68 +128,14 @@ const StatCard = ({ icon, label, value, color }) => {
 
 /* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
 
-const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, onRemove, onAddNotice, onRemoveNotice, globalNotice }) => {
-  const isChief = userId && (clan.chief?._id || clan.chief) === userId;
-  const isAdmin = userRole === 'admin' || userRole === 'super-admin';
-  const isPrivileged = isChief || isAdmin;
+const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
   const members = clan.members || [];
   const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
-  const [newNotice, setNewNotice] = useState('');
-
-  const submitNotice = (e) => {
-    e.preventDefault();
-    if (!newNotice.trim()) return;
-    onAddNotice(newNotice.trim());
-    setNewNotice('');
-  };
+  const [activeTab, setActiveTab] = useState('roster'); // roster, notices, chat
 
   return (
     <div className="space-y-6">
-      {/* 0. Pending Requests (Chief or Admin Only) */}
-      {isPrivileged && requests.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="macos-glass border-accent/40 bg-accent/5 p-6 space-y-4"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <FiUsers className="text-accent" /> Pending Approvals
-              <span className="bg-accent text-white text-[10px] px-2 py-0.5 rounded-full">{requests.length}</span>
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {requests.map((req) => (
-              <div key={req._id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-glass-border/40">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center font-bold text-accent text-xs">
-                    {req.username[0].toUpperCase()}
-                  </div>
-                  <span className="text-sm font-semibold">{req.username}</span>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => onApprove(req._id)}
-                    className="p-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
-                    title="Approve"
-                  >
-                    <FiCheckCircle size={16} />
-                  </button>
-                  <button
-                    onClick={() => onReject(req._id)}
-                    className="p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                    title="Reject"
-                  >
-                    <FiX size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
       {/* Header Banner */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -129,11 +155,6 @@ const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, o
               <p className="text-secondary mt-2 max-w-lg text-sm md:text-base">{clan.description}</p>
             </div>
             <div className="flex items-center gap-2">
-              {isPrivileged && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/15 text-yellow-400 text-xs font-bold">
-                  <FiShield size={12} /> {isAdmin ? 'Admin View' : 'Chief'}
-                </span>
-              )}
               <button
                 onClick={onLeave}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-semibold"
@@ -156,151 +177,149 @@ const ClanDashboard = ({ clan, userId, userRole, onLeave, onApprove, onReject, o
         <StatCard icon={FiAward} label="Chief" value={clan.chief?.username || 'None'} color="bg-yellow-500/15 text-yellow-400" />
       </div>
 
-      {/* Two columns: Notice Board + Members */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Notice Board */}
-        <div className="xl:col-span-1 h-full">
-          <BaseCard variant="solid" hover={false} className="h-full flex flex-col min-h-[400px]">
-            <h3 className="text-section-title font-bold flex items-center gap-2 mb-4 shrink-0">
-              <FiMessageSquare className="text-accent" />
-              Notice Board
-            </h3>
+      <div className="macos-glass p-2 inline-flex gap-2 mb-2">
+        <button 
+          className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'roster' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:text-primary'}`} 
+          onClick={() => setActiveTab('roster')}
+        >
+          Roster
+        </button>
+        <button 
+          className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'notices' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:text-primary'}`} 
+          onClick={() => setActiveTab('notices')}
+        >
+          Notice Board
+        </button>
+        <button 
+          className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'chat' ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-secondary hover:text-primary'}`} 
+          onClick={() => setActiveTab('chat')}
+        >
+          Uplink
+        </button>
+      </div>
 
-            {isPrivileged && (
-              <form onSubmit={submitNotice} className="mb-4 shrink-0">
-                <div className="relative group">
-                  <input
-                    type="text"
-                    className="field-input pr-10 text-xs"
-                    placeholder="Post new announcement..."
-                    value={newNotice}
-                    onChange={(e) => setNewNotice(e.target.value)}
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-accent hover:text-accent-light p-1 transition-colors"
-                  >
-                    <FiCheckCircle size={16} />
-                  </button>
-                </div>
-              </form>
-            )}
+      <div className="grid grid-cols-1 gap-6">
+        {activeTab === 'notices' && (
+          <div className="h-full">
+            <BaseCard variant="solid" hover={false} className="h-full flex flex-col min-h-[400px]">
+              <h3 className="text-section-title font-bold flex items-center gap-2 mb-4 shrink-0">
+                <FiMessageSquare className="text-accent" />
+                Notice Board
+              </h3>
 
-            <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar max-h-[500px]">
-              {globalNotice && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-accent/30 group/notice relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-accent text-[8px] font-black text-white rounded-bl-lg uppercase tracking-tighter">
-                    Global Notice
-                  </div>
-                  <FiAward className="text-accent mt-0.5 shrink-0" size={16} />
-                  <div>
-                    <p className="text-sm font-bold text-primary leading-relaxed">{globalNotice.content}</p>
-                    <p className="text-[9px] text-secondary mt-1 uppercase tracking-widest font-semibold">
-                      Posted by Admin • {new Date(globalNotice.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-
-              {notices.map((notice, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.08 }}
-                  className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-glass-border/40 group/notice"
-                >
-                  <FiStar className="text-yellow-400 mt-0.5 shrink-0" size={14} />
-                  <p className="text-sm text-primary/90 leading-relaxed flex-1">{notice}</p>
-                  {isPrivileged && (
-                    <button
-                      onClick={() => onRemoveNotice(i)}
-                      className="text-secondary hover:text-red-400 opacity-0 group-hover/notice:opacity-100 transition-all p-1"
-                      title="Remove notice"
-                    >
-                      <FiTrash2 size={12} />
-                    </button>
-                  )}
-                </motion.div>
-              ))}
-              {notices.length === 0 && (
-                <div className="text-center py-10 opacity-30 italic text-xs">
-                  No notices yet.
-                </div>
-              )}
-            </div>
-          </BaseCard>
-        </div>
-
-        {/* Members List */}
-        <div className="xl:col-span-2 h-full">
-          <BaseCard variant='solid'className="h-full" hover={false}>
-            <h3 className="text-section-title font-bold flex items-center gap-2 mb-4">
-              <FiUsers className="text-accent" />
-              Roster
-              <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black">{members.length}</span>
-            </h3>
-            <div className="space-y-2">
-              {members.map((member, i) => {
-                const isMemberChief = clan.chief?._id === member._id;
-                return (
+              <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar max-h-[500px]">
+                {globalNotice && (
                   <motion.div
-                    key={member._id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="flex items-center justify-between p-4 rounded-xl border border-glass-border/40 hover:border-accent/30 transition-all group"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-accent/10 border border-accent/30 group/notice relative overflow-hidden"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent">
-                        {member.username[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-bold text-primary flex items-center gap-2">
-                          {member.username}
-                          {member._id === userId && (
-                            <span className="text-[9px] bg-accent px-1.5 py-0.5 rounded text-white italic font-black">YOU</span>
-                          )}
-                        </p>
-                        {isMemberChief && (
-                          <p className="text-[10px] text-yellow-400 font-bold flex items-center gap-1">
-                            <FiShield size={10} /> Clan Chief
-                          </p>
-                        )}
-                      </div>
+                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-accent text-[8px] font-black text-white rounded-bl-lg uppercase tracking-tighter">
+                      Global Notice
                     </div>
-                    <div className="flex items-center gap-2">
-                      {isMemberChief ? (
-                        <span className="text-[10px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded-lg font-bold">
-                          CHIEF
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-[10px] bg-glass-surface text-secondary px-2 py-1 rounded-lg font-medium">
-                            Member
-                          </span>
-                          {isChief && (
-                            <button
-                              onClick={() => onRemove(member)}
-                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
-                              title="Remove from clan"
-                            >
-                              <FiX size={14} />
-                            </button>
-                          )}
-                        </>
-                      )}
+                    <FiAward className="text-accent mt-0.5 shrink-0" size={16} />
+                    <div>
+                      <p className="text-sm font-bold text-primary leading-relaxed">{globalNotice.content}</p>
+                      <p className="text-[9px] text-secondary mt-1 uppercase tracking-widest font-semibold">
+                        Posted by Admin • {new Date(globalNotice.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </motion.div>
-                );
-              })}
-            </div>
-          </BaseCard>
-        </div>
+                )}
+
+                {notices.map((notice, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-glass-border/40 group/notice"
+                  >
+                    <FiStar className="text-yellow-400 mt-0.5 shrink-0" size={14} />
+                    <p className="text-sm text-primary/90 leading-relaxed flex-1">{notice}</p>
+                  </motion.div>
+                ))}
+                {notices.length === 0 && (
+                  <div className="text-center py-10 opacity-30 italic text-xs">
+                    No notices yet.
+                  </div>
+                )}
+              </div>
+            </BaseCard>
+          </div>
+        )}
+
+        {activeTab === 'roster' && (
+          <div className="h-full">
+            <BaseCard variant='solid'className="h-full" hover={false}>
+              <h3 className="text-section-title font-bold flex items-center gap-2 mb-4">
+                <FiUsers className="text-accent" />
+                Roster
+                <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black">{members.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {members.map((member, i) => {
+                  const isMemberChief = clan.chief?._id === member._id;
+                  return (
+                    <motion.div
+                      key={member._id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="flex items-center justify-between p-4 rounded-xl border border-glass-border/40 hover:border-accent/30 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent">
+                          {member.username[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-primary flex items-center gap-2">
+                            <MemberHoverCard userId={member._id} username={member.username}>
+                              {member.username}
+                            </MemberHoverCard>
+                            {member._id === userId && (
+                              <span className="text-[9px] bg-accent px-1.5 py-0.5 rounded text-white italic font-black">YOU</span>
+                            )}
+                          </p>
+                          {isMemberChief && (
+                            <p className="text-[10px] text-yellow-400 font-bold flex items-center gap-1">
+                              <FiShield size={10} /> Clan Chief
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isMemberChief ? (
+                          <span className="text-[10px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded-lg font-bold">
+                            CHIEF
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-[10px] bg-glass-surface text-secondary px-2 py-1 rounded-lg font-medium">
+                              Member
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </BaseCard>
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div className="h-[500px]">
+            <BaseCard variant='solid' className="h-full" hover={false}>
+              <h3 className="text-section-title font-bold flex items-center gap-2 mb-4">
+                <FiMessageSquare className="text-accent" />
+                Uplink
+              </h3>
+              <InternalClanChat clanId={clan._id} />
+            </BaseCard>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -422,29 +441,12 @@ const Clans = () => {
   const [removeTarget, setRemoveTarget] = useState(null);
   const [leaving, setLeaving] = useState(false);
 
-  useSocket('global_notice_update', () => {
-    queryClient.invalidateQueries({ queryKey: ['global-notice'] });
-  });
-
-  useSocket('clan_update', () => {
-    queryClient.invalidateQueries({ queryKey: ['clans-list'] });
-    queryClient.invalidateQueries({ queryKey: ['clan-leaderboard'] });
-  });
-
-  useSocket('challenge_update', () => {
-    queryClient.invalidateQueries({ queryKey: ['challenges'] });
-  });
-
   // Fetch all clans
   const clansQuery = useQuery({
     queryKey: ['clans-list'],
     queryFn: async () => {
-      try {
-        const res = await api.get('/api/clans');
-        return res.data.data || [];
-      } catch (err) {
-        return [];
-      }
+      const res = await api.get('/api/clans');
+      return res.data.data || [];
     },
   });
 
@@ -459,9 +461,9 @@ const Clans = () => {
     queryFn: async () => {
       try {
         const res = await api.get('/api/notices');
-        return res.data.data || (USE_MOCK ? mockGlobalNotice : null);
+        return res.data.data || null;
       } catch {
-        return USE_MOCK ? mockGlobalNotice : null;
+        return null;
       }
     },
   });
@@ -494,25 +496,6 @@ const Clans = () => {
 
   const handleApprove = async (userId) => {
     if (!myClan) return;
-    if (USE_MOCK) {
-      toast.success('Member approved (Mock Mode)!');
-      // Simulate data change in cache
-      const currentData = queryClient.getQueryData(['clans-list']) || [];
-      const updatedData = currentData.map(c => {
-        if (c._id === myClan._id) {
-          const userToMove = c.requests?.find(r => r._id === userId);
-          if (!userToMove) return c;
-          return {
-            ...c,
-            requests: c.requests.filter(r => r._id !== userId),
-            members: [...(c.members || []), userToMove]
-          };
-        }
-        return c;
-      });
-      queryClient.setQueryData(['clans-list'], updatedData);
-      return;
-    }
     try {
       await api.post(`/api/clans/${myClan._id}/approve/${userId}`);
       toast.success('Member approved!');
@@ -524,22 +507,6 @@ const Clans = () => {
 
   const handleReject = async (userId) => {
     if (!myClan) return;
-    if (USE_MOCK) {
-      toast.success('Request rejected (Mock Mode)!');
-      // Simulate data change in cache
-      const currentData = queryClient.getQueryData(['clans-list']) || [];
-      const updatedData = currentData.map(c => {
-        if (c._id === myClan._id) {
-          return {
-            ...c,
-            requests: (c.requests || []).filter(r => r._id !== userId)
-          };
-        }
-        return c;
-      });
-      queryClient.setQueryData(['clans-list'], updatedData);
-      return;
-    }
     try {
       await api.post(`/api/clans/${myClan._id}/reject/${userId}`);
       toast.success('Request rejected.');
@@ -551,22 +518,6 @@ const Clans = () => {
 
   const handleRemoveMember = async () => {
     if (!myClan || !removeTarget) return;
-    if (USE_MOCK) {
-      toast.success(`${removeTarget.username} removed (Mock Mode)!`);
-      const currentData = queryClient.getQueryData(['clans-list']) || [];
-      const updatedData = currentData.map(c => {
-        if (c._id === myClan._id) {
-          return {
-            ...c,
-            members: (c.members || []).filter(m => m._id !== removeTarget._id)
-          };
-        }
-        return c;
-      });
-      queryClient.setQueryData(['clans-list'], updatedData);
-      setRemoveTarget(null);
-      return;
-    }
     try {
       await api.delete(`/api/clans/${myClan._id}/members/${removeTarget._id}`);
       toast.success('Member removed from clan.');
@@ -579,18 +530,6 @@ const Clans = () => {
 
   const handleAddNotice = async (notice) => {
     if (!myClan) return;
-    if (USE_MOCK) {
-      toast.success('Notice posted (Mock Mode)!');
-      const currentData = queryClient.getQueryData(['clans-list']) || [];
-      const updatedData = currentData.map(c => {
-        if (c._id === myClan._id) {
-          return { ...c, notices: [...(c.notices || []), notice] };
-        }
-        return c;
-      });
-      queryClient.setQueryData(['clans-list'], updatedData);
-      return;
-    }
     try {
       await api.post(`/api/clans/${myClan._id}/notices`, { notice });
       toast.success('Notice posted!');
@@ -602,20 +541,6 @@ const Clans = () => {
 
   const handleRemoveNotice = async (index) => {
     if (!myClan) return;
-    if (USE_MOCK) {
-      toast.success('Notice removed (Mock Mode)!');
-      const currentData = queryClient.getQueryData(['clans-list']) || [];
-      const updatedData = currentData.map(c => {
-        if (c._id === myClan._id) {
-          const newNotices = [...(c.notices || [])];
-          newNotices.splice(index, 1);
-          return { ...c, notices: newNotices };
-        }
-        return c;
-      });
-      queryClient.setQueryData(['clans-list'], updatedData);
-      return;
-    }
     try {
       await api.delete(`/api/clans/${myClan._id}/notices/${index}`);
       toast.success('Notice removed!');
@@ -643,13 +568,7 @@ const Clans = () => {
             <ClanDashboard
               clan={myClan}
               userId={user?.id}
-              userRole={user?.role}
               onLeave={() => setShowLeaveConfirm(true)}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onRemove={setRemoveTarget}
-              onAddNotice={handleAddNotice}
-              onRemoveNotice={handleRemoveNotice}
               globalNotice={globalNoticeQuery.data}
             />
           </MotionDiv>

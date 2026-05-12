@@ -16,6 +16,16 @@ const initSocket = (server) => {
   io.on('connection', (socket) => {
     logger.info('New client connected', { socketId: socket.id });
 
+    socket.on('join_clan', (clanId) => {
+      socket.join(`clan_${clanId}`);
+      logger.info('Client joined clan room', { socketId: socket.id, clanId });
+    });
+
+    socket.on('leave_clan', (clanId) => {
+      socket.leave(`clan_${clanId}`);
+      logger.info('Client left clan room', { socketId: socket.id, clanId });
+    });
+
     socket.on('disconnect', () => {
       logger.info('Client disconnected', { socketId: socket.id });
     });
@@ -38,4 +48,11 @@ const emitEvent = (event, data) => {
   }
 };
 
-module.exports = { initSocket, getIO, emitEvent };
+const emitToRoom = (room, event, data) => {
+  if (io) {
+    io.to(room).emit(event, data);
+    logger.info(`Socket event emitted to room ${room}`, { event, data });
+  }
+};
+
+module.exports = { initSocket, getIO, emitEvent, emitToRoom };

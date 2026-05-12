@@ -8,8 +8,7 @@ import { mockChallenges } from '../lib/mockData';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
-import { useSocket } from '../hooks/useSocket';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/useAuth';
 
 const buildChallengeQuery = ({
   page,
@@ -40,12 +39,35 @@ const difficultyChips = [
 const FALLBACK_CREATED_AT = '2026-01-01T00:00:00.000Z';
 
 const Missions = () => {
+  const { user } = useAuth();
+  
+  const submissionsQuery = useQuery({
+    queryKey: ['my-submissions'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/api/submissions/my');
+        return res.data.data || [];
+      } catch { return []; }
+    }
+  });
+
+  const subsMap = useMemo(() => {
+    const map = {};
+    (submissionsQuery.data || []).forEach(sub => {
+      // Prioritize Accepted over Pending if multiple
+      if (!map[sub.challengeId?._id] || sub.status === 'Accepted') {
+        map[sub.challengeId?._id] = sub.status;
+      }
+    });
+    return map;
+  }, [submissionsQuery.data]);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 50, // Increase limit when grouping to show all related items
     search: "",
     difficulty: "",
     category: "",
+    status: "All", // 'All', 'Accepted', 'Pending'
     sortBy: "createdAt",
     sortDir: "desc",
     grouping: "none", // 'none', 'weekly', 'monthly'
@@ -53,12 +75,6 @@ const Missions = () => {
   const [viewMode, setViewMode] = useState(
     () => localStorage.getItem("missions:view") || "grid",
   );
-
-  const queryClient = useQueryClient();
-
-  useSocket('challenge_update', () => {
-    queryClient.invalidateQueries({ queryKey: ['challenges'] });
-  });
 
   useEffect(() => {
     localStorage.setItem("missions:view", viewMode);
@@ -81,6 +97,12 @@ const Missions = () => {
         if (filters.category) {
           const categoryLower = filters.category.toLowerCase();
           filtered = filtered.filter(c => c.category && c.category.toLowerCase().includes(categoryLower));
+        }
+        if (filters.status !== "All") {
+          filtered = filtered.filter(c => {
+            const st = subsMap[c._id];
+            return st === filters.status;
+          });
         }
         return filtered;
       };
@@ -205,36 +227,66 @@ const Missions = () => {
           </select>
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
-        {/* Left Side: Difficulty Chips */}
-        <div className="chip-group  flex flex-wrap gap-2">
-          {difficultyChips.map((chip) => (
-            <button
-              key={chip.label}
-              className={`chip-btn ${filters.difficulty === chip.value ? "active" : ""}`}
-              onClick={() => handleFilterChange("difficulty", chip.value)}
-            >
-              {chip.label}
-            </button>
-          ))}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 w-full">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Left Side: Difficulty Chips */}
+          <div className="chip-group flex flex-wrap gap-2">
+            {difficultyChips.map((chip) => (
+              <button
+                key={chip.label}
+                className={`chip-btn ${filters.difficulty === chip.value ? "active" : ""}`}
+                onClick={() => handleFilterChange("difficulty", chip.value)}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Status Tabs */}
+          <div className="flex bg-glass-border/30 rounded-lg p-1">
+            {['All', 'Accepted', 'Pending'].map(st => {
+              const label = st === 'Accepted' ? 'Solved' : st === 'Pending' ? 'Pending Review' : 'All';
+              return (
+                <button
+                  key={st}
+                  onClick={() => handleFilterChange("status", st)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${filters.status === st ? 'bg-accent/20 text-accent shadow-sm' : 'text-secondary hover:text-primary'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Right Side: View Mode Toggle */}
-        <div className="segmented flex items-center">
-          <button
-            className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}
-            onClick={() => setViewMode("grid")}
-          >
-            <FiGrid className="mr-2" />
-            Grid
-          </button>
-          <button
-            className={`segmented-btn ${viewMode === "list" ? "active" : ""}`}
-            onClick={() => setViewMode("list")}
-          >
-            <FiList className="mr-2" />
-            List
-          </button>
+        {/* Right Side: View Mode Toggle & Clan Stat */}
+        <div className="flex items-center gap-4">
+          {user?.clan && (
+            <div className="hidden xl:flex items-center gap-3 bg-white/[0.03] border border-white/5 px-4 py-2 rounded-xl">
+              <span className="text-[10px] font-black uppercase tracking-widest text-secondary">Clan vs Global Solve Rate</span>
+              <div className="w-32 h-1.5 bg-white/10 rounded-full overflow-hidden flex">
+                <div className="h-full bg-blue-500 w-[60%]" title="Clan: 60%" />
+                <div className="h-full bg-accent w-[40%]" title="Global: 40%" />
+              </div>
+            </div>
+          )}
+          
+          <div className="segmented flex items-center">
+            <button
+              className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}
+              onClick={() => setViewMode("grid")}
+            >
+              <FiGrid className="mr-2" />
+              Grid
+            </button>
+            <button
+              className={`segmented-btn ${viewMode === "list" ? "active" : ""}`}
+              onClick={() => setViewMode("list")}
+            >
+              <FiList className="mr-2" />
+              List
+            </button>
+          </div>
         </div>
       </div>
 
@@ -286,13 +338,22 @@ const Missions = () => {
                         <Link to={`/challenge/${challenge._id}`} className="group">
                           <div className="macos-glass p-6 hover:border-accent transition-all duration-300 transform hover:-translate-y-1 h-full">
                             <div className="flex justify-between items-start mb-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
                                 challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
                               }`}>
                                 {challenge.difficulty}
                               </span>
-                              <span className="text-secondary text-sm">{challenge.points} XP</span>
+                              
+                              <div className="flex items-center gap-2">
+                                {subsMap[challenge._id] === 'Accepted' && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">Approved</span>
+                                )}
+                                {subsMap[challenge._id] === 'Pending' && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">Pending Review</span>
+                                )}
+                                <span className="text-secondary text-sm font-bold">{challenge.points} XP</span>
+                              </div>
                             </div>
                             <h3 className="text-xl font-bold group-hover:text-accent transition-colors">{challenge.title}</h3>
                             <p className="text-secondary text-sm mt-2 line-clamp-2">{challenge.description}</p>
@@ -318,13 +379,19 @@ const Missions = () => {
                               <p className="text-secondary text-sm mt-1">{challenge.category}</p>
                             </div>
                             <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              {subsMap[challenge._id] === 'Accepted' && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20 hidden sm:block">Approved</span>
+                              )}
+                              {subsMap[challenge._id] === 'Pending' && (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hidden sm:block">Pending Review</span>
+                              )}
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
                                 challenge.difficulty === "Medium" ? "bg-yellow-500/20 text-yellow-500" : "bg-red-500/20 text-red-500"
                               }`}>
                                 {challenge.difficulty}
                               </span>
-                              <span className="text-secondary text-sm min-w-[60px] text-right">{challenge.points} XP</span>
+                              <span className="text-secondary text-sm min-w-[60px] text-right font-bold">{challenge.points} XP</span>
                             </div>
                           </div>
                         </Link>

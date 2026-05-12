@@ -1,0 +1,103 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: [true, 'Please add a username'],
+    unique: true,
+    trim: true,
+    minlength: [3, 'Username must be at least 3 characters'],
+  },
+  email: {
+    type: String,
+    required: [true, 'Please add an email'],
+    unique: true,
+    trim: true,
+    lowercase: true,
+    match: [
+      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      'Please add a valid email',
+    ],
+  },
+  password: {
+    type: String,
+    required: [true, 'Please add a password'],
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false, // Security: never return password by default
+  },
+  role: {
+    type: String,
+    enum: ['user', 'moderator', 'admin', 'clan-chief'],
+    default: 'user',
+  },
+  clan: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Clan',
+    default: null,
+  },
+  profilePicture: {
+    type: String,
+    default: null,
+  },
+  regNo: {
+    type: String,
+    default: '',
+  },
+  codingLevel: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced'],
+    default: 'Beginner',
+  },
+  points: {
+    type: Number,
+    default: 0,
+  },
+  streak: {
+    type: Number,
+    default: 0,
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Warned', 'Banned'],
+    default: 'Active',
+  },
+  solvedProblems: {
+    type: Number,
+    default: 0,
+  },
+  lastLoginDate: {
+    type: Date,
+    default: null,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  bio: { type: String, default: 'Expert Algorithmist' },
+  branch: { type: String, default: 'B.Tech CSE' },
+  year: { type: String, default: 'Third Year' },
+  section: { type: String, default: 'Section A' },
+  location: { type: String, default: 'Bhubaneswar, India' },
+  github: { type: String, default: '' },
+  twitter: { type: String, default: '' },
+  linkedin: { type: String, default: '' },
+  website: { type: String, default: '' },
+});
+
+// Encrypt password before saving.
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) {
+    return;
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+// Compare provided password with stored hash.
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);

@@ -14,8 +14,8 @@ const ClanChiefRoute = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  // Chief can be a clan-chief, admin, super-admin, or have the isChief flag
-  const isChief = role === 'clan-chief' || role === 'admin' || role === 'super-admin' || user?.isChief;
+  // Chief can be a clan-chief, admin, or have the isChief flag
+  const isChief = role === 'clan-chief' || role === 'admin' || user?.isChief;
   if (!isChief) {
     return <Navigate to="/dashboard" />;
   }

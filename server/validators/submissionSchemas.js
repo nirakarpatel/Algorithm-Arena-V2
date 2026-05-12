@@ -12,7 +12,7 @@ const submissionCreateSchema = {
       challengeId: z.string().length(24),
       repositoryUrl: z.string().trim().url().optional(),
       code: z.string().trim().min(1).max(50000).optional(),
-      language: z.enum(['javascript', 'python', 'java', 'cpp', 'c']).default('javascript'),
+      language: z.enum(['javascript', 'python', 'java', 'cpp']).default('javascript'),
     })
     .refine((payload) => payload.repositoryUrl || payload.code, {
       message: 'Please provide code or a repository URL',
@@ -23,7 +23,6 @@ const submissionCreateSchema = {
 const submissionUpdateSchema = {
   body: z.object({
     status: z.enum(['Pending', 'Accepted', 'Rejected']),
-    reviewComment: z.string().trim().min(1, { message: 'Comment cannot be empty' }).max(2000).optional(),
   }),
 };
 

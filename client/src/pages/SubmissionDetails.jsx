@@ -19,7 +19,6 @@ import CodeEditor from '../components/CodeEditor';
 import SkeletonCard from '../components/SkeletonCard';
 import Card from '../components/Card';
 import { api } from '../lib/api';
-import { USE_MOCK, mockSubmissions } from '../lib/mockData';
 
 const StatusBadge = ({ status }) => {
   const colorClass =
@@ -62,15 +61,11 @@ const SubmissionDetails = () => {
   const submissionQuery = useQuery({
     queryKey: ['submission', id],
     queryFn: async () => {
-      if (USE_MOCK) {
-        const found = mockSubmissions.find((s) => s._id === id);
-        if (!found) throw new Error('Submission not found');
-        return found;
-      }
       const res = await api.get(`/api/submissions/${id}`);
       return res.data.data;
     },
   });
+
 
   if (submissionQuery.isLoading) {
     return (
@@ -200,7 +195,7 @@ const SubmissionDetails = () => {
 
         {/* RIGHT PANEL — Review & Info */}
         <div className="lg:w-[380px] xl:w-[420px] flex flex-col min-h-0 gap-3">
-          {/* Review Comments Card */}
+          {/* Reviewer Feedback Card — Rejected only */}
           {hasReviewComment && (
             <div className="macos-glass rounded-xl overflow-hidden border border-red-500/20">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-red-500/10 bg-red-500/5">
@@ -208,7 +203,6 @@ const SubmissionDetails = () => {
                 <span className="text-sm font-bold text-red-400">Reviewer Feedback</span>
               </div>
               <div className="p-4 space-y-3">
-                {/* Reviewer info */}
                 {submission.reviewedBy && (
                   <div className="flex items-center gap-2 text-xs text-secondary">
                     <div className="w-6 h-6 rounded-md bg-accent/10 flex items-center justify-center text-accent font-bold text-[10px]">
@@ -225,7 +219,6 @@ const SubmissionDetails = () => {
                     </span>
                   </div>
                 )}
-                {/* Comment text */}
                 <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 text-sm text-primary leading-relaxed whitespace-pre-wrap">
                   {submission.reviewComment}
                 </div>
@@ -233,7 +226,7 @@ const SubmissionDetails = () => {
             </div>
           )}
 
-          {/* Status-specific state cards */}
+          {/* Status State Cards */}
           {submission.status === 'Pending' && (
             <div className="macos-glass rounded-xl p-6 border border-yellow-500/20 text-center space-y-3">
               <div className="w-12 h-12 mx-auto rounded-2xl bg-yellow-500/10 flex items-center justify-center">
@@ -277,7 +270,7 @@ const SubmissionDetails = () => {
             </div>
           )}
 
-          {/* Challenge info */}
+          {/* Challenge Info */}
           <div className="macos-glass rounded-xl overflow-hidden flex-1 min-h-0">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-black/10 dark:border-white/10">
               <FiCode className="text-accent" size={14} />
@@ -307,7 +300,7 @@ const SubmissionDetails = () => {
             </div>
           </div>
 
-          {/* Retry Challenge Button — shown for rejected submissions */}
+          {/* Retry button — Rejected submissions only */}
           {submission.status === 'Rejected' && submission.challengeId?._id && (
             <Link
               to={`/challenge/${submission.challengeId._id}`}

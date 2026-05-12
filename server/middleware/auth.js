@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../src/features/users/User.model');
 const { env } = require('../config/env');
 
 // Guard: Protect routes for logged-in users
@@ -31,7 +31,7 @@ exports.protect = async (req, res, next) => {
 
 // Guard: Admin only access
 exports.admin = (req, res, next) => {
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'super-admin')) {
+  if (req.user && req.user.role === 'admin') {
     return next();
   }
 
@@ -42,7 +42,6 @@ exports.admin = (req, res, next) => {
 exports.chiefOrAdmin = (req, res, next) => {
   if (req.user && (
     req.user.role === 'admin' || 
-    req.user.role === 'super-admin' || 
     req.user.role === 'clan-chief'
   )) {
     return next();

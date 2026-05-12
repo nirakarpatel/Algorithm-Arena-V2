@@ -25,7 +25,8 @@ const Missions = lazy(() => import('./pages/Missions'));
 const PendingTasks = lazy(() => import('./pages/PendingTasks'));
 const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
-
+const Resources = lazy(() => import('./pages/Resources'));
+const PendingAssignment = lazy(() => import('./pages/PendingAssignment'));
 function App() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -60,6 +61,7 @@ function App() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/clans" element={<Clans />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:username" element={<Profile />} />
             <Route path="/challenge/:id" element={<ChallengeDetails />} />
             <Route path="/submission/:id" element={<SubmissionDetails />} />
             <Route path="/missions" element={<Missions />} />
@@ -73,14 +75,11 @@ function App() {
                 </AdminRoute>
               }
             />
-            <Route 
-              path="/chief-panel" 
-              element={
-                <ClanChiefRoute>
-                  <ClanChiefPanel />
-                </ClanChiefRoute>
-              } 
-            />
+            <Route path="/chief-panel" element={<ClanChiefRoute><ClanChiefPanel /></ClanChiefRoute>} />
+            
+            {/* New Features */}
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/pending-assignment" element={<PendingAssignment />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
