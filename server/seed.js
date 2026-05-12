@@ -93,6 +93,14 @@ async function seedDatabase(isStandalone = false) {
       isNewUser: false
     });
 
+    const nishant = await User.create({
+      username: 'nishant',
+      email: 'nishhu24@gmail.com',
+      password: 'nishhu24',
+      role: 'admin',
+      isNewUser: false
+    });
+
     const clanChief = await User.create({
       username: 'chief1',
       email: 'chief1@iter.ac.in',
