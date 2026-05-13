@@ -337,7 +337,7 @@ const updateSubmissionStatus = async (req, res, next) => {
         </div>
       `;
 
-      await sendEmail(
+      sendEmail(
         submission.userId.email,
         `Code Submission ${status}: ${submission.challengeId?.title || 'Update'}`,
         emailHTML

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import toast from 'react-hot-toast';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiUsers, FiShield, FiActivity, FiCode, FiPercent, FiClock,
-  FiPlus, FiFileText, FiFolder, FiBell, FiSearch, FiEdit2, FiTrash2, FiAlertCircle, FiCheck, FiX, FiInfo, FiEye
+  FiPlus, FiFileText, FiFolder, FiBell, FiSearch, FiEdit2, FiTrash2, FiAlertCircle, FiCheck, FiX, FiInfo, FiEye, FiZap
 } from 'react-icons/fi';
 import { clsx } from 'clsx';
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -70,7 +70,7 @@ const Profile = () => {
     refetchInterval: 10000,
   });
 
-  const submissions = subsQ.data || [];
+  const submissions = useMemo(() => subsQ.data || [], [subsQ.data]);
 
   const recentSubs = useMemo(() => {
     return [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 8);

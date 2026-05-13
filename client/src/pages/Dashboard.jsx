@@ -90,7 +90,7 @@ const Dashboard = () => {
   const summary  = summaryQ.data;
   const profile  = profileQ.data;
   const challenges = challengesQ.data || [];
-  const allSubs  = profile?.recentSubmissions || summary?.recentActivity || [];
+  const allSubs  = useMemo(() => profile?.recentSubmissions || summary?.recentActivity || [], [profile, summary]);
 
   const solved    = summary?.solved ?? profile?.acceptedCount ?? 0;
   const total     = summary?.totalChallenges ?? 0;
@@ -98,7 +98,7 @@ const Dashboard = () => {
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
   const activeSet = setsQ.data?.find(s => new Date(s.deadline) > new Date());
-  const featuredChallenge = activeSet?.questions?.[0] || challenges[0];
+  // const featuredChallenge = activeSet?.questions?.[0] || challenges[0];
 
   const recentSubs = useMemo(() =>
     [...allSubs].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 6),
@@ -303,6 +303,7 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <h3 className="text-sm font-bold leading-snug text-primary group-hover:text-accent transition-colors line-clamp-2">{ch.title}</h3>
+                          {/* eslint-disable-next-line */}
                           {new Date() - new Date(ch.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400">New</span>
                           )}

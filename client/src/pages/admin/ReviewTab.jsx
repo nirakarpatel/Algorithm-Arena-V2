@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { FiCheck, FiCode, FiEye, FiFilter, FiClock, FiMessageSquare } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
@@ -10,7 +9,7 @@ import EmptyState from '../../components/EmptyState';
 import { api } from '../../lib/api';
 
 const ReviewTab = () => {
-  const queryClient = useQueryClient();
+
   const [statusFilter, setStatusFilter] = useState('Pending');
   const [page, setPage] = useState(1);
   const limit = 15;

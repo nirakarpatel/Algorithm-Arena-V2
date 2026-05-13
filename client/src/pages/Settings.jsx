@@ -6,7 +6,7 @@ import { api } from '../lib/api';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import toast from 'react-hot-toast';
-import { clsx } from 'clsx';
+
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop',
@@ -49,7 +49,7 @@ const Settings = () => {
         website: user.website || '',
       });
     }
-  }, [user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website]);
+  }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

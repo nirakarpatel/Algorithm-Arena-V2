@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion, useScroll, useTransform, stagger } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import {
   FiArrowRight,
   FiClock,

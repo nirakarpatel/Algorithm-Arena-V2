@@ -6,16 +6,10 @@ import { useNavigate } from "react-router-dom";
 import {
   FiX, FiZap, FiTarget, FiStar, FiCalendar, FiUsers, FiShield, FiActivity
 } from "react-icons/fi";
-import { toPng } from "html-to-image";
-import saveAs from "file-saver";
+
 import { api } from "../lib/api";
 
-const fd = (delay = 0) => ({
-  initial: { opacity: 0, scale: 0.95, y: 20 },
-  animate: { opacity: 1, scale: 1, y: 0 },
-  exit: { opacity: 0, scale: 0.95, y: 20, transition: { duration: 0.2 } },
-  transition: { duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] },
-});
+
 
 /* ── Full Profile Modal (Identity Card Design) ───────────────────────── */
 const IdentityHoverCard = ({ userId, username, position }) => {

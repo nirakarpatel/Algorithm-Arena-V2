@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { FiCheck, FiX, FiCode, FiEye, FiCpu, FiFilter, FiExternalLink } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
 import { api } from '../../lib/api';
 
 const ChiefReviewTab = ({ clan }) => {
-  const queryClient = useQueryClient();
+
   const [statusFilter, setStatusFilter] = useState('Pending');
 
   const submissionsQuery = useQuery({
@@ -35,16 +34,7 @@ const ChiefReviewTab = ({ clan }) => {
     enabled: !!clan
   });
 
-  const gradeMutation = useMutation({
-    mutationFn: async ({ id, status, feedback }) => {
-      const res = await api.put(`/api/submissions/${id}`, { status, feedback: feedback || undefined });
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success('Submission graded');
-      queryClient.invalidateQueries({ queryKey: ['chief-submissions'] });
-    }
-  });
+
 
   if (!clan) return null;
 

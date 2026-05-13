@@ -5,11 +5,10 @@ import PageHeader from '../components/PageHeader';
 import BaseCard from '../components/BaseCard';
 import SkeletonCard from '../components/SkeletonCard';
 import { FiLock } from 'react-icons/fi';
-import { useAuth } from '../context/useAuth';
 
 const Badges = () => {
-  const { user } = useAuth();
-  
+
+
   const { data: badges = [], isLoading } = useQuery({
     queryKey: ['badges'],
     queryFn: async () => {
@@ -30,9 +29,9 @@ const Badges = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Asset Inventory" 
-        subtitle="Your collection of secured achievements and honors." 
+      <PageHeader
+        title="Asset Inventory"
+        subtitle="Your collection of secured achievements and honors."
       />
 
       {isLoading ? (
@@ -44,10 +43,10 @@ const Badges = () => {
           {badges.map((badge, index) => {
             // Mock logic: unlock first 4 badges or any Common/Rare badges if index is low
             const isUnlocked = index < 4 || badge.rarity === 'COMMON';
-            
+
             return (
-              <BaseCard 
-                key={badge._id} 
+              <BaseCard
+                key={badge._id}
                 className={`p-6 flex flex-col items-center text-center gap-3 relative overflow-hidden transition-all duration-300 ${isUnlocked ? 'hover:-translate-y-1 hover:shadow-lg' : 'opacity-60 grayscale'}`}
               >
                 {!isUnlocked && (
@@ -56,7 +55,7 @@ const Badges = () => {
                     <span className="text-xs font-bold text-white/50 uppercase tracking-widest">Locked</span>
                   </div>
                 )}
-                
+
                 <div className={`text-5xl mb-2 ${!isUnlocked && 'opacity-50'}`}>{badge.icon}</div>
                 <h3 className={`font-bold ${isUnlocked ? 'text-primary' : 'text-secondary'}`}>{badge.name}</h3>
                 <p className="text-xs text-secondary leading-relaxed line-clamp-3">{badge.description}</p>

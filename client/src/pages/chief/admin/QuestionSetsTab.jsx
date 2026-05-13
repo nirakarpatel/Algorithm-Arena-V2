@@ -27,7 +27,7 @@ const QuestionSetsTab = () => {
       try {
         const res = await api.get('/api/sets');
         return res.data.data || [];
-      } catch (err) {
+      } catch {
         return [];
       }
     }

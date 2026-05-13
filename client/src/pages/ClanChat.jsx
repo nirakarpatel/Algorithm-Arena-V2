@@ -31,6 +31,14 @@ const ClanChat = () => {
     enabled: hasClan,
   });
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
   useEffect(() => {
     if (!hasClan) return;
 
@@ -57,13 +65,7 @@ const ClanChat = () => {
     };
   }, [clanId, hasClan, queryClient]);
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }, 100);
-  };
+
 
   useEffect(() => {
     scrollToBottom();

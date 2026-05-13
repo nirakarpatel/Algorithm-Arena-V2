@@ -130,6 +130,7 @@ const StatCard = ({ icon, label, value, color }) => {
 
 const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
   const members = clan.members || [];
+  // eslint-disable-next-line no-unused-vars
   const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
   const [activeTab, setActiveTab] = useState('roster'); // roster, notices, chat
@@ -494,6 +495,7 @@ const Clans = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleApprove = async (userId) => {
     if (!myClan) return;
     try {
@@ -505,6 +507,7 @@ const Clans = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleReject = async (userId) => {
     if (!myClan) return;
     try {
@@ -528,6 +531,7 @@ const Clans = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleAddNotice = async (notice) => {
     if (!myClan) return;
     try {
@@ -539,6 +543,7 @@ const Clans = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleRemoveNotice = async (index) => {
     if (!myClan) return;
     try {

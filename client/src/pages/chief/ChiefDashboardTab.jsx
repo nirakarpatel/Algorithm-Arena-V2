@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiActivity, FiCheck, FiX, FiAward, FiAlertTriangle, FiFileText, FiMessageSquare, FiShield } from 'react-icons/fi';
@@ -171,7 +171,7 @@ const ChiefDashboardTab = ({ clan }) => {
           </div>
           
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {members.slice(0, 6).map((member, i) => {
+            {members.slice(0, 6).map((member) => {
               const isActive = member.status !== 'Warned' && member.status !== 'Inactive';
               const isWarned = member.status === 'Warned';
               const solved = member.solvedProblems || 0;

@@ -24,9 +24,9 @@ test.before(async () => {
   process.env.MONGO_URI = mongoServer.getUri();
 
   ({ app } = require('../server'));
-  User = require('../features/users/User.model.js');
-  Submission = require('../features/submissions/Submission.model.js');
-  RefreshToken = require('../features/auth/RefreshToken.model.js');
+  User = require('../src/features/users/User.model.js');
+  Submission = require('../src/features/submissions/Submission.model.js');
+  RefreshToken = require('../src/features/auth/RefreshToken.model.js');
 
   await mongoose.connect(process.env.MONGO_URI);
 });
