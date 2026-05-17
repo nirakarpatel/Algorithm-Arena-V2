@@ -14,6 +14,7 @@ import Card from "../components/Card";
 import SkeletonCard from "../components/SkeletonCard";
 import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
+import Logo from "../components/Logo";
 
 
 const MotionBlock = motion.div;
@@ -23,11 +24,11 @@ const GridBackground = () => (
   <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
     {/* Perspective grid */}
     <svg
-      className="absolute inset-0 w-full h-full opacity-[0] dark:opacity-[0]"
+      className="absolute top-0 left-0 w-full h-full opacity-[.1] dark:opacity-[.1]"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <path
             d="M 60 0 L 0 0 0 60"
             fill="none"
@@ -112,7 +113,7 @@ const FloatingSnippet = ({ text, style }) => (
   <span
     className="absolute font-mono text-[11px] font-bold select-none pointer-events-none"
     style={{
-      color: `rgba(var(--accent-rgb), 0)`,
+      color: `rgba(var(--accent-rgb), .2)`,
       letterSpacing: "0.05em",
       ...style,
     }}
@@ -123,7 +124,7 @@ const FloatingSnippet = ({ text, style }) => (
 
 /* ── Stat pill ── */
 const StatPill = ({ icon: Icon, value, label, color }) => (
-  <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/70 dark:bg-white/[0.04] border border-black/[0.07] dark:border-white/10 shadow-sm dark:shadow-none">
+  <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/70 dark:bg-black/70 border border-black/[0.07] dark:border-white/10 shadow-sm dark:shadow-none">
     <div
       className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
       style={{ background: `rgba(${color}, 0.12)` }}
@@ -208,22 +209,8 @@ const Home = () => {
 
       {/* ── Navigation ── */}
       <nav className="relative z-10 flex justify-between items-center px-6 py-5 w-full">
-        <Link to="/" className="group flex items-center gap-2.5">
-          {/* Logo mark */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              background: `linear-gradient(135deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-rgb), 0.5))`,
-              boxShadow: `0 0 16px rgba(var(--accent-rgb), 0.35)`,
-            }}
-          >
-            <span className="text-white font-black text-sm leading-none">
-              A
-            </span>
-          </div>
-          <span className="font-black text-xl tracking-tight text-primary group-hover:opacity-80 transition-opacity">
-            Algo<span style={{ color: `rgb(var(--accent-rgb))` }}>Arena</span>
-          </span>
+        <Link to="/" className="group flex items-center">
+          <Logo variant="arena" showText={true} size="sm" />
         </Link>
 
         <div className="flex gap-2 items-center">
@@ -275,10 +262,10 @@ const Home = () => {
           className="mb-8"
         >
           <div className="flex flex-col items-center gap-3">
-            <img
-              src="/bg-logo.jpeg"
-              alt="Google Developer Group SOA ITER"
-              className="w-24 h-24 object-contain rounded-2xl"
+            <Logo
+              variant="hybrid"
+              size="w-32 h-16"
+              imgClassName="object-cover"
               style={{ filter: "drop-shadow(0 0 20px rgba(var(--accent-rgb),0.3))" }}
             />
             <span
@@ -554,46 +541,51 @@ const Home = () => {
                         className="group block h-full"
                       >
                         <Card
-                          className="h-full p-6"
-                          difficultyColor={getDifficultyRGB(
-                            challenge.difficulty,
-                          )}
+                          className="h-full p-5 !rounded-2xl"
+                          innerClassName="flex flex-col gap-3 h-full justify-between w-full"
+                          difficultyColor={getDifficultyRGB(challenge.difficulty)}
                         >
-                          <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-start justify-between gap-2">
                             <span
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide ${
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
                                 challenge.difficulty === "Easy"
-                                  ? "bg-green-500/15 text-green-500"
+                                  ? "bg-green-500/15 text-green-400 border-green-500/25"
                                   : challenge.difficulty === "Medium"
-                                    ? "bg-yellow-500/15 text-yellow-500"
-                                    : "bg-red-500/15 text-red-500"
+                                    ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25"
+                                    : "bg-red-500/15 text-red-400 border-red-500/25"
                               }`}
                             >
                               {challenge.difficulty}
                             </span>
-                            <span className="text-secondary text-xs font-mono font-bold">
-                              +{challenge.points} XP
+                            <span className="text-[10px] font-black text-accent">
+                              {challenge.points} XP
                             </span>
                           </div>
-                          <h3 className="text-lg font-black group-hover:text-accent transition-colors leading-snug">
-                            {challenge.title}
-                          </h3>
-                          <p
-                            className="text-secondary text-sm mt-2 leading-relaxed"
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {challenge.description}
-                          </p>
-                          <div className="mt-5 flex items-center justify-between">
-                            <span className="text-xs text-secondary font-mono">
-                              {challenge.tags?.[0] || "Algorithm"}
-                            </span>
-                            <FiArrowRight className="text-secondary text-sm group-hover:translate-x-1 group-hover:text-accent transition-all" />
+                          <div className="flex items-start justify-between gap-3">
+                            <h3 className="text-sm font-bold leading-snug text-primary group-hover:text-accent transition-colors line-clamp-2 flex-1">
+                              {challenge.title}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                            {challenge.tags && challenge.tags.length > 0 ? (
+                              challenge.tags.slice(0, 3).map((tag, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/5 text-secondary border border-white/5"
+                                >
+                                  {tag}
+                                </span>
+                              ))
+                            ) : challenge.category ? (
+                              challenge.category.split(',').slice(0, 3).map((cat, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/5 text-secondary border border-white/5"
+                                >
+                                  {cat.trim()}
+                                </span>
+                              ))
+                            ) : null}
                           </div>
                         </Card>
                       </Link>
@@ -615,7 +607,7 @@ const Home = () => {
         }}
       >
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <img src="/gdg-logo.png" alt="GDG" className="w-6 h-6 object-contain opacity-70" />
+          <Logo variant="gdg" size="w-10 h-10" imgClassName="opacity-100" />
           <p className="text-xs text-secondary tracking-wide text-center">
             © 2026 Algorithm Arena ·{" "}
             <span className="text-primary font-bold">GDG On Campus – SOA ITER</span>

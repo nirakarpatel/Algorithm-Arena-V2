@@ -27,8 +27,32 @@ const getQuestionSetById = async (req, res, next) => {
   }
 };
 
+const capitalizeTitle = (title) => {
+  if (!title) return "";
+  return title
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const createQuestionSet = async (req, res, next) => {
   try {
+    // Capitalize the Question Set title
+    if (req.body.title) {
+      req.body.title = capitalizeTitle(req.body.title);
+    }
+
+    // Capitalize each individual question title
+    if (req.body.questions && req.body.questions.length > 0) {
+      req.body.questions = req.body.questions.map(q => {
+        if (q.title) {
+          q.title = capitalizeTitle(q.title);
+        }
+        return q;
+      });
+    }
+
     const set = await QuestionSet.create({ ...req.body, createdBy: req.user.id });
 
     await logAudit({

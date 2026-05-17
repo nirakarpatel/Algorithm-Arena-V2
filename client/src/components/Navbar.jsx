@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { useAuth } from "../context/useAuth";
 import ThemeToggle from "./ThemeToggle";
+import Logo from "./Logo";
 
 const Navbar = ({ onLogout }) => {
   const MotionDiv = motion.div;
@@ -53,17 +54,10 @@ const Navbar = ({ onLogout }) => {
           <div className="flex justify-between items-center h-16 gap-10">
             <Link
               to="/"
-              className="flex items-center gap-2.5 group"
+              className="flex items-center group"
               onClick={closeMenu}
             >
-              <img
-                src="/gdg-logo.png"
-                alt="GDG"
-                className="w-7 h-7 object-contain transition-transform group-hover:scale-110 duration-200"
-              />
-              <span className="font-black text-lg tracking-tight text-primary group-hover:text-accent transition-colors">
-                Algo<span className="text-accent">Arena</span>
-              </span>
+              <Logo variant="arena" showText={true} size="sm" />
             </Link>
             <div className="hidden md:flex items-center space-x-1">
               {navItems.map((item) => {
@@ -94,7 +88,7 @@ const Navbar = ({ onLogout }) => {
 
             <div className="flex items-center gap-2 md:gap-4">
               <div className="relative">
-                 <button 
+                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="hidden md:flex items-center gap-3 group focus:outline-none py-1 px-2 rounded-2xl hover:bg-white/5 transition-all"
                  >
@@ -116,9 +110,9 @@ const Navbar = ({ onLogout }) => {
                  <AnimatePresence>
                    {userDropdownOpen && (
                      <>
-                       <div 
-                         className="fixed inset-0 z-40" 
-                         onClick={() => setUserDropdownOpen(false)} 
+                       <div
+                         className="fixed inset-0 z-40"
+                         onClick={() => setUserDropdownOpen(false)}
                        />
                         <MotionDiv
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -131,10 +125,10 @@ const Navbar = ({ onLogout }) => {
                              <p className="text-sm font-bold text-primary group-hover:text-accent truncate transition-colors">{user?.username}</p>
                              <p className="text-[10px] text-tertiary truncate">{user?.email || 'Authenticated User'}</p>
                           </Link>
-                         
+
                          <div className="space-y-1">
-                           <Link 
-                             to="/profile" 
+                           <Link
+                             to="/profile"
                              onClick={() => setUserDropdownOpen(false)}
                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-white/5 transition-all group/item"
                            >
@@ -144,8 +138,8 @@ const Navbar = ({ onLogout }) => {
                              <span>My Profile</span>
                            </Link>
 
-                           <Link 
-                             to="/settings" 
+                           <Link
+                             to="/settings"
                              onClick={() => setUserDropdownOpen(false)}
                              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-secondary hover:text-primary hover:bg-white/5 transition-all group/item"
                            >
@@ -157,7 +151,7 @@ const Navbar = ({ onLogout }) => {
                          </div>
 
                          <div className="mt-2 pt-2 border-t border-white/5">
-                           <button 
+                           <button
                              onClick={() => {
                                setUserDropdownOpen(false);
                                onLogout();

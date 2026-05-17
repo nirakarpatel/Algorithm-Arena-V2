@@ -1,7 +1,8 @@
-import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Outlet, useLocation } from 'react-router-dom';
-import Navbar from './Navbar';
+import React from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Outlet, useLocation } from "react-router-dom";
+import Navbar from "./Navbar";
+import Logo from "../components/Logo";
 
 const Layout = ({ onLogout }) => {
   const location = useLocation();
@@ -26,7 +27,7 @@ const Layout = ({ onLogout }) => {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
           >
             <Outlet />
           </MotionContainer>
@@ -34,14 +35,20 @@ const Layout = ({ onLogout }) => {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-glass-border/40 py-8 text-center w-full mt-auto bg-black/5">
-        <p className="text-sm text-secondary">
-          Copyright 2026 Algorithm Arena. Built for{" "}
-          <span className="text-primary font-semibold">
-            GDG On Campus - SOA ITER
-          </span>
-          .
-        </p>
+      <footer
+        className="relative z-10 mt-auto py-6 w-full"
+        style={{
+          borderTop: `1px solid rgba(var(--accent-rgb), 0.08)`,
+          background: `rgba(var(--accent-rgb), 0.02)`,
+        }}
+      >
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Logo variant="gdg" size="w-10 h-10" imgClassName="opacity-100" />
+          <p className="text-xs text-secondary tracking-wide text-center">
+            © 2026 Algorithm Arena ·{" "}
+            <span className="text-primary font-bold">GDG On Campus – SOA ITER</span>
+          </p>
+        </div>
       </footer>
     </div>
   );

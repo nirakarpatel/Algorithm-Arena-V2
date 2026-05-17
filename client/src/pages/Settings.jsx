@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import toast from 'react-hot-toast';
+import Logo from '../components/Logo';
 
 
 const PRESET_AVATARS = [
@@ -323,7 +324,7 @@ const Settings = () => {
             {/* GDG footer strip */}
             <div className="border-t border-white/[0.05] px-6 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img src="/gdg-logo.png" alt="GDG" className="w-5 h-5 object-contain opacity-70" />
+                <Logo variant="gdg" size="w-5 h-5" imgClassName="opacity-70" />
                 <span className="text-[9px] font-bold text-tertiary uppercase tracking-widest">GDG · SOA ITER</span>
               </div>
               <span className="text-[9px] text-tertiary font-mono opacity-50">PROFILE CARD</span>

@@ -7,6 +7,7 @@ import {
   FiArrowRight, FiGithub, FiTwitter, FiLinkedin, FiGlobe,
   FiCode, FiCpu,
 } from "react-icons/fi";
+import Logo from "./Logo";
 
 /* ── Rarity configs ─────────────────────────────────────── */
 const RARITY = {
@@ -194,7 +195,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                 )}
                 {/* GDG badge */}
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border border-white/10 bg-white/[0.04] text-tertiary">
-                  <img src="/gdg-logo.png" className="w-2.5 h-2.5 object-contain" alt="GDG" />
+                  <Logo variant="gdg" size="w-2.5 h-2.5" />
                   GDG
                 </span>
               </div>
@@ -366,7 +367,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
         style={{ background: "linear-gradient(145deg, rgba(15,15,24,0.9) 0%, rgba(10,10,18,0.95) 100%)" }}
       >
         <div className="flex items-center gap-4 p-4">
-          <img src="/gdg-logo.png" alt="GDG" className="w-10 h-10 object-contain flex-shrink-0" />
+          <Logo variant="hybrid" size="w-10 h-10" />
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tertiary">Powered by</p>
             <p className="text-sm font-black text-primary leading-tight">Google Developer Group</p>

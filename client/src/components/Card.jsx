@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 const ChallengeCard = ({
   children,
   className,
+  innerClassName,
   hoverEffect = true,
   // Pass an RGB string like "34, 197, 94" for difficulty cards.
   // Leave undefined for generic cards — they'll use the accent color.
@@ -95,7 +96,7 @@ const ChallengeCard = ({
         }}
       />
 
-      <div className="relative z-10">{children}</div>
+      <div className={clsx("relative z-10", innerClassName)}>{children}</div>
 
       {/* Blueprint corners */}
       <div

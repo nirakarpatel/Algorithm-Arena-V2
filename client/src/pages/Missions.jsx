@@ -98,7 +98,12 @@ const Missions = () => {
         let filtered = mockChallenges;
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
-          filtered = filtered.filter(c => c.title.toLowerCase().includes(searchLower) || c.description.toLowerCase().includes(searchLower));
+          filtered = filtered.filter(c =>
+            c.title.toLowerCase().includes(searchLower) ||
+            c.description.toLowerCase().includes(searchLower) ||
+            (c.category && c.category.toLowerCase().includes(searchLower)) ||
+            (Array.isArray(c.tags) && c.tags.some(t => t.toLowerCase().includes(searchLower)))
+          );
         }
         if (filters.difficulty) {
           filtered = filtered.filter(c => c.difficulty === filters.difficulty);
@@ -154,10 +159,16 @@ const Missions = () => {
       let key = "";
 
       if (filters.grouping === 'weekly') {
-        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-        const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
-        const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-        key = `Week ${weekNum}`;
+        if (ch.questionSetId && typeof ch.questionSetId === 'object' && typeof ch.questionSetId.weekNumber === 'number') {
+          key = `Week ${ch.questionSetId.weekNumber}`;
+        } else if (typeof ch.weekNumber === 'number') {
+          key = `Week ${ch.weekNumber}`;
+        } else {
+          const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+          const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+          const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+          key = `Week ${weekNum}`;
+        }
       } else if (filters.grouping === 'monthly') {
         key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
       }
@@ -345,7 +356,11 @@ const Missions = () => {
                         transition={{ delay: index * 0.03 }}
                       >
                         <Link to={`/challenge/${challenge._id}`} className="group block h-full">
-                          <ChallengeCard className="h-full p-6 flex flex-col gap-2 !rounded-2xl" difficultyColor={getRGB(challenge.difficulty)}>
+                          <ChallengeCard
+                            className="h-full p-6 !rounded-2xl"
+                            innerClassName="flex flex-col gap-3 h-full justify-between w-full"
+                            difficultyColor={getRGB(challenge.difficulty)}
+                          >
                             <div className="flex justify-between items-start mb-4">
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 challenge.difficulty === "Easy" ? "bg-green-500/20 text-green-500" :
@@ -364,10 +379,10 @@ const Missions = () => {
                                 <span className="text-secondary text-sm font-bold">{challenge.points} XP</span>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between gap-2 mt-2">
-                              <h3 className="text-xl font-bold group-hover:text-accent transition-colors line-clamp-2">{challenge.title}</h3>
+                            <div className="flex items-start justify-between gap-3 mt-2">
+                              <h3 className="text-xl font-bold group-hover:text-accent transition-colors line-clamp-2 flex-1">{challenge.title}</h3>
                               {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400">New</span>
+                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-1">New</span>
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 mt-auto pt-4">
@@ -393,12 +408,16 @@ const Missions = () => {
                         transition={{ delay: index * 0.03 }}
                       >
                         <Link to={`/challenge/${challenge._id}`} className="group block">
-                          <ChallengeCard className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 !rounded-2xl" difficultyColor={getRGB(challenge.difficulty)}>
+                          <ChallengeCard
+                            className="p-4 sm:p-6 !rounded-2xl"
+                            innerClassName="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full h-full"
+                            difficultyColor={getRGB(challenge.difficulty)}
+                          >
                             <div className="flex-1">
-                              <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-bold group-hover:text-accent transition-colors line-clamp-1">{challenge.title}</h3>
+                              <div className="flex items-start gap-3">
+                                <h3 className="text-lg font-bold group-hover:text-accent transition-colors line-clamp-1 flex-1">{challenge.title}</h3>
                                 {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400">New</span>
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-0.5">New</span>
                                 )}
                               </div>
                               <div className="flex flex-wrap gap-2 mt-2">

@@ -37,7 +37,8 @@ const getChallenges = async (req, res, next) => {
         $or: [
           { title: { $regex: search, $options: 'i' } },
           { description: { $regex: search, $options: 'i' } },
-          { tags: { $in: [new RegExp(search, 'i')] } }
+          { tags: { $in: [new RegExp(search, 'i')] } },
+          { category: { $regex: search, $options: 'i' } }
         ]
       });
     }
@@ -53,7 +54,7 @@ const getChallenges = async (req, res, next) => {
 
     const [total, challenges] = await Promise.all([
       Challenge.countDocuments(filter),
-      Challenge.find(filter).sort(sort).skip(skip).limit(limit),
+      Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(limit),
     ]);
 
     return sendSuccess(res, {
