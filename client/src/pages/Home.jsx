@@ -14,6 +14,7 @@ import Card from "../components/Card";
 import SkeletonCard from "../components/SkeletonCard";
 import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
+import Logo from "../components/Logo";
 
 
 const MotionBlock = motion.div;
@@ -23,11 +24,11 @@ const GridBackground = () => (
   <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
     {/* Perspective grid */}
     <svg
-      className="absolute inset-0 w-full h-full opacity-[0] dark:opacity-[0]"
+      className="absolute top-0 left-0 w-full h-full opacity-[.1] dark:opacity-[.1]"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <path
             d="M 60 0 L 0 0 0 60"
             fill="none"
@@ -208,22 +209,8 @@ const Home = () => {
 
       {/* ── Navigation ── */}
       <nav className="relative z-10 flex justify-between items-center px-6 py-5 w-full">
-        <Link to="/" className="group flex items-center gap-2.5">
-          {/* Logo mark */}
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              background: `linear-gradient(135deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-rgb), 0.5))`,
-              boxShadow: `0 0 16px rgba(var(--accent-rgb), 0.35)`,
-            }}
-          >
-            <span className="text-white font-black text-sm leading-none">
-              A
-            </span>
-          </div>
-          <span className="font-black text-xl tracking-tight text-primary group-hover:opacity-80 transition-opacity">
-            Algo<span style={{ color: `rgb(var(--accent-rgb))` }}>Arena</span>
-          </span>
+        <Link to="/" className="group flex items-center">
+          <Logo variant="arena" showText={true} size="sm" />
         </Link>
 
         <div className="flex gap-2 items-center">
@@ -275,10 +262,10 @@ const Home = () => {
           className="mb-8"
         >
           <div className="flex flex-col items-center gap-3">
-            <img
-              src="/bg-logo.jpeg"
-              alt="Google Developer Group SOA ITER"
-              className="w-24 h-24 object-contain rounded-2xl"
+            <Logo
+              variant="hybrid"
+              size="w-32 h-16"
+              imgClassName="object-cover"
               style={{ filter: "drop-shadow(0 0 20px rgba(var(--accent-rgb),0.3))" }}
             />
             <span
@@ -615,7 +602,7 @@ const Home = () => {
         }}
       >
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <img src="/gdg-logo.png" alt="GDG" className="w-6 h-6 object-contain opacity-70" />
+          <Logo variant="gdg" size="w-10 h-10" imgClassName="opacity-100" />
           <p className="text-xs text-secondary tracking-wide text-center">
             © 2026 Algorithm Arena ·{" "}
             <span className="text-primary font-bold">GDG On Campus – SOA ITER</span>

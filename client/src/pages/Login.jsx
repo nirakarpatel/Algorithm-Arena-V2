@@ -67,13 +67,10 @@ const Login = ({ onLoginSuccess }) => {
         <div className="text-center mb-8">
           {/* GDG Branding */}
           <div className="flex flex-col items-center gap-3 mb-5">
-            <img src="/bg-logo.jpeg" alt="GDG on Campus SOA ITER" className="w-28 h-28 object-contain rounded-2xl" />
+            <Logo variant="hybrid" size="w-28 h-14" imgClassName="object-cover" />
           </div>
           <Link to="/" className="inline-flex items-center justify-center gap-2 group mb-2">
-            <img src="/gdg-logo.png" alt="GDG" className="w-6 h-6 object-contain" />
-            <span className="font-black text-2xl tracking-tight text-primary group-hover:text-accent transition-colors">
-              Algo<span className="text-accent">Arena</span>
-            </span>
+            <Logo variant="arena" size="sm" showText={true} />
           </Link>
           <h2 className="text-sm font-medium text-secondary">Welcome back, Pilot.</h2>
         </div>

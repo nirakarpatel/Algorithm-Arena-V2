@@ -494,7 +494,17 @@ const ChallengeDetails = () => {
           </h1>
         </a>
 
-        <div className="flex items-center gap-2 ml-auto shrink-0">
+        <div className="flex items-center gap-2 ml-auto shrink-0 flex-wrap justify-end">
+          {challenge.tags && challenge.tags.map((tag, idx) => (
+            <span key={idx} className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/5 text-secondary border border-white/5">
+              {tag}
+            </span>
+          ))}
+          {(!challenge.tags || challenge.tags.length === 0) && challenge.category && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white/5 text-secondary border border-white/5">
+              {challenge.category}
+            </span>
+          )}
           <span
             className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${difficultyBg} ${difficultyColor}`}
           >
@@ -562,6 +572,16 @@ const ChallengeDetails = () => {
                   <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent">
                     {challenge.points} XP
                   </span>
+                  {challenge.tags && challenge.tags.map((tag, idx) => (
+                    <span key={idx} className="text-xs font-semibold px-2 py-1 rounded bg-white/5 text-secondary border border-white/5">
+                      {tag}
+                    </span>
+                  ))}
+                  {(!challenge.tags || challenge.tags.length === 0) && challenge.category && (
+                    <span className="text-xs font-semibold px-2 py-1 rounded bg-white/5 text-secondary border border-white/5">
+                      {challenge.category}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : leftTab === "submissions" ? (
