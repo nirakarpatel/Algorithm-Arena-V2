@@ -41,7 +41,7 @@ const XPBar = ({ xp }) => {
         <span className="text-tertiary">Level {lvl}</span>
         <span style={{ color: "rgb(var(--accent-rgb))" }}>{xp} XP</span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-black/[0.06] dark:bg-white/[0.06] overflow-hidden">
         <motion.div
           className="h-full rounded-full"
           style={{
@@ -62,7 +62,7 @@ const XPBar = ({ xp }) => {
 
 /* ── Animated counter stat ───────────────────────────────── */
 const StatPill = ({ icon: Icon, value, label, color, sublabel }) => (
-  <div className="group relative rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.03] p-3 flex flex-col items-center justify-center gap-1 hover:border-white/[0.12] hover:bg-white/[0.06] transition-all duration-300 cursor-default">
+  <div className="group relative rounded-xl overflow-hidden border border-black/[0.06] dark:border-white/[0.06] bg-black/[0.02] dark:bg-white/[0.03] p-3 flex flex-col items-center justify-center gap-1 hover:border-black/[0.12] dark:hover:border-white/[0.12] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-300 cursor-default">
     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
       style={{ background: `radial-gradient(circle at center, rgba(var(--accent-rgb),0.06) 0%, transparent 70%)` }} />
     <Icon size={13} className={`${color} relative z-10`} />
@@ -83,7 +83,7 @@ const DiffBar = ({ label, solved, total, color, delay }) => {
         <span className="text-[10px] font-black" style={{ color }}>{label}</span>
         <span className="text-[10px] font-mono text-tertiary">{solved}<span className="text-tertiary/50">/{total}</span></span>
       </div>
-      <div className="h-[4px] rounded-full bg-white/[0.05] overflow-hidden">
+      <div className="h-[4px] rounded-full bg-black/[0.05] dark:bg-white/[0.05] overflow-hidden">
         <motion.div className="h-full rounded-full"
           style={{ background: color, boxShadow: `0 0 8px ${color}55` }}
           initial={{ width: 0 }}
@@ -125,12 +125,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-2xl"
-        style={{
-          background: "linear-gradient(145deg, rgba(18,18,28,0.95) 0%, rgba(12,12,22,0.98) 100%)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
-        }}
+        className="relative overflow-hidden rounded-2xl border border-black/[0.07] dark:border-white/[0.07] bg-[var(--glass-surface)] shadow-lg"
       >
         {/* Animated top accent bar */}
         <div className="absolute top-0 left-0 right-0 h-[2px]"
@@ -169,7 +164,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                 }
               </div>
               {/* Online dot */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0c0c14] shadow-[0_0_8px_rgba(34,197,94,0.7)] z-20" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-[var(--bg-app)] shadow-[0_0_8px_rgba(34,197,94,0.7)] z-20" />
             </div>
 
             {/* Name + role badges */}
@@ -206,7 +201,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           <XPBar xp={xp} />
 
           {/* Divider */}
-          <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
+          <div className="h-px bg-black/[0.08] dark:bg-white/[0.08]" />
 
           {/* Stats 2×2 grid */}
           <div className="grid grid-cols-2 gap-2">
@@ -225,13 +220,13 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           </div>
 
           {/* Divider */}
-          <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
+          <div className="h-px bg-black/[0.08] dark:bg-white/[0.08]" />
 
           {/* Clan */}
           {user?.clan && (
-            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.06]">
               <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <FiUsers size={12} className="text-blue-400" />
+                <FiUsers size={12} className="text-blue-600 dark:text-blue-400" />
               </div>
               <div className="min-w-0">
                 <p className="text-[9px] text-tertiary uppercase tracking-widest font-black">Clan</p>
@@ -245,25 +240,25 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             <div className="flex flex-wrap gap-1.5">
               {user.github && (
                 <a href={`https://github.com/${user.github}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07] text-[10px] text-secondary hover:text-primary hover:border-white/15 transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.07] dark:border-white/[0.07] text-[10px] text-secondary hover:text-primary hover:border-black/15 dark:hover:border-white/15 transition-all">
                   <FiGithub size={10} /> {user.github}
                 </a>
               )}
               {user.twitter && (
                 <a href={`https://twitter.com/${user.twitter}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/[0.06] border border-blue-500/20 text-[10px] text-blue-400 hover:text-blue-300 transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/[0.06] border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-all">
                   <FiTwitter size={10} /> @{user.twitter}
                 </a>
               )}
               {user.linkedin && (
                 <a href={`https://linkedin.com/in/${user.linkedin}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-700/[0.08] border border-blue-700/20 text-[10px] text-blue-500 hover:text-blue-400 transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-700/[0.08] border border-blue-700/20 text-[10px] text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-all">
                   <FiLinkedin size={10} /> LinkedIn
                 </a>
               )}
               {user.website && (
                 <a href={user.website} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/[0.06] border border-green-500/20 text-[10px] text-green-400 hover:text-green-300 transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/[0.06] border border-green-500/20 text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 transition-all">
                   <FiGlobe size={10} /> Site
                 </a>
               )}
@@ -273,7 +268,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           {/* Edit profile CTA */}
           <Link
             to="/settings"
-            className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-white/[0.07] bg-white/[0.02] hover:bg-white/[0.06] hover:border-accent/30 transition-all text-xs font-bold text-secondary hover:text-primary"
+            className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-black/[0.07] dark:border-white/[0.07] bg-black/[0.01] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-accent/30 transition-all text-xs font-bold text-secondary hover:text-primary"
           >
             <FiEdit2 size={11} className="group-hover:text-accent transition-colors" />
             Edit Profile
@@ -287,12 +282,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-2xl"
-        style={{
-          background: "linear-gradient(145deg, rgba(18,18,28,0.95) 0%, rgba(12,12,22,0.98) 100%)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
-        }}
+        className="relative overflow-hidden rounded-2xl border border-black/[0.07] dark:border-white/[0.07] bg-[var(--glass-surface)] shadow-lg"
       >
         {/* Gold glow at top */}
         <div className="absolute top-0 left-0 right-0 h-[2px]"
@@ -305,7 +295,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
               <FiAward size={12} className="text-yellow-400" /> Achievements
             </h3>
-            <span className="text-[9px] font-black text-tertiary bg-white/[0.04] border border-white/[0.06] rounded-full px-2 py-0.5">
+            <span className="text-[9px] font-black text-tertiary bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-2 py-0.5">
               {displayBadges.length}
             </span>
           </div>
@@ -363,8 +353,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
         initial={{ opacity: 0, x: -24 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, delay: 0.2, ease: "easeOut" }}
-        className="relative overflow-hidden rounded-2xl border border-white/[0.05]"
-        style={{ background: "linear-gradient(145deg, rgba(15,15,24,0.9) 0%, rgba(10,10,18,0.95) 100%)" }}
+        className="relative overflow-hidden rounded-2xl border border-black/[0.07] dark:border-white/[0.07] bg-[var(--glass-surface)] shadow-md"
       >
         <div className="flex items-center gap-4 p-4">
           <Logo variant="hybrid" size="w-10 h-10" />

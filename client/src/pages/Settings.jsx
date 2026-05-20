@@ -52,9 +52,41 @@ const Settings = () => {
     }
   }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website]);
 
+  /**
+   * Extract just the username when a user pastes a full profile URL.
+   * e.g. "https://github.com/nirakarpatel" → "nirakarpatel"
+   *      "https://www.linkedin.com/in/john-doe/" → "john-doe"
+   *      "https://twitter.com/elonmusk" → "elonmusk"
+   */
+  const extractUsername = (field, rawValue) => {
+    const value = rawValue.trim();
+
+    if (field === 'github') {
+      // Match github.com/USERNAME patterns
+      const match = value.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)\/?/);
+      if (match) return match[1];
+    }
+
+    if (field === 'linkedin') {
+      // Match linkedin.com/in/USERNAME patterns
+      const match = value.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)\/?/);
+      if (match) return match[1];
+    }
+
+    if (field === 'twitter') {
+      // Match twitter.com/USERNAME or x.com/USERNAME or @username patterns
+      const match = value.match(/(?:(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\/|@)([a-zA-Z0-9_]+)\/?/);
+      if (match) return match[1];
+    }
+
+    return value;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const socialFields = ['github', 'linkedin', 'twitter'];
+    const finalValue = socialFields.includes(name) ? extractUsername(name, value) : value;
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const handleAvatarSelect = (url) => {

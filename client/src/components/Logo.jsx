@@ -49,7 +49,7 @@ const Logo = ({
   }
 
   return (
-    <div className={clsx("inline-flex items-center gap-3 bg-black", className)}>
+    <div className={clsx("inline-flex items-center gap-3", className)}>
       {Img}
       <div className="flex flex-col justify-center min-w-0 select-none">
         {variant === "arena" && (

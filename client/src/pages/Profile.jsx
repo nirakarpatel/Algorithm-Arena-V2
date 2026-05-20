@@ -29,9 +29,9 @@ const DiffBar = ({ label, solved, total, color }) => {
     <div className="space-y-1">
       <div className="flex justify-between items-center">
         <span className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>{label}</span>
-        <span className="text-[10px] font-mono text-tertiary">{solved}<span className="text-tertiary/50">/{total}</span> <span className="text-white/20 ml-1">{Math.round(pct)}%</span></span>
+        <span className="text-[10px] font-mono text-tertiary">{solved}<span className="text-tertiary/50">/{total}</span> <span className="text-black/20 dark:text-white/20 ml-1">{Math.round(pct)}%</span></span>
       </div>
-      <div className="h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-black/[0.05] dark:bg-white/[0.05] overflow-hidden">
         <motion.div className="h-full rounded-full"
           style={{ background: color, boxShadow: `0 0 8px ${color}55` }}
           initial={{ width: 0 }}
@@ -109,12 +109,11 @@ const Profile = () => {
       <ProfileSidebar user={displayUser} profile={profile} badges={profile?.badges} />
 
       <div className="flex-1 min-w-0 space-y-6">
-        <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-white/[0.08]"
-          style={{ background: "linear-gradient(135deg, rgba(15,15,22,1) 0%, rgba(20,15,35,1) 100%)" }}>
+        <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md">
           <div className="absolute top-0 right-0 p-4 text-right z-10">
             <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
-              <span className="text-xs font-black text-white">{profile.totalPoints || 0} XP</span>
+              <span className="text-xs font-black text-primary">{profile.totalPoints || 0} XP</span>
             </div>
           </div>
           <div className="relative z-10">
@@ -123,7 +122,7 @@ const Profile = () => {
                 {getGreeting()}
               </span>
             )}
-            <h1 className="text-3xl md:text-4xl font-black text-white mb-2">{displayUser?.username}</h1>
+            <h1 className="text-3xl md:text-4xl font-black text-primary mb-2">{displayUser?.username}</h1>
             <p className="text-sm text-secondary max-w-md">
                 {username ? `Viewing ${displayUser?.username}'s public profile.` : "Track your journey, analyze your performance, and dominate the algorithm arena."}
             </p>
@@ -131,17 +130,17 @@ const Profile = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <motion.div {...fd(0.15)} className="rounded-2xl border border-white/[0.06] bg-[#0c0c14] p-5 flex flex-col">
+          <motion.div {...fd(0.15)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-5 flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xs font-black uppercase tracking-widest text-primary">Algorithm Mastery</h2>
               <div className="w-12 h-12 rounded-full flex items-center justify-center relative">
                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                    <path className="text-white/5" strokeWidth="4" stroke="currentColor" fill="none"
+                    <path className="text-black/5 dark:text-white/5" strokeWidth="4" stroke="currentColor" fill="none"
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     <path className="text-accent transition-all duration-1000 ease-out" strokeWidth="4" strokeDasharray={`${solvedPct}, 100`} strokeLinecap="round" stroke="currentColor" fill="none"
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                  </svg>
-                 <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">{solvedPct}%</div>
+                 <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-primary">{solvedPct}%</div>
               </div>
             </div>
             
@@ -152,13 +151,13 @@ const Profile = () => {
             </div>
           </motion.div>
 
-          <motion.div {...fd(0.2)} className="rounded-2xl border border-white/[0.06] bg-[#0c0c14] p-5 overflow-hidden flex flex-col justify-center">
+          <motion.div {...fd(0.2)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-5 overflow-hidden flex flex-col justify-center">
              <ActivityHeatmap submissions={submissions} />
           </motion.div>
         </div>
 
-        <motion.div {...fd(0.25)} className="rounded-2xl border border-white/[0.06] bg-[#0c0c14] overflow-hidden">
-          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+        <motion.div {...fd(0.25)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md overflow-hidden">
+          <div className="p-4 border-b border-black/[0.06] dark:border-b-white/[0.06] flex items-center justify-between">
              <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                <FiActivity className="text-accent" /> Recent Submissions
              </h2>
@@ -171,11 +170,11 @@ const Profile = () => {
           
           {recentSubs.length === 0 ? (
             <div className="p-10 text-center">
-              <FiCpu size={32} className="text-white/10 mx-auto mb-3" />
+              <FiCpu size={32} className="text-black/10 dark:text-white/10 mx-auto mb-3" />
               <p className="text-xs font-bold text-tertiary uppercase tracking-widest">No recent submissions</p>
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.04]">
+            <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
               {recentSubs.map((sub, i) => {
                 const ac = sub.status === "Accepted";
                 const wa = sub.status === "Rejected";
@@ -187,7 +186,7 @@ const Profile = () => {
                 const badgeLabel = ac ? "ACCEPTED" : wa ? "REJECTED" : "PENDING";
 
                 return (
-                  <Link key={sub._id + i} to={`/submission/${sub._id}`} className="flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors group">
+                  <Link key={sub._id + i} to={`/submission/${sub._id}`} className="flex items-center justify-between p-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
                     <div className="min-w-0 pr-4">
                       <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors truncate">
                         {sub.challengeId?.title || "Unknown Challenge"}

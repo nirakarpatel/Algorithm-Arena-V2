@@ -50,11 +50,11 @@ const IdentityHoverCard = ({ userId, username, position }) => {
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
         {profileQ.isLoading ? (
-           <div className="w-full h-[350px] rounded-[2rem] border border-white/[0.08] bg-[#09090b] flex items-center justify-center shadow-2xl">
+           <div className="w-full h-[350px] rounded-[2rem] border border-black/[0.08] dark:border-white/[0.08] bg-[var(--glass-surface)] backdrop-blur-md flex items-center justify-center shadow-2xl shadow-black/10 dark:shadow-black/60">
               <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
            </div>
         ) : !p ? (
-           <div className="w-full h-[350px] rounded-[2rem] border border-white/[0.08] bg-[#09090b] flex items-center justify-center flex-col text-secondary shadow-2xl">
+           <div className="w-full h-[350px] rounded-[2rem] border border-black/[0.08] dark:border-white/[0.08] bg-[var(--glass-surface)] backdrop-blur-md flex items-center justify-center flex-col text-secondary shadow-2xl shadow-black/10 dark:shadow-black/60">
               <FiZap size={30} className="mb-3 text-red-500/50" />
               <p className="font-mono uppercase tracking-widest text-xs">Entity Not Found.</p>
            </div>
@@ -67,11 +67,11 @@ const IdentityHoverCard = ({ userId, username, position }) => {
           
           return (
             <div
-              className="relative w-full overflow-hidden rounded-[2rem] border border-white/[0.08] bg-[#09090b] shadow-2xl"
-              style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.8), inset 0 0 40px rgba(var(--accent-rgb), 0.05)" }}
+              className="relative w-full overflow-hidden rounded-[2rem] border border-black/[0.08] dark:border-white/[0.08] bg-[var(--glass-surface)] backdrop-blur-md shadow-2xl shadow-black/10 dark:shadow-black/60"
+              style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.1), inset 0 0 40px rgba(var(--accent-rgb), 0.03)" }}
             >
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-                style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
+              <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03] pointer-events-none" 
+                style={{ backgroundImage: "radial-gradient(var(--fg-primary) 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
               
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50" />
 
@@ -80,7 +80,7 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-8">
                   {/* Avatar */}
                   <div className="relative group shrink-0">
-                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-[1.5rem] bg-black border-2 border-accent/20 flex items-center justify-center text-4xl font-black text-white relative overflow-hidden">
+                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-[1.5rem] bg-black/[0.05] dark:bg-black border-2 border-accent/20 flex items-center justify-center text-4xl font-black text-primary dark:text-white relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent opacity-50" />
                       {p.profilePicture ? (
                         <img src={p.profilePicture} className="relative z-10 w-full h-full object-cover" alt="" />
@@ -89,12 +89,12 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-accent/5 to-transparent h-1/2 w-full animate-scan pointer-events-none" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-[#09090b] shadow-[0_0_12px_rgba(34,197,94,0.5)]" />
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-[var(--bg-app)] dark:border-[#09090b] shadow-[0_0_12px_rgba(34,197,94,0.5)]" />
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 text-center md:text-left pt-1">
-                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-1 truncate">{p.username}</h1>
+                    <h1 className="text-3xl md:text-4xl font-black text-primary tracking-tight mb-1 truncate">{p.username}</h1>
                     <p className="text-sm italic text-secondary mb-4 font-medium truncate">"{p.bio || "Expert Algorithmist"}"</p>
                     
                     <div className="flex flex-wrap justify-center md:justify-start gap-2">
@@ -112,7 +112,7 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                   </div>
                 </div>
 
-                <div className="w-full h-px bg-white/[0.05] mb-8" />
+                <div className="w-full h-px bg-black/[0.06] dark:bg-white/[0.05] mb-8" />
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -120,10 +120,10 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-tertiary mb-2">Current Level</p>
                       <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-3xl font-black text-white">Lv. {level}</span>
-                        <span className="text-xs font-mono text-tertiary">{xpInLevel} <span className="text-white/20">/</span> 500 XP</span>
+                        <span className="text-3xl font-black text-primary">Lv. {level}</span>
+                        <span className="text-xs font-mono text-tertiary">{xpInLevel} <span className="text-black/20 dark:text-white/20">/</span> 500 XP</span>
                       </div>
-                      <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-black/[0.03] dark:bg-white/[0.03] border border-black/5 dark:border-white/5 rounded-full overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }} animate={{ width: `${xpPct}%` }} transition={{ duration: 1.5, ease: "easeOut" }}
                           className="h-full bg-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.5)]"
@@ -132,22 +132,22 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center gap-1 group hover:bg-white/[0.04] transition-all">
+                      <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 flex flex-col items-center gap-1 group hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all">
                         <div className="w-8 h-8 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
                           <FiTarget size={16} />
                         </div>
                         <div className="text-center mt-1">
                           <p className="text-[9px] font-black uppercase tracking-widest text-tertiary">Solved</p>
-                          <p className="text-xl font-black text-white">{p.acceptedCount || 0}</p>
+                          <p className="text-xl font-black text-primary">{p.acceptedCount || 0}</p>
                         </div>
                       </div>
-                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center gap-1 group hover:bg-white/[0.04] transition-all">
+                      <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/5 flex flex-col items-center gap-1 group hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all">
                         <div className="w-8 h-8 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
                           <FiActivity size={16} />
                         </div>
                         <div className="text-center mt-1">
                           <p className="text-[9px] font-black uppercase tracking-widest text-tertiary">Streak</p>
-                          <p className="text-xl font-black text-white">{p.streak || 0}</p>
+                          <p className="text-xl font-black text-primary">{p.streak || 0}</p>
                         </div>
                       </div>
                     </div>
@@ -168,9 +168,9 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                         <div key={item.label} className="space-y-1.5">
                           <div className="flex justify-between text-[9px] font-black tracking-widest">
                             <span className={item.color}>{item.label}</span>
-                            <span className="text-tertiary font-mono">{item.value} <span className="text-white/20">/</span> {item.total === 1 && item.value === 0 ? 0 : item.total}</span>
+                            <span className="text-tertiary font-mono">{item.value} <span className="text-black/20 dark:text-white/20">/</span> {item.total === 1 && item.value === 0 ? 0 : item.total}</span>
                           </div>
-                          <div className="h-1.5 w-full bg-white/[0.03] border border-white/5 rounded-full overflow-hidden">
+                          <div className="h-1.5 w-full bg-black/[0.03] dark:bg-white/[0.03] border border-black/5 dark:border-white/5 rounded-full overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }} animate={{ width: `${(item.value / item.total) * 100}%` }} transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
                               className={`h-full ${item.bg} opacity-80`}
