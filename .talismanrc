@@ -55,10 +55,6 @@ fileignoreconfig:
   checksum: 845d37d2e99e797d166c0a25efcbac1ec5c97aa46d15e930de2b18149f51b711
 - filename: client/src/pages/chief/ChiefReviewTab.jsx
   checksum: 64ff577ce5a0f379ba2d35ce462310d57c8cd438b0bc4a17424903c6331ed6ae
-- filename: refactor_hover.js
-  checksum: def02e96d87266109e06193cfc6a30672556ecbd057e7624cc4bc96e2dce1074
-- filename: scratch_card.jsx
-  checksum: ce3fc8e54838a6190b33ba9b6eb6601f13ecd6c7201ee1c3853b429a51e93a82
 - filename: server/seed.js
   checksum: 48877b006ce88791233dbd73eb7228acdc8d1e913747b230d9d81bc5c7330cbe
 - filename: server/utils/emailService.js
