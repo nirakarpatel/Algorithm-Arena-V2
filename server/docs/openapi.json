@@ -60,6 +60,118 @@
         "summary": "Delete challenge (admin)"
       }
     },
+    "/api/clans": {
+      "get": {
+        "summary": "List clans for the current user"
+      },
+      "post": {
+        "summary": "Create clan (admin)"
+      }
+    },
+    "/api/clans/leaderboard": {
+      "get": {
+        "summary": "List clan leaderboard with timeframe and status filters",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["active", "archived", "all"]
+            }
+          },
+          {
+            "name": "window",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["all", "7d", "30d"]
+            }
+          }
+        ]
+      }
+    },
+    "/api/clans/mine": {
+      "get": {
+        "summary": "Get the current user's clan"
+      }
+    },
+    "/api/clans/{id}": {
+      "get": {
+        "summary": "Get clan by id"
+      },
+      "put": {
+        "summary": "Update clan (admin)"
+      },
+      "patch": {
+        "summary": "Reserved for clan lifecycle operations"
+      },
+      "delete": {
+        "summary": "Delete archived clan permanently (admin)"
+      }
+    },
+    "/api/clans/{id}/archive": {
+      "patch": {
+        "summary": "Archive clan (chief or admin)"
+      }
+    },
+    "/api/clans/{id}/restore": {
+      "patch": {
+        "summary": "Restore archived clan (admin)"
+      }
+    },
+    "/api/clans/{id}/join": {
+      "post": {
+        "summary": "Join clan"
+      }
+    },
+    "/api/clans/{id}/leave": {
+      "post": {
+        "summary": "Leave clan"
+      }
+    },
+    "/api/clans/{id}/approve/{userId}": {
+      "post": {
+        "summary": "Approve clan join request"
+      }
+    },
+    "/api/clans/{id}/reject/{userId}": {
+      "post": {
+        "summary": "Reject clan join request"
+      }
+    },
+    "/api/clans/{id}/notices": {
+      "post": {
+        "summary": "Add clan notice"
+      }
+    },
+    "/api/clans/{id}/notices/{index}": {
+      "delete": {
+        "summary": "Remove clan notice"
+      }
+    },
+    "/api/clans/{id}/admin-stats": {
+      "get": {
+        "summary": "Get clan admin stats"
+      }
+    },
+    "/api/clans/{id}/chief": {
+      "put": {
+        "summary": "Assign clan chief (admin)"
+      }
+    },
+    "/api/clans/{id}/members": {
+      "post": {
+        "summary": "Add clan member (admin)"
+      }
+    },
+    "/api/clans/{id}/members/{userId}": {
+      "delete": {
+        "summary": "Remove clan member"
+      }
+    },
     "/api/submissions": {
       "get": {
         "summary": "List submissions (admin)"
