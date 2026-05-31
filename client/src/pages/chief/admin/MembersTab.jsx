@@ -72,7 +72,7 @@ const MembersTab = () => {
     const matchSearch = u.username.toLowerCase().includes(s) || (u.regNo && u.regNo.toLowerCase().includes(s));
     const matchLevel = levelFilter ? u.codingLevel === levelFilter : true;
     const matchClan = clanFilter ? u.clan?._id === clanFilter || u.clan === clanFilter : true;
-    return matchSearch && matchLevel && matchClan && u.role !== 'admin'; // hide admins maybe? Or keep them
+    return matchSearch && matchLevel && matchClan;
   });
 
   const getStatusDot = (status) => {

@@ -5,6 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiActivity, FiCheck, FiX, FiAward, FiAlertTriangle, FiFileText, FiMessageSquare, FiShield, FiRefreshCw } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/useAuth';
+import {
+  canApproveJoinRequests,
+  canArchiveClan,
+  canIssueWarning,
+  canManageOwnClan,
+  isClanArchived,
+} from '../../lib/permissions';
 
 const StatCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
   <BaseCard className="p-5 flex items-center gap-4 group hover:border-white/20 transition-all">
@@ -23,8 +31,12 @@ const StatCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
 
 const ChiefDashboardTab = ({ clan }) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [warningModal, setWarningModal] = useState({ open: false, user: null, message: '' });
-  const isArchived = clan?.status === 'archived';
+  const isArchived = isClanArchived(clan);
+  const canManageClan = canManageOwnClan(user, clan);
+  const canArchive = canArchiveClan(user, clan);
+  const canModerateRequests = canApproveJoinRequests(user, clan);
 
   const approveMutation = useMutation({
     mutationFn: async (userId) => {
@@ -102,6 +114,11 @@ const ChiefDashboardTab = ({ clan }) => {
           <FiAlertTriangle /> This clan is archived. Chief actions are paused until an admin restores it.
         </BaseCard>
       )}
+      {!canManageClan && !isArchived && (
+        <BaseCard className="p-4 border-red-500/20 bg-red-500/10 text-red-200 text-sm font-bold flex items-center gap-2">
+          <FiShield /> Your chief role is not mapped to this clan, so clan actions are unavailable.
+        </BaseCard>
+      )}
       
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -176,12 +193,12 @@ const ChiefDashboardTab = ({ clan }) => {
               </button>
               <button
                 onClick={() => {
-                  if (isArchived) return;
+                  if (!canArchive) return;
                   if (window.confirm(`Archive ${clan.name}? This will make the clan read-only until an admin restores it.`)) {
                     archiveMutation.mutate();
                   }
                 }}
-                disabled={isArchived || archiveMutation.isPending}
+                disabled={!canArchive || archiveMutation.isPending}
                 className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/10 hover:border-red-500/30 transition-all text-xs font-bold text-primary disabled:opacity-60"
               >
                 {isArchived ? <FiRefreshCw size={18} className="text-amber-400" /> : <FiAlertTriangle size={18} className="text-red-400" />}
@@ -207,6 +224,7 @@ const ChiefDashboardTab = ({ clan }) => {
               const solved = member.solvedProblems || 0;
               const total = TARGET_PROBLEMS;
               const progressPct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
+              const canWarnMember = canIssueWarning(user, member, clan);
               
               return (
                 <div key={member._id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${isWarned ? 'bg-red-500/10 border-red-500/20' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
@@ -242,8 +260,12 @@ const ChiefDashboardTab = ({ clan }) => {
                       <p className="text-[10px] text-yellow-400 flex items-center justify-end gap-1"><FiAward/> {(member.points || 0)} XP</p>
                     </div>
                     <button 
-                      onClick={() => setWarningModal({ open: true, user: member, message: '' })}
-                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                      onClick={() => {
+                        if (!canWarnMember) return;
+                        setWarningModal({ open: true, user: member, message: '' });
+                      }}
+                      disabled={!canWarnMember}
+                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
                       title="Issue Warning"
                     >
                       <FiAlertTriangle size={14} />
@@ -277,10 +299,10 @@ const ChiefDashboardTab = ({ clan }) => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => approveMutation.mutate(reqUser._id)} className="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center hover:bg-green-500/30 transition-colors">
+                  <button onClick={() => approveMutation.mutate(reqUser._id)} disabled={!canModerateRequests} className="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center hover:bg-green-500/30 transition-colors disabled:opacity-50">
                     <FiCheck />
                   </button>
-                  <button onClick={() => rejectMutation.mutate(reqUser._id)} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-colors">
+                  <button onClick={() => rejectMutation.mutate(reqUser._id)} disabled={!canModerateRequests} className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center hover:bg-red-500/30 transition-colors disabled:opacity-50">
                     <FiX />
                   </button>
                 </div>

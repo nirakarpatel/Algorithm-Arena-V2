@@ -4,9 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { FiCheck, FiX, FiCode, FiEye, FiCpu, FiFilter, FiExternalLink } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
+import { useAuth } from '../../context/useAuth';
 import { api } from '../../lib/api';
+import { canManageOwnClan, isClanArchived } from '../../lib/permissions';
 
 const ChiefReviewTab = ({ clan }) => {
+  const { user: currentUser } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState('Pending');
 
@@ -38,10 +41,18 @@ const ChiefReviewTab = ({ clan }) => {
 
   if (!clan) return null;
 
-  if (clan.status === 'archived') {
+  if (isClanArchived(clan)) {
     return (
       <BaseCard className="p-6 border-amber-500/20 bg-amber-500/10 text-amber-200 text-sm font-bold flex items-center gap-2">
         <FiCode className="text-amber-300" /> This clan is archived. Submission review is disabled until an admin restores it.
+      </BaseCard>
+    );
+  }
+
+  if (!canManageOwnClan(currentUser, clan)) {
+    return (
+      <BaseCard className="p-6 border-red-500/20 bg-red-500/10 text-red-200 text-sm font-bold flex items-center gap-2">
+        <FiCode className="text-red-300" /> Your chief role is not mapped to this clan, so submission review is unavailable.
       </BaseCard>
     );
   }

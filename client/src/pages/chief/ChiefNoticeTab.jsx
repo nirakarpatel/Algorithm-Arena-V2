@@ -5,11 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiTrash2, FiMessageSquare, FiX } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/useAuth';
+import { canManageClanNotice, canManageOwnClan, isClanArchived } from '../../lib/permissions';
 
 const ChiefNoticeTab = ({ clan }) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [createModal, setCreateModal] = useState(false);
   const [noticeText, setNoticeText] = useState('');
+  const isArchived = isClanArchived(clan);
+  const canManageClan = canManageOwnClan(user, clan);
+  const canPostNotice = canManageClanNotice(user, clan);
 
   const createMutation = useMutation({
     mutationFn: async (notice) => {
@@ -37,10 +43,18 @@ const ChiefNoticeTab = ({ clan }) => {
 
   if (!clan) return null;
 
-  if (clan.status === 'archived') {
+  if (isArchived) {
     return (
       <BaseCard className="p-6 border-amber-500/20 bg-amber-500/10 text-amber-200 text-sm font-bold flex items-center gap-2">
         <FiMessageSquare /> This clan is archived. Notice posting is disabled until an admin restores it.
+      </BaseCard>
+    );
+  }
+
+  if (!canManageClan) {
+    return (
+      <BaseCard className="p-6 border-red-500/20 bg-red-500/10 text-red-200 text-sm font-bold flex items-center gap-2">
+        <FiMessageSquare /> Your chief role is not mapped to this clan, so notice posting is unavailable.
       </BaseCard>
     );
   }
@@ -51,7 +65,7 @@ const ChiefNoticeTab = ({ clan }) => {
         <h2 className="text-section-title font-bold flex items-center gap-2">
           <FiMessageSquare className="text-blue-400" /> Internal Clan Notices
         </h2>
-        <button onClick={() => setCreateModal(true)} className="btn-primary py-2 px-4 text-sm flex items-center gap-2">
+        <button onClick={() => setCreateModal(true)} disabled={!canPostNotice} className="btn-primary py-2 px-4 text-sm flex items-center gap-2 disabled:opacity-50">
           <FiPlus /> Post Notice
         </button>
       </div>
@@ -102,8 +116,8 @@ const ChiefNoticeTab = ({ clan }) => {
                   <button onClick={() => setCreateModal(false)} className="px-4 py-2 rounded-xl font-bold text-sm bg-white/5 text-secondary hover:bg-white/10 transition-colors">Cancel</button>
                   <button 
                     onClick={() => createMutation.mutate(noticeText)} 
-                    disabled={createMutation.isLoading || !noticeText.trim()} 
-                    className="btn-primary px-6 py-2 text-sm"
+                    disabled={createMutation.isLoading || !noticeText.trim() || !canPostNotice} 
+                    className="btn-primary px-6 py-2 text-sm disabled:opacity-50"
                   >
                     {createMutation.isLoading ? 'Posting...' : 'Post Notice'}
                   </button>

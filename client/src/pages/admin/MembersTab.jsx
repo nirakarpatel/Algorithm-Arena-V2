@@ -5,16 +5,20 @@ import { FiSearch, FiFilter, FiAward, FiStar, FiUserCheck, FiUserX, FiAlertCircl
 import BaseCard from '../../components/BaseCard';
 import MemberHoverCard from '../../components/MemberHoverCard';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/useAuth';
+import { canManageClanGlobally } from '../../lib/permissions';
 import toast from 'react-hot-toast';
 
 import { USE_MOCK, mockLeaderboardMembers } from '../../lib/mockData';
 
 const MembersTab = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [clanFilter, setClanFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(null);
+  const canManageUsers = canManageClanGlobally(user);
 
   const usersQuery = useQuery({
     queryKey: ['admin-all-users'],
@@ -72,7 +76,7 @@ const MembersTab = () => {
     const matchSearch = u.username.toLowerCase().includes(s) || (u.regNo && u.regNo.toLowerCase().includes(s));
     const matchLevel = levelFilter ? u.codingLevel === levelFilter : true;
     const matchClan = clanFilter ? u.clan?._id === clanFilter || u.clan === clanFilter : true;
-    return matchSearch && matchLevel && matchClan && u.role !== 'admin'; // hide admins maybe? Or keep them
+    return matchSearch && matchLevel && matchClan;
   });
 
   const getStatusDot = (status) => {
@@ -186,25 +190,29 @@ const MembersTab = () => {
                        <div className="absolute right-10 top-4 w-48 bg-[#121218] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
                          <div className="p-1">
                             <button 
-                              onClick={() => updateRoleMutation.mutate({ userId: user._id, role: 'clan-chief' })}
-                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2"
+                              onClick={() => canManageUsers && updateRoleMutation.mutate({ userId: user._id, role: 'clan-chief' })}
+                              disabled={!canManageUsers}
+                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
                             >
                               <FiShield className="text-blue-400" /> Make Clan Chief
                             </button>
                             <button 
-                              onClick={() => updateRoleMutation.mutate({ userId: user._id, role: 'member' })}
-                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2"
+                              onClick={() => canManageUsers && updateRoleMutation.mutate({ userId: user._id, role: 'member' })}
+                              disabled={!canManageUsers}
+                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
                             >
                               <FiUserCheck className="text-green-400" /> Make Member
                             </button>
                             <div className="h-px bg-white/10 my-1 mx-2" />
                             <button 
                               onClick={() => {
+                                if (!canManageUsers) return;
                                 if(window.confirm(`Ban user ${user.username}?`)) {
                                   banUserMutation.mutate(user._id);
                                 }
                               }}
-                              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded flex items-center gap-2"
+                              disabled={!canManageUsers}
+                              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded flex items-center gap-2 disabled:opacity-50"
                             >
                               <FiUserX /> Ban User
                             </button>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import LoadingScreen from './LoadingScreen';
+import { canAccessChiefPanel } from '../lib/permissions';
 
 const ClanChiefRoute = ({ children }) => {
   const { isAuthenticated, role, loading, user } = useAuth();
@@ -14,9 +15,7 @@ const ClanChiefRoute = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  // Chief can be a clan-chief, admin, or have the isChief flag
-  const isChief = role === 'clan-chief' || role === 'admin' || user?.isChief;
-  if (!isChief) {
+  if (!canAccessChiefPanel(user || { role })) {
     return <Navigate to="/dashboard" />;
   }
 

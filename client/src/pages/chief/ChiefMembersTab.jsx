@@ -6,15 +6,21 @@ import { FiUsers, FiSearch, FiAlertTriangle, FiX, FiAward, FiEdit2 } from 'react
 import BaseCard from '../../components/BaseCard';
 import MemberHoverCard from '../../components/MemberHoverCard';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/useAuth';
+import { canManageClanMembers, canIssueWarning, canManageOwnClan, isClanArchived } from '../../lib/permissions';
 
 const ChiefMembersTab = ({ clan }) => {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
   const [levelModal, setLevelModal] = useState({ open: false, user: null });
   const [warnModal, setWarnModal] = useState({ open: false, user: null });
   const [selectedLevel, setSelectedLevel] = useState('');
   const [warnMessage, setWarnMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const isArchived = isClanArchived(clan);
+  const canManageMembers = canManageClanMembers(currentUser, clan);
+  const canManageClan = canManageOwnClan(currentUser, clan);
 
   const levelMutation = useMutation({
     mutationFn: async ({ userId, level }) => {
@@ -46,10 +52,18 @@ const ChiefMembersTab = ({ clan }) => {
 
   if (!clan) return null;
 
-  if (clan.status === 'archived') {
+  if (isArchived) {
     return (
       <BaseCard className="p-6 border-amber-500/20 bg-amber-500/10 text-amber-200 text-sm font-bold flex items-center gap-2">
         <FiAlertTriangle /> This clan is archived. Member management is disabled until an admin restores it.
+      </BaseCard>
+    );
+  }
+
+  if (!canManageClan) {
+    return (
+      <BaseCard className="p-6 border-red-500/20 bg-red-500/10 text-red-200 text-sm font-bold flex items-center gap-2">
+        <FiAlertTriangle /> Your chief role is not mapped to this clan, so member management is unavailable.
       </BaseCard>
     );
   }
@@ -140,8 +154,13 @@ const ChiefMembersTab = ({ clan }) => {
                   <td className="p-4 text-sm text-secondary font-mono">{user.regNo || 'N/A'}</td>
                   <td className="p-4 text-sm">
                     <button 
-                      onClick={() => { setLevelModal({ open: true, user }); setSelectedLevel(user.codingLevel || 'Beginner'); }}
-                      className="group relative inline-flex items-center gap-1.5 px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-xs font-bold text-tertiary hover:text-white border border-white/10 transition-all uppercase tracking-widest"
+                      onClick={() => {
+                        if (!canManageMembers) return;
+                        setLevelModal({ open: true, user });
+                        setSelectedLevel(user.codingLevel || 'Beginner');
+                      }}
+                      disabled={!canManageMembers}
+                      className="group relative inline-flex items-center gap-1.5 px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-xs font-bold text-tertiary hover:text-white border border-white/10 transition-all uppercase tracking-widest disabled:opacity-50"
                       title="Click to change level"
                     >
                       {user.codingLevel || 'Beginner'}
@@ -166,8 +185,12 @@ const ChiefMembersTab = ({ clan }) => {
                   </td>
                   <td className="p-4 text-right pr-6">
                     <button 
-                      onClick={() => setWarnModal({ open: true, user })}
-                      className={`p-2 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-2 ${isWarned ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-white/5 text-secondary hover:text-red-400 hover:bg-red-500/10'}`}
+                      onClick={() => {
+                        if (!canIssueWarning(currentUser, user, clan)) return;
+                        setWarnModal({ open: true, user });
+                      }}
+                      disabled={!canIssueWarning(currentUser, user, clan) || !canManageMembers}
+                      className={`p-2 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-2 disabled:opacity-50 ${isWarned ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-white/5 text-secondary hover:text-red-400 hover:bg-red-500/10'}`}
                       title="Issue Warning"
                     >
                       <FiAlertTriangle /> {isWarned ? 'Warn Again' : 'Warn'}
@@ -207,10 +230,10 @@ const ChiefMembersTab = ({ clan }) => {
                 </div>
                 <div className="flex justify-end gap-3">
                   <button onClick={() => setLevelModal({ open: false, user: null })} className="px-4 py-2 text-sm text-secondary hover:text-white">Cancel</button>
-                  <button 
+                    <button 
                     onClick={() => levelMutation.mutate({ userId: levelModal.user._id, level: selectedLevel })}
-                    disabled={levelMutation.isPending}
-                    className="btn-primary px-4 py-2 text-sm"
+                    disabled={levelMutation.isPending || !canManageMembers}
+                    className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
                   >
                     {levelMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -245,8 +268,8 @@ const ChiefMembersTab = ({ clan }) => {
                   <button onClick={() => setWarnModal({ open: false, user: null })} className="px-4 py-2 text-sm text-secondary hover:text-white">Cancel</button>
                   <button 
                     onClick={() => warnMutation.mutate({ userId: warnModal.user._id, message: warnMessage })}
-                    disabled={warnMutation.isPending || !warnMessage}
-                    className="btn-primary px-4 py-2 text-sm !bg-red-500 hover:!bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                    disabled={warnMutation.isPending || !warnMessage || !canIssueWarning(currentUser, warnModal.user, clan)}
+                    className="btn-primary px-4 py-2 text-sm !bg-red-500 hover:!bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.3)] disabled:opacity-50"
                   >
                     {warnMutation.isPending ? 'Sending...' : 'Send Warning Email'}
                   </button>

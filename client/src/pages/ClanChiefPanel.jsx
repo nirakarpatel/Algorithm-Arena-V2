@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { api } from '../lib/api';
 
 import PageHeader from '../components/PageHeader';
+import PermissionLegend from '../components/PermissionLegend';
 import ChiefDashboardTab from './chief/ChiefDashboardTab';
 import ChiefMembersTab from './chief/ChiefMembersTab';
 import ChiefReviewTab from './chief/ChiefReviewTab';
@@ -66,6 +67,31 @@ const ClanChiefPanel = () => {
           );
         })}
       </div>
+
+      <PermissionLegend
+        title="Clan Access Rules"
+        note="Actions below are filtered by the current clan mapping and archive status."
+        items={[
+          {
+            icon: FiShield,
+            iconClass: 'bg-blue-500/10 text-blue-400',
+            label: 'Mapped chief access',
+            description: 'Chief-only actions work only when your clan-chief role is linked to this clan.',
+          },
+          {
+            icon: FiAlertCircle,
+            iconClass: 'bg-amber-500/10 text-amber-300',
+            label: 'Archived clan lock',
+            description: 'Archived clans are read-only until an admin restores them.',
+          },
+          {
+            icon: FiUsers,
+            iconClass: 'bg-emerald-500/10 text-emerald-300',
+            label: 'Member management',
+            description: 'Level changes, warnings, notices, and reviews are limited to your assigned clan.',
+          },
+        ]}
+      />
 
       {/* Tab Content Area */}
       <AnimatePresence mode="wait">
