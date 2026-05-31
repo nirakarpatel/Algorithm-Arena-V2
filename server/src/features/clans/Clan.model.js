@@ -26,29 +26,6 @@ const clanSchema = new mongoose.Schema({
     ref: 'User',
     default: null,
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null,
-  },
-  archivedAt: {
-    type: Date,
-    default: null,
-  },
-  archivedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null,
-  },
-  restoredAt: {
-    type: Date,
-    default: null,
-  },
-  restoredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null,
-  },
   members: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
