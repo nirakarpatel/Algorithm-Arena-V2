@@ -51,6 +51,54 @@ router.delete('/:id/notices/:index', protect, validate(clanNoticeIndexParamsSche
 
 // Admin-only routes
 router.get('/:id/admin-stats', protect, admin, validate(clanIdParamsSchema), getClanAdminStats);
+
+// SPECIAL: Emergency index repair endpoint (admin only)
+router.post('/__repair-indexes__', protect, admin, async (req, res) => {
+  try {
+    const db = require('mongoose').connection.db;
+    const clanCollection = db.collection('clans');
+
+    const currentIndexes = await clanCollection.getIndexes();
+    const results = { dropped: [], created: [], error: null };
+
+    // Force drop all non-_id indexes
+    for (const [indexName, spec] of Object.entries(currentIndexes)) {
+      if (indexName === '_id_') continue;
+      try {
+        await clanCollection.dropIndex(indexName);
+        results.dropped.push(indexName);
+      } catch (err) {
+        // Continue anyway
+      }
+    }
+
+    // Create partial indexes
+    try {
+      await clanCollection.createIndex(
+        { name: 1 },
+        { unique: true, partialFilterExpression: { status: 'active' }, background: true }
+      );
+      results.created.push('name_partial');
+    } catch (err) {
+      results.error = err.message;
+    }
+
+    try {
+      await clanCollection.createIndex(
+        { tag: 1 },
+        { unique: true, partialFilterExpression: { status: 'active' }, background: true }
+      );
+      results.created.push('tag_partial');
+    } catch (err) {
+      results.error = err.message;
+    }
+
+    res.json({ success: true, message: 'Index repair triggered', results });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.post('/', protect, admin, validate(clanCreateSchema), createClan);
 router.put('/:id', protect, admin, validate(clanIdParamsSchema), validate(clanUpdateSchema), updateClan);
 router.patch('/:id/archive', protect, validate(clanIdParamsSchema), archiveClan);
