@@ -83,7 +83,7 @@ const createApp = () => {
   app.use(morgan(':method :url :status :response-time ms reqId=:request-id'));
 
   const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs: 1 * 60 * 1000,
     max: isNonProductionEnv ? 1000 : 200,
     standardHeaders: true,
     legacyHeaders: false,
@@ -93,7 +93,7 @@ const createApp = () => {
 
   // Stricter limiter for auth endpoints to prevent brute-force attacks
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs: 1 * 60 * 1000,
     max: isNonProductionEnv ? 200 : 10,
     standardHeaders: true,
     legacyHeaders: false,

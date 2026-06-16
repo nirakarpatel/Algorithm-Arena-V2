@@ -1,5 +1,5 @@
-Website:- https://algorithm-arena.one
 
+<<<<<<< HEAD
 MERN Stack for Algorithm-Arena
 
 # PROJECT_OVERVIEW.md
