@@ -16,7 +16,7 @@ const AdminRoute = ({ children }) => {
 
   const isAdmin = role === 'admin';
   if (!isAdmin) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/login" />;
   }
 
   return children;

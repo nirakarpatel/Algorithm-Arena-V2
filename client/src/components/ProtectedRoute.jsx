@@ -4,13 +4,17 @@ import { useAuth } from "../context/useAuth";
 import LoadingScreen from "./LoadingScreen";
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, role, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen label="Restoring session..." />;
   }
 
   if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (role === 'admin') {
     return <Navigate to="/login" />;
   }
   return children;

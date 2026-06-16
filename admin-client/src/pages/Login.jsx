@@ -64,6 +64,13 @@ const Login = ({ onLoginSuccess }) => {
       const res = await api.post('/api/auth/login', formData);
       const payload = res.data?.data;
 
+      if (payload?.role !== 'admin') {
+        toast.error('Access restricted to Admin accounts only.');
+        setErrors({ form: 'Access restricted to Admin accounts only.' });
+        api.post('/api/auth/logout').catch(() => null);
+        return;
+      }
+
       login(payload);
 
       if (typeof onLoginSuccess === 'function') {

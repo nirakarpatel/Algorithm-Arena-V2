@@ -28,6 +28,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.get('/api/auth/me');
       const me = res.data?.data;
+      if (me?.role !== 'admin') {
+        clearSession();
+        return null;
+      }
       const normalizedUser = {
         ...me,
         id: me?._id,
