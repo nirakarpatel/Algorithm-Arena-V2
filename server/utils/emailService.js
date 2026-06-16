@@ -13,6 +13,11 @@ const createTransporter = () => {
 
 const sendEmail = async (to, subject, html) => {
   try {
+    if (process.env.NODE_ENV === 'test') {
+      console.log(`[TEST MOCK] Email mock-sent to ${to} (Subject: ${subject})`);
+      return { messageId: 'test-mock-message-id' };
+    }
+
     const transporter = createTransporter();
     const mailOptions = {
       from: process.env.SMTP_FROM || '"Algorithm Arena" <noreply@algorithm-arena.com>',

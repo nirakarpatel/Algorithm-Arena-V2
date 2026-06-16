@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUser, FiCheck, FiX, FiArrowRight, FiLoader, FiFileText, FiHash, FiBookOpen, FiClock, FiGrid } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -113,7 +113,7 @@ const ClaimUsername = () => {
     setError('');
 
     try {
-      const res = await api.post('/api/auth/claim-username', {
+      await api.post('/api/auth/claim-username', {
         username,
         name: name.trim(),
         regNo: regNo.trim(),
