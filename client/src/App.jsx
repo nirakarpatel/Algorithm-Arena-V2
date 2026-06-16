@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -13,7 +13,7 @@ import { useAuth } from './context/useAuth';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
+const ClaimUsername = lazy(() => import('./pages/ClaimUsername'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ChallengeDetails = lazy(() => import('./pages/ChallengeDetails'));
 const SubmissionDetails = lazy(() => import('./pages/SubmissionDetails'));
@@ -48,7 +48,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
 
           <Route
             element={
@@ -57,6 +57,7 @@ function App() {
               </ProtectedRoute>
             }
           >
+            <Route path="/claim-username" element={<ClaimUsername />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/clans" element={<Clans />} />

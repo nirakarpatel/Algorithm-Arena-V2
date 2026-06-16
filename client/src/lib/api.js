@@ -15,16 +15,20 @@ const isAuthFlowRequest = (url = '') => {
   return (
     url.includes('/api/auth/login') ||
     url.includes('/api/auth/register') ||
+    url.includes('/api/auth/google') ||
     url.includes('/api/auth/refresh') ||
     url.includes('/api/auth/logout')
   );
 };
 
-const normalizeUser = (payload) => ({
-  id: payload?._id || null,
-  username: payload?.username || null,
-  role: payload?.role || 'user',
-});
+const normalizeUser = (payload) => {
+  const user = payload?.user || payload;
+  return {
+    id: user?.id || user?._id || null,
+    username: user?.username || null,
+    role: user?.role || 'user',
+  };
+};
 
 const updateSessionFromPayload = (payload) => {
   const token = payload?.token || payload?.accessToken;
@@ -32,7 +36,8 @@ const updateSessionFromPayload = (payload) => {
     localStorage.setItem('token', token);
   }
 
-  if (payload?._id) {
+  const userObj = payload?.user || (payload?._id ? payload : null);
+  if (userObj) {
     localStorage.setItem('user', JSON.stringify(normalizeUser(payload)));
   }
 

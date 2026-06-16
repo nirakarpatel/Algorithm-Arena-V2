@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
         profilePicture: me?.profilePicture,
         isChief: me?.isChief,
         clanId: me?.clanId,
+        usernameSet: me?.usernameSet ?? true,
       };
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
@@ -66,16 +67,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((payload) => {
     const token = payload?.token || payload?.accessToken;
+    const userObj = payload?.user || payload;
     const normalizedUser = {
-      ...payload,
-      id: payload?._id,
-      username: payload?.username,
-      role: payload?.role,
-      status: payload?.status,
-      points: payload?.points,
-      profilePicture: payload?.profilePicture,
-      isChief: payload?.isChief,
-      clanId: payload?.clanId,
+      ...userObj,
+      id: userObj?.id || userObj?._id,
+      username: userObj?.username,
+      role: userObj?.role,
+      status: userObj?.status,
+      points: userObj?.points,
+      profilePicture: userObj?.profilePicture,
+      isChief: userObj?.isChief,
+      clanId: userObj?.clanId,
+      usernameSet: userObj?.usernameSet ?? true,
     };
 
     if (token) {

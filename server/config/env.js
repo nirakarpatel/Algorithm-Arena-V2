@@ -25,6 +25,8 @@ const envSchema = z
     REFRESH_COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
     COOKIE_SECURE: cookieSecureSchema,
     CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
+    FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
+    SUPER_ADMIN_EMAIL: z.string().email().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.JWT_ACCESS_SECRET && !data.JWT_SECRET) {
@@ -50,6 +52,14 @@ const envSchema = z
         message: 'COOKIE_SECURE must be true when REFRESH_COOKIE_SAMESITE is "none"',
       });
     }
+
+    if (data.NODE_ENV === 'production' && !data.SUPER_ADMIN_EMAIL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUPER_ADMIN_EMAIL'],
+        message: 'SUPER_ADMIN_EMAIL must be set explicitly in production',
+      });
+    }
   });
 
 const parsed = envSchema.safeParse(process.env);
@@ -68,6 +78,7 @@ const env = Object.freeze({
       ? false
       : parsed.data.COOKIE_SECURE ?? parsed.data.NODE_ENV === 'production',
   CORS_ORIGINS: parsed.data.CORS_ORIGINS.split(',').map((origin) => origin.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean),
+  SUPER_ADMIN_EMAIL: parsed.data.SUPER_ADMIN_EMAIL || 'akr6447@gmail.com',
 });
 
-module.exports = { env };
+module.exports = { env }; // reload trigger

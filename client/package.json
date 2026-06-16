@@ -24,6 +24,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.4.5",
     "file-saver": "^2.0.5",
+    "firebase": "^12.14.0",
     "framer-motion": "^12.34.0",
     "html-to-image": "^1.11.13",
     "postprocessing": "^6.39.1",

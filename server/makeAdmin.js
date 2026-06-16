@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('./models/User');
+const User = require('./src/features/users/User.model');
 require('dotenv').config();
 
 const dns = require('dns');

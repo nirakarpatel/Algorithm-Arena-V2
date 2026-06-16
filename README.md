@@ -225,3 +225,47 @@ The following items were mentioned in product context but are **not implemented 
 - Removed fallback logic that injected mock challenges and mock members when backend requests returned empty results or failed.
 - The website now cleanly renders standard empty state pages instead of displaying local mock data.
 - Cleared all unused mock imports to maintain a 100% clean linter and production build.
+
+### 8. Firebase Google Authentication & Admin Restriction
+- Migrated authentication from password login to Firebase Google Sign-In with backend verification of Google `idToken`.
+- Automatically links existing local email accounts to Google login upon first sign-in.
+- Restricts the Admin Panel (`admin-client`) access strictly to users with `admin` and `superAdmin` roles.
+- Prevents `admin` and `superAdmin` users from logging in or registering on the participant website.
+- Removed the inline dropdown role-promotion buttons from the members table; elevation to the Admin role is strictly pre-authorized via Gmail address addition.
+
+### 9. Hardened Onboarding Security & Audit Log
+- Added a sparse unique index on `regNo` in MongoDB to enforce strict registration number uniqueness.
+- Differentiated backend conflict error responses to return specific `"Registration number is already registered"` errors instead of unified `"Username or registration number is already taken"` messages, preventing frontend UI lockouts.
+- Upgraded the username availability check to decode JWT headers and exclude the authenticated user themselves from lookup, allowing migrated users to claim their own existing codename.
+- Enforced a 5-minute Google re-authentication window for sensitive administrator actions (such as role modifications).
+- Created an immutable `AuditLog` collection to store and track admin operations (warnings, bans, role updates, and pre-authorizations) with strict database pre-hooks preventing modifications or deletions.
+
+## Production Environment Variables Guide
+
+### Backend Server (Render)
+Pasted into **Render Web Service** Environment configuration:
+```env
+NODE_ENV=production
+MONGO_URI=mongodb+srv://<username>:<password>@cluster0.mdgjeuk.mongodb.net/test?appName=Cluster0
+JWT_SECRET=<your-secure-jwt-secret-key>
+BOOTSTRAP_ADMIN_KEY=<your-secure-bootstrap-key>
+ACCESS_TOKEN_TTL=15m
+REFRESH_TOKEN_TTL_DAYS=14
+REFRESH_COOKIE_SAMESITE=none
+COOKIE_SECURE=true
+SUPER_ADMIN_EMAIL=<your-super-admin-email@gmail.com>
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,https://your-participant-site.vercel.app,https://your-admin-site.vercel.app
+FIREBASE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"your-firebase-project", ... }
+```
+
+### Participant Client & Admin Client (Vercel)
+Pasted into **Vercel Project Settings** under Environment Variables:
+```env
+VITE_FIREBASE_API_KEY=<your-firebase-api-key>
+VITE_FIREBASE_AUTH_DOMAIN=<your-firebase-project-id>.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=<your-firebase-project-id>
+VITE_FIREBASE_STORAGE_BUCKET=<your-firebase-project-id>.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=<your-firebase-messaging-sender-id>
+VITE_FIREBASE_APP_ID=<your-firebase-app-id>
+VITE_API_BASE_URL=https://your-backend-app.onrender.com
+```

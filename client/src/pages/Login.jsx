@@ -1,18 +1,18 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiArrowRight, FiLock, FiMail } from 'react-icons/fi';
+import { FiArrowRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../lib/firebase';
 import Card from '../components/Card';
 import PixelBlast from '../components/PixelBlast';
-import ThemeToggle from '../components/ThemeToggle';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
 import Logo from '../components/Logo';
 
 const Login = ({ onLoginSuccess }) => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -37,51 +37,57 @@ const Login = ({ onLoginSuccess }) => {
     return () => observer.disconnect();
   }, []);
 
-  const isValid = useMemo(() => {
-    return formData.email.trim().length > 0 && formData.password.length > 0;
-  }, [formData]);
-
-  const validate = () => {
-    const nextErrors = {};
-    if (!formData.email.trim()) nextErrors.email = 'Email is required';
-    if (!formData.password) nextErrors.password = 'Password is required';
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-
+  const handleGoogleSignIn = async () => {
     setLoading(true);
+    setError('');
 
     try {
-      const res = await api.post('/api/auth/login', formData);
+      // 1. Firebase Google popup
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+
+      // 2. Send Firebase ID token to our server
+      const res = await api.post('/api/auth/google', { idToken });
       const payload = res.data?.data;
 
-      if (payload?.role === 'admin') {
-        toast.error('Admin accounts are restricted to the Command Center only.');
-        setErrors({ form: 'Admin accounts are restricted to the Command Center only.' });
+      // Block Admins / Super Admins from logging in on the participant site
+      const userRole = payload?.user?.role || payload?.role;
+      if (userRole === 'admin' || userRole === 'superAdmin') {
+        toast.error('Admins must log in through the Admin Command Center.');
+        setError('Admins are not allowed to log in on the participant website.');
         api.post('/api/auth/logout').catch(() => null);
+        setLoading(false);
         return;
       }
 
+      // 3. Store session
       login(payload);
 
       if (typeof onLoginSuccess === 'function') {
         onLoginSuccess();
       }
 
-      toast.success('Welcome back');
-      navigate('/dashboard');
+      // 4. Route based on whether username is set
+      const isNewUser = payload?.isNewUser || payload?.user?.isNewUser;
+      const usernameSet = payload?.user?.usernameSet ?? payload?.usernameSet;
+
+      if (isNewUser || !usernameSet) {
+        toast.success('Welcome! Let\'s pick a username.');
+        navigate('/claim-username');
+      } else {
+        toast.success('Welcome back');
+        navigate('/dashboard');
+      }
     } catch (err) {
-      toast.error(err.userMessage || 'Invalid credentials');
-      setErrors({ form: err.userMessage || 'Invalid credentials' });
+      // Don't show error if user just closed the popup
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        setLoading(false);
+        return;
+      }
+
+      const message = err.userMessage || err?.response?.data?.message || 'Sign in failed';
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -89,7 +95,6 @@ const Login = ({ onLoginSuccess }) => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-between p-4 relative overflow-hidden">
-
 
       <div className="absolute inset-0 z-0 pointer-events-none">
         <PixelBlast
@@ -126,92 +131,73 @@ const Login = ({ onLoginSuccess }) => {
             <h2 className="text-sm font-medium text-secondary">Welcome back, Pilot.</h2>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            {errors.form && (
+          <div className="space-y-6">
+            {error && (
               <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                {errors.form}
+                {error}
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="field-label">Email Address</label>
-              <div className="relative group">
-                <FiMail className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400"
-                  placeholder="name@example.com"
-                  aria-invalid={Boolean(errors.email)}
-                />
-              </div>
-              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <label className="field-label">Password</label>
-              <div className="relative group">
-                <FiLock className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400"
-                  placeholder="********"
-                  aria-invalid={Boolean(errors.password)}
-                />
-              </div>
-              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
-            </div>
-
             <button
-              type="submit"
-              disabled={loading || !isValid}
-              className="w-full py-3.5 rounded-xl bg-accent hover:bg-accent-glow text-white font-bold transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-white dark:bg-white/10 hover:bg-gray-50 dark:hover:bg-white/15 border border-glass-border text-primary font-bold transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
                   Authenticating...
                 </>
               ) : (
                 <>
-                  Enter Arena <FiArrowRight />
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Continue with Google
                 </>
               )}
             </button>
-          </form>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-glass-border"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-4 bg-card text-tertiary">Secured by Firebase</span>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-tertiary leading-relaxed">
+              By signing in, you agree to join the Algorithm Arena community.
+              Your Google profile will be used to create your account.
+            </p>
+          </div>
 
           <div className="mt-6 text-center pt-6 border-t border-glass-border">
             <p className="text-sm text-secondary">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-accent hover:underline">
-                Sign up
-              </Link>
+              New here? Just click the button above — {' '}
+              <span className="font-semibold text-accent">
+                we'll set up your profile next <FiArrowRight className="inline" />
+              </span>
             </p>
           </div>
         </Card>
       </div>
 
       {/* Footer */}
-
-        <p className="text-sm text-secondary">
-          Copyright 2026 Algorithm Arena. Built for{" "}
-          <span className="text-primary font-semibold">
-            GDG On Campus - SOA ITER
-          </span>
-          .
-        </p>
-
+      <p className="text-sm text-secondary">
+        Copyright 2026 Algorithm Arena. Built for{" "}
+        <span className="text-primary font-semibold">
+          GDG On Campus - SOA ITER
+        </span>
+        .
+      </p>
     </div>
   );
 };
 
 export default Login;
-

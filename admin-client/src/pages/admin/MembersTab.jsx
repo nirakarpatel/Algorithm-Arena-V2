@@ -8,6 +8,8 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
 import { canManageClanGlobally } from '../../lib/permissions';
 import toast from 'react-hot-toast';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../../lib/firebase';
 
 import { USE_MOCK } from '../../lib/mockData';
 
@@ -19,6 +21,49 @@ const MembersTab = () => {
   const [clanFilter, setClanFilter] = useState('');
   const [menuOpen, setMenuOpen] = useState(null);
   const canManageUsers = canManageClanGlobally(user);
+  const [adminEmail, setAdminEmail] = useState('');
+
+  const addAdminMutation = useMutation({
+    mutationFn: async (email) => {
+      return api.post('/api/users/add-admin', { email });
+    },
+    onSuccess: (res) => {
+      toast.success(res.data?.message || "Admin access granted successfully");
+      setAdminEmail('');
+      queryClient.invalidateQueries(['admin-all-users']);
+    }
+  });
+
+  const handleAddAdmin = async (e) => {
+    e.preventDefault();
+    if (!adminEmail) return;
+
+    try {
+      await addAdminMutation.mutateAsync(adminEmail);
+    } catch (err) {
+      const isReauth = err.response?.status === 403 && (err.response?.data?.reauthRequired || err.response?.data?.error?.includes('Re-authentication') || err.response?.data?.message?.includes('Re-authentication'));
+      if (isReauth) {
+        if (window.confirm("For security, adding an admin requires you to re-authenticate with Google. Click OK to authenticate now.")) {
+          try {
+            toast.loading("Opening Google sign-in...", { id: 'reauth-admin' });
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken(true);
+            toast.loading("Verifying session...", { id: 'reauth-admin' });
+            await api.post('/api/auth/confirm-session', { idToken });
+            toast.success("Re-authenticated! Retrying admin promotion...", { id: 'reauth-admin' });
+            
+            // Retry the operation
+            await addAdminMutation.mutateAsync(adminEmail);
+          } catch (reauthErr) {
+            console.error("Re-authentication failed", reauthErr);
+            toast.error(reauthErr?.response?.data?.message || reauthErr?.message || "Re-authentication failed", { id: 'reauth-admin' });
+          }
+        }
+      } else {
+        toast.error(err.response?.data?.message || "Failed to grant admin access");
+      }
+    }
+  };
 
   const usersQuery = useQuery({
     queryKey: ['admin-all-users'],
@@ -50,9 +95,6 @@ const MembersTab = () => {
       toast.success("Role updated successfully");
       queryClient.invalidateQueries(['admin-all-users']);
       setMenuOpen(null);
-    },
-    onError: () => {
-      toast.error("Failed to update role");
     }
   });
 
@@ -69,6 +111,46 @@ const MembersTab = () => {
       toast.error("Failed to ban user");
     }
   });
+
+  const handleRoleChange = async (targetUser, role) => {
+    if (!canManageUsers) return;
+
+    const actionText = role === 'admin' 
+      ? `elevate ${targetUser.username} to Admin` 
+      : role === 'clan-chief'
+      ? `elevate ${targetUser.username} to Clan Chief`
+      : `demote ${targetUser.username} to Member`;
+
+    if (!window.confirm(`Are you sure you want to ${actionText}?`)) {
+      return;
+    }
+
+    try {
+      await updateRoleMutation.mutateAsync({ userId: targetUser._id, role });
+    } catch (err) {
+      const isReauth = err.response?.status === 403 && (err.response?.data?.reauthRequired || err.response?.data?.error?.includes('Re-authentication') || err.response?.data?.message?.includes('Re-authentication'));
+      if (isReauth) {
+        if (window.confirm("For security, role changes require you to re-authenticate with Google. Click OK to authenticate now.")) {
+          try {
+            toast.loading("Opening Google sign-in...", { id: 'reauth' });
+            const result = await signInWithPopup(auth, googleProvider);
+            const idToken = await result.user.getIdToken(true);
+            toast.loading("Verifying session...", { id: 'reauth' });
+            await api.post('/api/auth/confirm-session', { idToken });
+            toast.success("Re-authenticated! Retrying role change...", { id: 'reauth' });
+            
+            // Retry the operation
+            await updateRoleMutation.mutateAsync({ userId: targetUser._id, role });
+          } catch (reauthErr) {
+            console.error("Re-authentication failed", reauthErr);
+            toast.error(reauthErr?.response?.data?.message || reauthErr?.message || "Re-authentication failed", { id: 'reauth' });
+          }
+        }
+      } else {
+        toast.error(err.response?.data?.message || "Failed to update role");
+      }
+    }
+  };
 
   // Filter users
   const filteredUsers = (usersQuery.data || []).filter(u => {
@@ -127,6 +209,39 @@ const MembersTab = () => {
           </div>
         </div>
       </div>
+
+      {canManageUsers && (
+        <BaseCard className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-md font-bold text-primary flex items-center gap-2">
+                <FiShield className="text-red-400" /> Pre-authorize Google Admin Email
+              </h3>
+              <p className="text-xs text-secondary">
+                Enter a Google email address to pre-authorize Admin privileges.
+                Registered users will be promoted immediately. Unregistered users will be granted access upon signup.
+              </p>
+            </div>
+            <form onSubmit={handleAddAdmin} className="flex gap-2 w-full md:w-auto min-w-[320px]">
+              <input
+                type="email"
+                value={adminEmail}
+                onChange={e => setAdminEmail(e.target.value)}
+                placeholder="e.g. admin@gmail.com"
+                className="field-input text-sm flex-1 h-10"
+                required
+              />
+              <button
+                type="submit"
+                disabled={addAdminMutation.isPending}
+                className="px-4 py-2 text-sm h-10 flex items-center justify-center gap-1.5 whitespace-nowrap bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-xl"
+              >
+                {addAdminMutation.isPending ? 'Granting...' : 'Grant Admin'}
+              </button>
+            </form>
+          </div>
+        </BaseCard>
+      )}
 
       <BaseCard className="p-0 overflow-hidden">
         <div className="overflow-x-auto min-h-[400px]">
@@ -189,33 +304,45 @@ const MembersTab = () => {
                     {menuOpen === user._id && (
                        <div className="absolute right-10 top-4 w-48 bg-[#121218] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
                          <div className="p-1">
-                            <button 
-                              onClick={() => canManageUsers && updateRoleMutation.mutate({ userId: user._id, role: 'clan-chief' })}
-                              disabled={!canManageUsers}
-                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
-                            >
-                              <FiShield className="text-blue-400" /> Make Clan Chief
-                            </button>
-                            <button 
-                              onClick={() => canManageUsers && updateRoleMutation.mutate({ userId: user._id, role: 'member' })}
-                              disabled={!canManageUsers}
-                              className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
-                            >
-                              <FiUserCheck className="text-green-400" /> Make Member
-                            </button>
-                            <div className="h-px bg-white/10 my-1 mx-2" />
-                            <button 
-                              onClick={() => {
-                                if (!canManageUsers) return;
-                                if(window.confirm(`Ban user ${user.username}?`)) {
-                                  banUserMutation.mutate(user._id);
-                                }
-                              }}
-                              disabled={!canManageUsers}
-                              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded flex items-center gap-2 disabled:opacity-50"
-                            >
-                              <FiUserX /> Ban User
-                            </button>
+                           {user.role === 'superAdmin' ? (
+                             <div className="px-3 py-2 text-xs text-tertiary italic flex items-center gap-2">
+                               <FiShield className="text-yellow-400" /> Protected Super Admin
+                             </div>
+                           ) : (
+                             <>
+                               <button 
+                                 onClick={() => handleRoleChange(user, 'clan-chief')}
+                                 disabled={!canManageUsers}
+                                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
+                               >
+                                 <FiShield className="text-blue-400" /> Make Clan Chief
+                               </button>
+                               <button 
+                                 onClick={() => handleRoleChange(user, 'user')}
+                                 disabled={!canManageUsers || user.role === 'user'}
+                                 className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
+                               >
+                                 <FiUserCheck className="text-green-400" /> Make Member
+                               </button>
+                             </>
+                           )}
+                           <div className="h-px bg-white/10 my-1 mx-2" />
+                           <button 
+                             onClick={() => {
+                               if (!canManageUsers) return;
+                               if (user.role === 'superAdmin') {
+                                 toast.error("Cannot ban a superAdmin");
+                                 return;
+                               }
+                               if(window.confirm(`Ban user ${user.username}?`)) {
+                                 banUserMutation.mutate(user._id);
+                               }
+                             }}
+                             disabled={!canManageUsers || user.role === 'superAdmin'}
+                             className="w-full text-left px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded flex items-center gap-2 disabled:opacity-50"
+                           >
+                             <FiUserX /> Ban User
+                           </button>
                          </div>
                        </div>
                     )}

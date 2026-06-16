@@ -1,13 +1,38 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true,
+  },
+  authProvider: {
+    type: String,
+    enum: ['google', 'local'],
+    default: 'google',
+  },
   username: {
     type: String,
-    required: [true, 'Please add a username'],
     unique: true,
+    sparse: true,
     trim: true,
     minlength: [3, 'Username must be at least 3 characters'],
+    maxlength: [30, 'Username must be at most 30 characters'],
+  },
+  usernameSet: {
+    type: Boolean,
+    default: false,
+  },
+  name: {
+    type: String,
+    default: '',
+    trim: true,
+    maxlength: 60,
+    validate: {
+      validator: (v) => !v || /^[a-zA-Z\s'\-\.]+$/.test(v),
+      message: 'Name contains invalid characters',
+    },
   },
   email: {
     type: String,
@@ -20,15 +45,9 @@ const userSchema = new mongoose.Schema({
       'Please add a valid email',
     ],
   },
-  password: {
-    type: String,
-    required: [true, 'Please add a password'],
-    minlength: [6, 'Password must be at least 6 characters'],
-    select: false, // Security: never return password by default
-  },
   role: {
     type: String,
-    enum: ['user', 'moderator', 'admin', 'clan-chief'],
+    enum: ['user', 'moderator', 'admin', 'clan-chief', 'superAdmin'],
     default: 'user',
   },
   clan: {
@@ -42,7 +61,12 @@ const userSchema = new mongoose.Schema({
   },
   regNo: {
     type: String,
-    default: '',
+    unique: true,
+    sparse: true,
+    validate: {
+      validator: (v) => !v || /^[a-zA-Z0-9]{6,20}$/.test(v),
+      message: 'Invalid registration number format',
+    },
   },
   codingLevel: {
     type: String,
@@ -74,30 +98,19 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  bio: { type: String, default: 'Expert Algorithmist' },
-  branch: { type: String, default: 'B.Tech CSE' },
-  year: { type: String, default: 'Third Year' },
-  section: { type: String, default: 'Section A' },
-  location: { type: String, default: 'Bhubaneswar, India' },
+  bio: { type: String, default: '' },
+  branch: { type: String, default: '', enum: ['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA', ''] },
+  year: { type: String, default: '', enum: ['First Year', 'Second Year', 'Third Year', 'Fourth Year', ''] },
+  section: { type: String, default: '' },
+  lastConfirmedAt: {
+    type: Date,
+    default: null,
+  },
+  location: { type: String, default: '' },
   github: { type: String, default: '' },
   twitter: { type: String, default: '' },
   linkedin: { type: String, default: '' },
   website: { type: String, default: '' },
 });
-
-// Encrypt password before saving.
-userSchema.pre('save', async function () {
-  if (!this.isModified('password')) {
-    return;
-  }
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
-
-// Compare provided password with stored hash.
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
-};
 
 module.exports = mongoose.model('User', userSchema);

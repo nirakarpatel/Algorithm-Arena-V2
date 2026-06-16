@@ -14,7 +14,7 @@ const AdminRoute = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'superAdmin';
   if (!isAdmin) {
     return <Navigate to="/login" />;
   }
