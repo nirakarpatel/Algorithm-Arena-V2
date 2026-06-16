@@ -1,5 +1,17 @@
 const express = require('express');
-const { googleAuth, claimUsername, checkUsername, refresh, logout, logoutAll, getMe, updateMe, confirmSession } = require('./auth.controller');
+const { 
+  googleAuth, 
+  claimUsername, 
+  checkUsername, 
+  refresh, 
+  logout, 
+  logoutAll, 
+  getMe, 
+  updateMe, 
+  confirmSession,
+  testRegister,
+  testLogin
+} = require('./auth.controller');
 const { protect } = require('../../../middleware/auth');
 const { validate } = require('../../../middleware/validate');
 const { googleAuthSchema, claimUsernameSchema, refreshSchema, updateMeSchema, confirmSessionSchema } = require('../../../validators/authSchemas');
@@ -15,5 +27,10 @@ router.put('/update-me', protect, validate(updateMeSchema), updateMe);
 router.post('/claim-username', protect, validate(claimUsernameSchema), claimUsername);
 router.get('/check-username/:username', checkUsername);
 router.post('/confirm-session', protect, validate(confirmSessionSchema), confirmSession);
+
+if (process.env.NODE_ENV === 'test') {
+  router.post('/register', testRegister);
+  router.post('/login', testLogin);
+}
 
 module.exports = router;

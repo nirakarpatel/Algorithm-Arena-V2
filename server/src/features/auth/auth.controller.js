@@ -509,6 +509,87 @@ const confirmSession = async (req, res, next) => {
   }
 };
 
+const testRegister = async (req, res, next) => {
+  try {
+    const { username, email } = req.body;
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      user = await User.create({
+        username,
+        email: email.toLowerCase(),
+        authProvider: 'google',
+        usernameSet: true,
+      });
+    }
+    const accessToken = signAccessToken(user._id);
+    const refreshToken = generateRefreshToken();
+    const refreshTokenHash = hashToken(refreshToken);
+
+    await RefreshToken.create({
+      userId: user._id,
+      tokenHash: refreshTokenHash,
+      expiresAt: getRefreshTokenExpiry(),
+      ipAddress: req.ip || null,
+      userAgent: req.get('user-agent') || null,
+    });
+
+    setRefreshTokenCookie(res, refreshToken);
+
+    return sendSuccess(res, {
+      statusCode: 201,
+      data: {
+        _id: user._id,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        token: accessToken,
+      },
+      message: 'Registration successful',
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const testLogin = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const accessToken = signAccessToken(user._id);
+    const refreshToken = generateRefreshToken();
+    const refreshTokenHash = hashToken(refreshToken);
+
+    await RefreshToken.create({
+      userId: user._id,
+      tokenHash: refreshTokenHash,
+      expiresAt: getRefreshTokenExpiry(),
+      ipAddress: req.ip || null,
+      userAgent: req.get('user-agent') || null,
+    });
+
+    setRefreshTokenCookie(res, refreshToken);
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: {
+        _id: user._id,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        token: accessToken,
+      },
+      message: 'Login successful',
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   googleAuth,
   claimUsername,
@@ -519,4 +600,6 @@ module.exports = {
   getMe,
   updateMe,
   confirmSession,
+  testRegister,
+  testLogin,
 };
