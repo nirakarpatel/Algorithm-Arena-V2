@@ -130,9 +130,12 @@ const ChallengeDetails = () => {
   
   // Resizer state
   const [leftWidth, setLeftWidth] = useState(45);
-  const [bottomHeight, setBottomHeight] = useState(224);
   const containerRef = useRef(null);
-  const rightPanelRef = useRef(null);
+
+  // Bottom (test/result) panel sizing — lets the editor grow when the
+  // test-case panel takes up too much vertical space.
+  const [bottomHeight, setBottomHeight] = useState(224); // matches old h-56
+  const [bottomCollapsed, setBottomCollapsed] = useState(false);
   
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark",
@@ -170,42 +173,29 @@ const ChallengeDetails = () => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
-
-  const handleVerticalMouseDown = (e) => {
+  const handleBottomResize = (e) => {
     e.preventDefault();
     const startY = e.clientY;
-    const startHeight = bottomHeight;
-
-    const handleMouseMove = (e) => {
-      const deltaY = e.clientY - startY;
-      let newHeight = startHeight - deltaY;
-
-      // Constrain height: min 40px (header only), max is height of right panel minus some padding
-      let maxHeight = 500;
-      if (rightPanelRef.current) {
-        const panelRect = rightPanelRef.current.getBoundingClientRect();
-        maxHeight = Math.max(100, panelRect.height - 120);
-      }
-
-      if (newHeight < 40) newHeight = 40;
-      if (newHeight > maxHeight) newHeight = maxHeight;
-
-      setBottomHeight(newHeight);
+    const startH = bottomHeight;
+    const handleMove = (ev) => {
+      // Dragging the handle up grows the panel (shrinks the editor); down shrinks it.
+      let h = startH - (ev.clientY - startY);
+      if (h < 80) h = 80;
+      if (h > 520) h = 520;
+      setBottomHeight(h);
     };
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handleUp = () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
     };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
   };
+
   const setCodeSnippet = (val) => {
     const newVal =
       typeof val === "function" ? val(codeByLang[language] || "") : val;
     setCodeByLang((prev) => ({ ...prev, [language]: newVal }));
-    setRunOutput(null); // Reset test results when code changes
   };
 
   // Logic: LocalStorage Persistence
@@ -307,50 +297,6 @@ const ChallengeDetails = () => {
     [codeSnippet],
   );
 
-  // Check if all test cases passed
-  const allTestsPassed = useMemo(() => {
-    const testCases = challengeQuery.data?.testCases ?? [];
-    if (testCases.length === 0) return true; // No test cases defined
-    if (!runOutput || !runOutput.cases) return false; // Not run yet
-    
-    // Check if every test case has run successfully and matches expected output
-    return runOutput.cases.every((c) => {
-      const hasError = c.compile_output || c.stderr;
-      return (
-        !hasError &&
-        c.expected != null &&
-        c.stdout?.trim() === c.expected.trim()
-      );
-    });
-  }, [challengeQuery.data?.testCases, runOutput]);
-
-  // Determine if user can submit the solution
-  const canSubmit = useMemo(() => {
-    if (submitting) return false;
-    
-    const hasRepoUrl = Boolean(repoUrl.trim());
-    const hasCode = Boolean(codeSnippet.trim());
-    
-    // If they submit via repo URL, allow it directly
-    if (hasRepoUrl) return true;
-    
-    // If they are submitting code, require code to be present
-    if (!hasCode) return false;
-    
-    // If challenge has test cases, require them to run and all pass
-    const testCases = challengeQuery.data?.testCases ?? [];
-    if (testCases.length > 0) {
-      return allTestsPassed;
-    }
-    
-    return true;
-  }, [submitting, repoUrl, codeSnippet, challengeQuery.data?.testCases, allTestsPassed]);
-
-  // Reset test results when language changes
-  useEffect(() => {
-    setRunOutput(null);
-  }, [language]);
-
   const handleInsertStarter = () =>
     setCodeSnippet(defaultStarterByLanguage[language] ?? defaultStarterByLanguage.javascript);
 
@@ -390,7 +336,6 @@ const ChallengeDetails = () => {
 
     setRunning(true);
     setRightTab("tests"); // Switch to tests tab to see results
-    setBottomTab("output"); // Select output tab automatically
     setRunOutput(null);
 
     const langId = LANGUAGE_MAP[language]?.id ?? 63;
@@ -717,10 +662,7 @@ const ChallengeDetails = () => {
         </div>
 
         {/* RIGHT PANEL - Editor / AI / Tests */}
-        <div 
-          ref={rightPanelRef}
-          className="flex-1 lg:flex-none flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full lg:w-[var(--right-width)] h-full"
-        >
+        <div className="flex-1 lg:flex-none flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full lg:w-[var(--right-width)] h-full">
           <div className="flex items-center justify-between pr-4 border-b border-black/10 dark:border-white/10 shrink-0">
             <div className="flex">
               <button className={`px-4 py-3 text-sm font-semibold relative ${rightTab === "code" ? "text-primary" : "text-secondary"}`} onClick={() => setRightTab("code")}>
@@ -731,13 +673,7 @@ const ChallengeDetails = () => {
                 <FiZap className="inline mr-2" /> AI Review
                 {rightTab === "ai" && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />}
               </button>
-              <button 
-                className={`px-4 py-3 text-sm font-semibold relative ${rightTab === "tests" ? "text-primary" : "text-secondary"}`} 
-                onClick={() => {
-                  setRightTab("tests");
-                  setBottomTab("output");
-                }}
-              >
+              <button className={`px-4 py-3 text-sm font-semibold relative ${rightTab === "tests" ? "text-primary" : "text-secondary"}`} onClick={() => setRightTab("tests")}>
                 <FiCheckCircle className="inline mr-2" /> Result
                 {rightTab === "tests" && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />}
               </button>
@@ -757,50 +693,33 @@ const ChallengeDetails = () => {
             )}
           </div>
 
-          {/* Monaco Editor Instance (hidden when tests or ai tab is active in normal mode) */}
-          {(isReviewMode || rightTab === "code") && (
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <CodeEditor
-                value={codeSnippet}
-                onChange={(value) => setCodeSnippet(value ?? "")}
-                language={LANGUAGE_MAP[language]?.monacoLang ?? language}
-                isDark={isDark}
-                readOnly={isReviewMode}
-              />
-            </div>
-          )}
-
-          {/* AI Review Placeholder */}
-          {!isReviewMode && rightTab === "ai" && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent animate-pulse">
-                <FiZap size={24} />
-              </div>
-              <h3 className="text-lg font-bold">AI Code Review</h3>
-              <p className="text-sm text-secondary max-w-md">
-                AI feedback and code optimization suggestions will be available here once the AI review module is connected.
-              </p>
-            </div>
-          )}
-
-          {/* Vertical Resizer (normal mode, only when code tab is active) */}
-          {!isReviewMode && rightTab === "code" && (
-            <div 
-              className="h-2 cursor-row-resize flex justify-center items-center group shrink-0 z-10 hover:bg-white/5 transition-colors border-t border-black/10 dark:border-white/10"
-              onMouseDown={handleVerticalMouseDown}
-            >
-              <div className="h-1 w-16 bg-white/10 group-hover:bg-accent rounded-full transition-colors" />
-            </div>
-          )}
+          {/* Monaco Editor Instance */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <CodeEditor
+              value={codeSnippet}
+              onChange={(value) => setCodeSnippet(value ?? "")}
+              language={LANGUAGE_MAP[language]?.monacoLang ?? language}
+              isDark={isDark}
+              readOnly={isReviewMode}
+            />
+          </div>
 
           {/* ── Test / Result Panel (normal mode only) ── */}
-          {!isReviewMode && (rightTab === "code" || rightTab === "tests") && (
-            <div 
-              style={rightTab === "code" ? { height: `${bottomHeight}px` } : {}}
-              className={`flex flex-col border-t border-black/10 dark:border-white/10 ${
-                rightTab === "code" ? "shrink-0" : "flex-1 min-h-0"
-              }`}
+          {!isReviewMode && (
+            <div
+              className="relative flex flex-col border-t border-black/10 dark:border-white/10 shrink-0"
+              style={{ height: bottomCollapsed ? "auto" : `${bottomHeight}px` }}
             >
+              {/* Drag handle to resize the panel (and grow the editor) */}
+              {!bottomCollapsed && (
+                <div
+                  onMouseDown={handleBottomResize}
+                  className="absolute -top-1.5 left-0 right-0 h-3 cursor-row-resize flex justify-center items-center group z-10"
+                  title="Drag to resize"
+                >
+                  <div className="w-16 h-1 bg-white/15 group-hover:bg-accent rounded-full transition-colors" />
+                </div>
+              )}
               {/* Panel header */}
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-black/10 dark:border-white/10 shrink-0">
                 <div className="flex gap-0.5">
@@ -1150,24 +1069,6 @@ const ChallengeDetails = () => {
                   onChange={(e) => setRepoUrl(e.target.value)}
                 />
               </div>
-
-              {/* Submission requirements warning/helper message */}
-              {!isReviewMode && (
-                <div className="text-[11px] text-center font-medium mt-1">
-                  {submitting ? (
-                    <span className="text-accent animate-pulse">Submitting your solution...</span>
-                  ) : !repoUrl.trim() && !codeSnippet.trim() ? (
-                    <span className="text-secondary/60">Provide a repository URL or code snippet</span>
-                  ) : !repoUrl.trim() && challengeQuery.data?.testCases?.length > 0 && !runOutput ? (
-                    <span className="text-yellow-500/90">⚠️ Run code and satisfy all test cases to submit</span>
-                  ) : !repoUrl.trim() && challengeQuery.data?.testCases?.length > 0 && !allTestsPassed ? (
-                    <span className="text-red-400">❌ Test cases are not satisfied. Please fix your code and run again</span>
-                  ) : (
-                    <span className="text-green-400">✓ Ready to submit solution</span>
-                  )}
-                </div>
-              )}
-
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={handleRun}
@@ -1178,7 +1079,7 @@ const ChallengeDetails = () => {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!canSubmit}
+                  disabled={submitting}
                   className="btn-primary flex-1 py-2.5 flex items-center justify-center gap-2 text-xs disabled:opacity-50"
                 >
                   <FiSend size={13} /> {submitting ? "Transmitting..." : "Submit Solution"}
