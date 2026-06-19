@@ -50,7 +50,6 @@ const StatCard = ({ icon, label, value, color }) => {
 
 const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
   const members = clan.members || [];
-  // eslint-disable-next-line no-unused-vars
   const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
   const [activeTab, setActiveTab] = useState('roster'); // roster, notices

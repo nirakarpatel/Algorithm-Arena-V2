@@ -17,6 +17,8 @@ import {
   FiX,
   FiTrash2,
   FiAlertTriangle,
+  FiGrid,
+  FiList,
 } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
@@ -46,13 +48,14 @@ const StatCard = ({ icon, label, value, color }) => {
   );
 };
 
-/* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
+/* ─── Clan Dashboard ─────────────── */
 
-const ClanDashboard = ({ clan, userId, onLeave }) => {
+const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
   const members = clan.members || [];
   // eslint-disable-next-line no-unused-vars
   const requests = clan.requests || [];
   const isArchived = clan.status === 'archived';
+  const [viewMode, setViewMode] = useState('grid');
 
   return (
     <div className="space-y-6">
@@ -65,8 +68,13 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
         <div className="relative z-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
+              {onBack && (
+                 <button onClick={onBack} className="mb-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-secondary hover:text-primary transition-all text-xs font-semibold w-max">
+                    <FiLogOut className="rotate-180" size={12} /> Back
+                 </button>
+              )}
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-2 block">
-                Your Clan
+                {readOnly ? 'Clan Preview' : 'Your Clan'}
               </span>
               <h2 className="text-3xl md:text-5xl font-black text-primary leading-tight">
                 {clan.name}
@@ -83,13 +91,15 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={onLeave}
-                disabled={isArchived}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-semibold disabled:opacity-50 disabled:hover:bg-transparent"
-              >
-                <FiLogOut size={14} /> {isArchived ? 'Archived' : 'Leave Clan'}
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={onLeave}
+                  disabled={isArchived}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-semibold disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <FiLogOut size={14} /> {isArchived ? 'Archived' : 'Leave Clan'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -115,8 +125,12 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
               <FiUsers className="text-accent" />
               Roster
               <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black">{members.length}</span>
+              <div className="ml-auto flex bg-white/5 border border-white/10 rounded-lg p-1">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiGrid size={14}/></button>
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiList size={14}/></button>
+              </div>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-3" : "flex flex-col gap-2"}>
               {members.map((member, i) => {
                 const isMemberChief = clan.chief?._id === member._id;
                 return (
@@ -148,6 +162,9 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-accent/80 font-bold flex items-center gap-1 bg-accent/10 px-2 py-1 rounded-lg">
+                        <FiStar size={10} /> {(member.points || 0).toLocaleString()} XP
+                      </span>
                       {isMemberChief ? (
                         <span className="text-[10px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded-lg font-bold">
                           CHIEF
@@ -171,11 +188,13 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
   );
 };
 
-/* ─── Clan Browser (when user is NOT in a clan) ───────────── */
-const ClanBrowser = ({ clans, loading, userId, onApply }) => {
+/* ─── Clan Browser ───────────── */
+const ClanBrowser = ({ clans, loading, userId, onApply, onViewClan, userHasClan, onBack }) => {
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
 
   const filtered = clans.filter((c) => {
+    if (userHasClan && (c.members || []).some(m => m._id === userId)) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q);
@@ -186,21 +205,28 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="macos-glass p-8 md:p-10 border-accent/20 bg-gradient-to-br from-purple-500/10 via-transparent to-accent/10"
+        className="macos-glass p-8 md:p-10 border-accent/20 bg-gradient-to-br from-purple-500/10 via-transparent to-accent/10 relative"
       >
+        {onBack && (
+          <button onClick={onBack} className="absolute top-6 right-6 btn-secondary text-xs flex items-center gap-2">
+            <FiLogOut className="rotate-180" size={12} /> Back to My Clan
+          </button>
+        )}
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-2 block">
-          Find Your Tribe
+          {userHasClan ? "Explore" : "Find Your Tribe"}
         </span>
         <h2 className="text-2xl md:text-4xl font-black text-primary mb-2">
-          Join a Clan
+          {userHasClan ? "Other Clans" : "Join a Clan"}
         </h2>
         <p className="text-secondary text-sm max-w-lg">
-          Clans let you team up, compete together, and climb the leaderboards as a unit. Apply to join — once the chief approves, you're in!
+          {userHasClan 
+            ? "Browse other clans in the arena to see their rosters and stats." 
+            : "Clans let you team up, compete together, and climb the leaderboards as a unit. Apply to join — once the chief approves, you're in!"}
         </p>
       </motion.div>
 
-      <div className="macos-glass p-4">
-        <div className="relative">
+      <div className="macos-glass p-4 flex gap-3">
+        <div className="relative flex-1">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
           <input
             className="field-input pl-9"
@@ -209,16 +235,20 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 shrink-0">
+          <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiGrid size={18}/></button>
+          <button onClick={() => setViewMode('list')} className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiList size={18}/></button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
           <SkeletonCard /><SkeletonCard /><SkeletonCard />
         </div>
       ) : filtered.length === 0 ? (
         <EmptyState title="No clans found" description="Try a different search or ask admin to create one." />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" : "flex flex-col gap-3"}>
           {filtered.map((clan, index) => {
             const isMember = (clan.members || []).some((m) => m._id === userId);
             return (
@@ -228,44 +258,63 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card className="h-full flex flex-col group hover:border-accent/40 transition-all">
-                  <div className="flex items-start justify-between mb-3">
+                <Card className={`h-full group hover:border-accent/40 transition-all ${viewMode === 'list' ? 'flex flex-col sm:flex-row sm:items-center gap-4 py-3 px-5' : 'flex flex-col'}`}>
+                  <div className={`flex items-start justify-between ${viewMode === 'list' ? 'shrink-0 mb-0 pr-4 min-w-[200px]' : 'mb-3'}`}>
                     <div>
-                      <h3 className="font-bold text-lg text-primary group-hover:text-accent transition-colors">
+                      <h3 className={`font-bold text-lg text-primary group-hover:text-accent transition-colors ${viewMode === 'list' ? 'whitespace-nowrap' : 'truncate'}`}>
                         {clan.name}
                       </h3>
-                      <span className="text-xs text-accent font-mono">[{clan.tag}]</span>
+                      <span className="text-xs text-accent font-mono whitespace-nowrap">[{clan.tag}]</span>
                     </div>
-                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                      <FiUsers className="text-accent" size={18} />
-                    </div>
+                    {viewMode === 'grid' && (
+                      <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                        <FiUsers className="text-accent" size={18} />
+                      </div>
+                    )}
                   </div>
 
-                  <p className="text-secondary text-sm leading-relaxed flex-1 mb-4">
+                  <p className={`text-secondary text-sm leading-relaxed ${viewMode === 'list' ? 'sm:flex-1 mb-0 line-clamp-2' : 'flex-1 mb-4 line-clamp-3'}`}>
                     {clan.description || 'No description provided.'}
                   </p>
 
-                  <div className="flex items-center gap-4 text-xs text-secondary mb-4 pt-3 border-t border-glass-border/40">
+                  <div className={`flex items-center gap-4 text-xs text-secondary ${viewMode === 'list' ? 'sm:w-1/4 sm:justify-end pt-0 border-0 mb-0 shrink-0' : 'mb-4 pt-3 border-t border-glass-border/40'}`}>
                     <span className="flex items-center gap-1">
-                      <FiUsers size={12} /> {(clan.members || []).length} members
+                      <FiUsers size={12} /> {(clan.members || []).length} {viewMode === 'grid' ? 'members' : ''}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <FiShield size={12} /> {clan.chief?.username || 'No chief'}
+                    <span className="flex items-center gap-1 truncate">
+                      <FiShield size={12} /> {clan.chief?.username || 'None'}
                     </span>
                   </div>
 
-                  {isMember ? (
-                    <div className="flex items-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg">
-                      <FiCheckCircle size={14} /> Already a member
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => onApply(clan._id)}
-                      className="btn-primary w-full text-sm"
-                    >
-                      Apply to Join
-                    </button>
-                  )}
+                  <div className={`${viewMode === 'list' ? 'mt-0 sm:ml-4 shrink-0' : 'mt-auto'}`}>
+                    {userHasClan ? (
+                       <button
+                         onClick={() => onViewClan(clan)}
+                         className={`btn-secondary text-sm flex items-center justify-center gap-2 ${viewMode === 'list' ? 'px-4 py-2' : 'w-full'}`}
+                       >
+                         <FiSearch size={14} /> View{viewMode === 'grid' ? ' Clan' : ''}
+                       </button>
+                    ) : isMember ? (
+                      <div className="flex items-center justify-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg">
+                        <FiCheckCircle size={14} /> Joined
+                      </div>
+                    ) : (
+                      <div className={`flex gap-2 ${viewMode === 'list' ? '' : 'w-full'}`}>
+                        <button
+                          onClick={() => onViewClan(clan)}
+                          className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2 px-3 py-2"
+                        >
+                          <FiSearch size={14} /> Preview
+                        </button>
+                        <button
+                          onClick={() => onApply(clan._id)}
+                          className="btn-primary flex-1 text-sm px-3 py-2"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </motion.div>
             );
@@ -286,6 +335,8 @@ const Clans = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [leaving, setLeaving] = useState(false);
+  const [viewingOtherClan, setViewingOtherClan] = useState(null);
+  const [isBrowsingOthers, setIsBrowsingOthers] = useState(false);
 
   const myClanQuery = useQuery({
     queryKey: ['my-clan'],
@@ -414,10 +465,50 @@ const Clans = () => {
         subtitle={myClan ? (myClan.status === 'archived' ? `Your clan ${myClan.name} is archived and read only.` : `You are a member of ${myClan.name}`) : 'Find your tribe and compete together.'}
         showBack={true}
         backUrl="/dashboard"
+        actions={
+          myClan && !isBrowsingOthers && !viewingOtherClan && (
+            <button
+              onClick={() => setIsBrowsingOthers(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-accent/30 text-accent hover:bg-accent/10 transition-all text-sm font-semibold"
+            >
+              <FiSearch size={14} /> Browse Other Clans
+            </button>
+          )
+        }
       />
 
       <AnimatePresence mode="wait">
-        {myClan ? (
+        {viewingOtherClan ? (
+          <MotionDiv
+            key="preview"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ClanDashboard
+              clan={viewingOtherClan}
+              userId={user?.id}
+              readOnly={true}
+              onBack={() => setViewingOtherClan(null)}
+            />
+          </MotionDiv>
+        ) : isBrowsingOthers ? (
+          <MotionDiv
+            key="browser-others"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ClanBrowser
+              clans={clansQuery.data || []}
+              loading={clansQuery.isLoading}
+              userId={user?.id}
+              userHasClan={true}
+              onViewClan={(clan) => setViewingOtherClan(clan)}
+              onBack={() => setIsBrowsingOthers(false)}
+            />
+          </MotionDiv>
+        ) : myClan ? (
           <MotionDiv
             key="dashboard"
             initial={{ opacity: 0 }}
@@ -428,6 +519,7 @@ const Clans = () => {
               clan={myClan}
               userId={user?.id}
               onLeave={() => setShowLeaveConfirm(true)}
+              onBrowseOthers={() => setIsBrowsingOthers(true)}
             />
           </MotionDiv>
         ) : (
@@ -442,6 +534,7 @@ const Clans = () => {
               loading={clansQuery.isLoading}
               userId={user?.id}
               onApply={handleApply}
+              onViewClan={(clan) => setViewingOtherClan(clan)}
             />
           </MotionDiv>
         )}
@@ -469,3 +562,4 @@ const Clans = () => {
 };
 
 export default Clans;
+

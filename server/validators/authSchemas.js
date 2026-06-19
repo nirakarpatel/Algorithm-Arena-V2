@@ -46,7 +46,7 @@ const url = z.string().trim().url().max(512).optional().or(z.literal(''));
 const updateMeSchema = {
   body: z.object({
     bio:            z.string().trim().max(500).optional(),
-    branch:         z.enum(['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA']).optional(),
+    branch:         z.enum(['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA']).optional().or(z.literal('')),
     year:           z.enum(['First Year', 'Second Year', 'Third Year', 'Fourth Year']).optional().or(z.literal('')),
     section:        z
       .string()
@@ -55,13 +55,13 @@ const updateMeSchema = {
       .regex(/^[a-zA-Z0-9]+$/, 'Section must be alphanumeric')
       .optional()
       .or(z.literal('')),
-    location:       z.string().trim().max(100).optional(),
+    location:       z.string().trim().max(100).optional().or(z.literal('')),
     github:         z.string().trim().max(100).optional().or(z.literal('')),
     twitter:        z.string().trim().max(100).optional().or(z.literal('')),
     linkedin:       z.string().trim().max(100).optional().or(z.literal('')),
     website:        url,
     profilePicture: z.string().trim().max(4 * 1024 * 1024).optional().or(z.literal('')),
-    preferredLanguage: z.enum(['javascript', 'python', 'java', 'cpp', 'c']).optional(),
+    preferredLanguage: z.enum(['javascript', 'python', 'java', 'cpp', 'c']).optional().or(z.literal('')),
   }).strict(),
 };
 

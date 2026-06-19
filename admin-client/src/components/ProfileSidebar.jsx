@@ -619,7 +619,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                           {/* Right Info Box */}
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <h4 className="text-sm font-black tracking-tight text-white leading-none">
+                              <h4 className="text-sm font-black tracking-tight text-black dark:text-white leading-none">
                                 {badge.name}
                               </h4>
                               <span
@@ -629,7 +629,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                                 {badge.rarity}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-400 line-clamp-2 leading-tight">
+                            <p className="text-xs text-black dark:text-slate-400 line-clamp-2 leading-tight">
                               {badge.description || "No description provided."}
                             </p>
                           </div>

@@ -62,23 +62,27 @@ const Settings = () => {
    */
   const extractUsername = (field, rawValue) => {
     const value = rawValue.trim();
+    const isUrl = /https?:\/\/|www\.|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/|localhost:/i.test(value);
 
     if (field === 'github') {
-      // Match github.com/USERNAME patterns
       const match = value.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)\/?/);
       if (match) return match[1];
+      if (isUrl) return '';
+      return value.replace(/[^a-zA-Z0-9_-]/g, '');
     }
 
     if (field === 'linkedin') {
-      // Match linkedin.com/in/USERNAME patterns
       const match = value.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)\/?/);
       if (match) return match[1];
+      if (isUrl) return '';
+      return value.replace(/[^a-zA-Z0-9_-]/g, '');
     }
 
     if (field === 'twitter') {
-      // Match twitter.com/USERNAME or x.com/USERNAME or @username patterns
       const match = value.match(/(?:(?:https?:\/\/)?(?:www\.)?(?:twitter|x)\.com\/|@)([a-zA-Z0-9_]+)\/?/);
       if (match) return match[1];
+      if (isUrl) return '';
+      return value.replace(/[^a-zA-Z0-9_]/g, '');
     }
 
     return value;

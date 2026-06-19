@@ -28,7 +28,8 @@ const toAuthPayload = (user, accessToken, { isChief = false, dailyXpAwarded = fa
     usernameSet: user.usernameSet,
     isChief,
     dailyXpAwarded,
-    clanId: user.clan || null,
+    clan: user.clan || null,
+    clanId: user.clan?._id || user.clan || null,
   },
   isNewUser,
   dailyXpAwarded,
@@ -36,6 +37,10 @@ const toAuthPayload = (user, accessToken, { isChief = false, dailyXpAwarded = fa
 
 
 const issueSession = async (req, res, user, { statusCode = 200, message = 'Success', isChief = false, dailyXpAwarded = false, isNewUser = false } = {}) => {
+  if (user.clan && !user.clan.name && typeof user.populate === 'function') {
+    await user.populate('clan', 'name');
+  }
+
   const accessToken = signAccessToken(user._id);
   const refreshToken = generateRefreshToken();
   const refreshTokenHash = hashToken(refreshToken);
@@ -398,7 +403,7 @@ const refresh = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Refresh token is invalid or expired' });
     }
 
-    const user = await User.findById(existingToken.userId);
+    const user = await User.findById(existingToken.userId).populate('clan', 'name');
     if (!user) {
       existingToken.revokedAt = new Date();
       await existingToken.save();
@@ -489,7 +494,7 @@ const logoutAll = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).lean();
+    const user = await User.findById(req.user.id).populate('clan', 'name').lean();
     if (!user) {
       res.status(404);
       throw new Error('User not found');
