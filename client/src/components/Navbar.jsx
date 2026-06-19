@@ -90,7 +90,7 @@ const Navbar = ({ onLogout }) => {
                  >
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-lg shadow-accent/20">
                     {user?.profilePicture ? (
-                      <img src={user.profilePicture} alt="Avatar" className="w-full h-full rounded-[9px] object-cover" />
+                      <img src={user.profilePicture} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full rounded-[9px] object-cover" />
                     ) : (
                       <div className="w-full h-full rounded-[9px] bg-[#1a1a1c] flex items-center justify-center text-sm text-white font-black uppercase">
                         {user?.username?.[0] || 'U'}
@@ -205,7 +205,7 @@ const Navbar = ({ onLogout }) => {
           <div className="flex items-center gap-4 px-2 pb-4 border-b border-glass-border/40">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-purple-600 p-0.5 shadow-lg shadow-accent/20">
               {user?.profilePicture ? (
-                <img src={user.profilePicture} alt="Avatar" className="w-full h-full rounded-[9px] object-cover" />
+                <img src={user.profilePicture} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full rounded-[9px] object-cover" />
               ) : (
                 <div className="w-full h-full rounded-[9px] bg-[#1a1a1c] flex items-center justify-center text-sm text-white font-black uppercase">
                   {user?.username?.[0] || 'U'}

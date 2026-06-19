@@ -1,6 +1,8 @@
 const User = require('../users/User.model');
 const RefreshToken = require('./RefreshToken.model');
 const { sendSuccess } = require('../../../utils/response');
+const { verifyGoogleToken } = require('./googleAuth');
+const crypto = require('crypto');
 const {
   REFRESH_COOKIE_NAME,
   signAccessToken,
@@ -101,7 +103,7 @@ const googleAuth = async (req, res, next) => {
         // Link existing account to Firebase
         user.firebaseUid = uid;
         user.authProvider = 'google';
-        if (picture && !user.profilePicture) {
+        if (picture) {
           user.profilePicture = picture;
         }
         // Existing users already have a username
@@ -128,14 +130,22 @@ const googleAuth = async (req, res, next) => {
         isNewUser = true;
       }
     } else {
+      let shouldSave = false;
+      if (picture && user.profilePicture !== picture) {
+        user.profilePicture = picture;
+        shouldSave = true;
+      }
       // Check if they are pre-authorized
       if (isPreauthorizedAdmin && user.role !== 'admin' && user.role !== 'superAdmin') {
         user.role = 'admin';
-        await user.save({ validateBeforeSave: false });
+        shouldSave = true;
       }
       // If user exists but is super admin email, enforce role
       if (isSuperAdminEmail && user.role !== 'superAdmin') {
         user.role = 'superAdmin';
+        shouldSave = true;
+      }
+      if (shouldSave) {
         await user.save({ validateBeforeSave: false });
       }
     }
@@ -294,6 +304,73 @@ const checkUsername = async (req, res, next) => {
       success: true,
       available: !existing,
       message: existing ? 'Username is taken' : 'Username is available',
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+const googleLogin = async (req, res, next) => {
+  try {
+    const { credential, accessToken } = req.body;
+    if (!credential && !accessToken) {
+      res.status(400);
+      throw new Error('Google credentials are required');
+    }
+
+    const { email, name, picture } = await verifyGoogleToken({ credential, accessToken });
+
+    let user = await User.findOne({ email });
+    let isNewUser = false;
+
+    if (!user) {
+      isNewUser = true;
+      // Derive a unique username
+      let baseUsername = (name || email.split('@')[0])
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 15);
+      if (baseUsername.length < 3) baseUsername = 'user_' + baseUsername;
+
+      let username = baseUsername;
+      let suffix = 1;
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}${suffix}`;
+        suffix++;
+      }
+
+      // Generate a secure random password
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+
+      user = await User.create({
+        username,
+        email,
+        password: randomPassword,
+        profilePicture: picture || null,
+      });
+    }
+
+    // Daily Login XP: award 50 XP if first login of the day
+    let dailyXpAwarded = false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
+    const isFirstLoginToday = !lastLogin || lastLogin < today;
+
+    if (isFirstLoginToday) {
+      user.points = (user.points || 0) + 50;
+      user.lastLoginDate = new Date();
+      await user.save({ validateBeforeSave: false });
+      dailyXpAwarded = true;
+    }
+
+    const Clan = require('../clans/Clan.model');
+    const clanWhereChief = await Clan.findOne({ chief: user._id });
+
+    return issueSession(req, res, user, {
+      statusCode: isNewUser ? 201 : 200,
+      message: isNewUser ? 'Registration successful via Google' : 'Login successful via Google',
+      isChief: !!clanWhereChief,
+      dailyXpAwarded,
     });
   } catch (err) {
     return next(err);

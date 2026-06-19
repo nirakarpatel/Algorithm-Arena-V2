@@ -94,7 +94,6 @@ const Profile = () => {
   const profile = profileQ.data || {};
   const displayUser = username ? profile : user;
 
-
   const easy = profile?.difficultyBreakdown?.easy ?? { solved: 0, total: 0 };
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
   const hard = profile?.difficultyBreakdown?.hard ?? { solved: 0, total: 0 };

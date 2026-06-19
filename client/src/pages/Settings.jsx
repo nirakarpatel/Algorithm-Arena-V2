@@ -291,7 +291,7 @@ const Settings = () => {
                 <div className="h-24 w-24 rounded-2xl p-0.5 shadow-xl"
                   style={{ background: "linear-gradient(135deg, rgba(var(--accent-rgb),1), rgba(168,85,247,0.9))", boxShadow: "0 8px 32px rgba(var(--accent-rgb),0.3)" }}>
                   {preview.profilePicture ? (
-                    <img src={preview.profilePicture} alt="Profile" className="h-full w-full rounded-[14px] object-cover" />
+                    <img src={preview.profilePicture} alt="Profile" referrerPolicy="no-referrer" className="h-full w-full rounded-[14px] object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-[#1a1a1c] text-3xl font-black uppercase text-white">
                       {preview.username?.[0] || 'U'}

@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiActivity } from "react-icons/fi";
 
-const WEEKS = 26;
+const WEEKS = 53;
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /* Green intensity levels */
 const cellClass = (count, future) => {
@@ -18,6 +18,7 @@ const cellClass = (count, future) => {
 
 const ActivityHeatmap = ({ submissions = [] }) => {
   const [tooltip, setTooltip] = useState(null);
+  const scrollContainerRef = useRef(null);
 
   const today = useMemo(() => {
     const d = new Date(); d.setHours(0, 0, 0, 0); return d;
@@ -27,38 +28,85 @@ const ActivityHeatmap = ({ submissions = [] }) => {
     const map = {};
     submissions.forEach(s => {
       if (!s?.submittedAt) return;
-      const d = new Date(s.submittedAt); d.setHours(0,0,0,0);
-      const key = d.toISOString().slice(0, 10);
+      const d = new Date(s.submittedAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       map[key] = (map[key] || 0) + 1;
     });
     return map;
   }, [submissions]);
 
   /* Build grid col-by-col (week × day) */
-  const { grid, monthMarkers } = useMemo(() => {
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - WEEKS * 7 + 1);
+  const { grid, monthMarkers, totalWeeks } = useMemo(() => {
+    // Find earliest submission year
+    let startYear = today.getFullYear();
+    submissions.forEach(s => {
+      if (!s?.submittedAt) return;
+      const d = new Date(s.submittedAt);
+      const y = d.getFullYear();
+      if (y < startYear) {
+        startYear = y;
+      }
+    });
+
+    // Start grid at January 1st of the startYear
+    const startDate = new Date(startYear, 0, 1);
+    
+    // Adjust startDate to Sunday of that week
+    const dayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    // End date is December 31st of the current year
+    const endDate = new Date(today.getFullYear(), 11, 31);
+    
+    // Adjust endDate to Saturday of that week
+    const endDayOfWeek = endDate.getDay();
+    endDate.setDate(endDate.getDate() + (6 - endDayOfWeek));
+
+    // Calculate total weeks between startDate and endDate
+    const diffTime = endDate.getTime() - startDate.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const totalWeeks = Math.ceil(diffDays / 7);
 
     const grid = [];
-    const seenMonths = new Set();
     const monthMarkers = {}; // weekIndex → month label
+    const seenMonths = new Set();
 
-    for (let wi = 0; wi < WEEKS; wi++) {
+    for (let wi = 0; wi < totalWeeks; wi++) {
       const week = [];
       for (let di = 0; di < 7; di++) {
         const d = new Date(startDate);
         d.setDate(startDate.getDate() + wi * 7 + di);
-        const key = d.toISOString().slice(0, 10);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         week.push({ date: key, count: countMap[key] || 0, future: d > today, d });
         if (di === 0) {
           const mLabel = MONTHS[d.getMonth()];
-          if (!seenMonths.has(mLabel)) { seenMonths.add(mLabel); monthMarkers[wi] = mLabel; }
+          const seenKey = `${d.getFullYear()}-${mLabel}`;
+          if (!seenMonths.has(seenKey)) {
+            seenMonths.add(seenKey);
+            monthMarkers[wi] = mLabel;
+          }
         }
       }
       grid.push(week);
     }
-    return { grid, monthMarkers };
-  }, [countMap, today]);
+    return { grid, monthMarkers, totalWeeks };
+  }, [countMap, today, submissions]);
+
+  const yearGroups = useMemo(() => {
+    const groups = [];
+    let currentYear = null;
+    let currentGroup = null;
+    grid.forEach((week, wi) => {
+      const y = week[0].d.getFullYear();
+      if (y !== currentYear) {
+        currentYear = y;
+        currentGroup = { year: y, startIndex: wi, weeksCount: 0 };
+        groups.push(currentGroup);
+      }
+      currentGroup.weeksCount++;
+    });
+    return groups;
+  }, [grid]);
 
   const totalContribs = Object.values(countMap).reduce((a, b) => a + b, 0);
   const maxStreak = useMemo(() => {
@@ -76,13 +124,60 @@ const ActivityHeatmap = ({ submissions = [] }) => {
     return best;
   }, [countMap]);
 
+  // Find the start week index based on earliest submission
+  const startWeekIndex = useMemo(() => {
+    if (submissions.length === 0) {
+      return totalWeeks - 1; // Default to recent end
+    }
+    let earliestDate = null;
+    submissions.forEach(s => {
+      if (!s?.submittedAt) return;
+      const d = new Date(s.submittedAt);
+      if (!earliestDate || d < earliestDate) {
+        earliestDate = d;
+      }
+    });
+    if (!earliestDate) return totalWeeks - 1;
+
+    let startYear = today.getFullYear();
+    submissions.forEach(s => {
+      if (!s?.submittedAt) return;
+      const d = new Date(s.submittedAt);
+      const y = d.getFullYear();
+      if (y < startYear) startYear = y;
+    });
+    const startDate = new Date(startYear, 0, 1);
+    const dayOfWeek = startDate.getDay();
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+
+    const diffTime = earliestDate.getTime() - startDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 0;
+    const weekIdx = Math.floor(diffDays / 7);
+    return Math.min(Math.max(weekIdx, 0), totalWeeks - 1);
+  }, [submissions, today, totalWeeks]);
+
+  // Center scroll position on mount or data change
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      let weekLeft = 28; // Padding-left
+      for (let i = 0; i < startWeekIndex; i++) {
+        const isStart = i > 0 && grid[i][0].d.getFullYear() !== grid[i - 1][0].d.getFullYear();
+        if (isStart) weekLeft += 16; // 16px spacing for breaker
+        weekLeft += 16; // 13px width + 3px gap
+      }
+      const containerWidth = scrollContainerRef.current.clientWidth;
+      scrollContainerRef.current.scrollLeft = weekLeft - containerWidth / 2 + 8;
+    }
+  }, [startWeekIndex, grid]);
+
   return (
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs font-black text-secondary uppercase tracking-widest flex items-center gap-1.5">
           <FiActivity size={12} className="text-green-600 dark:text-green-400" />
-          <span className="text-green-600 dark:text-green-400 font-black">{totalContribs}</span> submissions in the last {WEEKS} weeks
+          <span className="text-green-600 dark:text-green-400 font-black">{totalContribs}</span> submissions in history
           {maxStreak > 1 && <span className="ml-2 text-tertiary">• 🔥 {maxStreak}-day streak</span>}
         </p>
         <div className="flex items-center gap-1.5 text-[10px] text-tertiary">
@@ -98,39 +193,88 @@ const ActivityHeatmap = ({ submissions = [] }) => {
         </div>
       </div>
 
-      {/* Month labels */}
-      <div className="flex gap-[3px] pl-7 overflow-x-auto custom-scrollbar">
-        {grid.map((_, wi) => (
-          <div key={wi} className="w-[13px] flex-shrink-0 text-[9px] text-tertiary font-bold text-center">
-            {monthMarkers[wi] || ""}
+      {/* Scrollable Container */}
+      <div ref={scrollContainerRef} className="overflow-x-auto custom-scrollbar pb-2">
+        <div className="min-w-max">
+          {/* Year boxes */}
+          <div className="flex gap-[3px] pl-7 mb-1.5">
+            {yearGroups.map((yg, ygi) => {
+              const width = yg.weeksCount * 16 - 3;
+              return (
+                <React.Fragment key={yg.year}>
+                  {ygi > 0 && (
+                    <div className="w-4 flex items-center justify-center flex-shrink-0">
+                      <div className="w-[1px] h-full bg-black/10 dark:bg-white/10" />
+                    </div>
+                  )}
+                  <div
+                    style={{ width: `${width}px` }}
+                    className="relative flex-shrink-0 text-[10px] font-bold py-1 bg-black/[0.03] dark:bg-white/[0.03] border border-black/5 dark:border-white/5 rounded text-secondary overflow-visible"
+                  >
+                    <span className="sticky left-0 right-0 mx-auto block w-max whitespace-nowrap">
+                      {yg.year}
+                    </span>
+                  </div>
+                </React.Fragment>
+              );
+            })}
           </div>
-        ))}
-      </div>
 
-      {/* Grid */}
-      <div className="relative flex gap-[3px] overflow-x-auto custom-scrollbar pb-1">
-        {/* Day labels */}
-        <div className="flex flex-col gap-[3px] pr-1 flex-shrink-0">
-          {DAY_LABELS.map((label, i) => (
-            <div key={i} className="h-[13px] w-6 text-[9px] text-tertiary flex items-center justify-end pr-1 font-bold">
-              {label}
+          {/* Month labels */}
+          <div className="flex gap-[3px] pl-7">
+            {grid.map((_, wi) => {
+              const isStart = wi > 0 && grid[wi][0].d.getFullYear() !== grid[wi - 1][0].d.getFullYear();
+              return (
+                <React.Fragment key={wi}>
+                  {isStart && (
+                    <div className="w-4 flex items-center justify-center flex-shrink-0">
+                      <div className="w-[1px] h-full bg-black/10 dark:bg-white/10" />
+                    </div>
+                  )}
+                  <div className="w-[13px] flex-shrink-0 text-[9px] text-tertiary font-bold text-center">
+                    {monthMarkers[wi] || ""}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* Grid */}
+          <div className="relative flex gap-[3px] pt-1">
+            {/* Day labels */}
+            <div className="flex flex-col gap-[3px] pr-1 flex-shrink-0">
+              {DAY_LABELS.map((label, i) => (
+                <div key={i} className="h-[13px] w-6 text-[9px] text-tertiary flex items-center justify-end pr-1 font-bold">
+                  {label}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Weeks */}
-        {grid.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-[3px] flex-shrink-0">
-            {week.map((day, di) => (
-              <div
-                key={di}
-                className={`w-[13px] h-[13px] rounded-[3px] transition-all duration-150 ${cellClass(day.count, day.future)}`}
-                onMouseEnter={e => !day.future && setTooltip({ day, x: e.clientX, y: e.clientY })}
-                onMouseLeave={() => setTooltip(null)}
-              />
-            ))}
+            {/* Weeks */}
+            {grid.map((week, wi) => {
+              const isStart = wi > 0 && grid[wi][0].d.getFullYear() !== grid[wi - 1][0].d.getFullYear();
+              return (
+                <React.Fragment key={wi}>
+                  {isStart && (
+                    <div className="w-4 flex flex-col gap-[3px] items-center justify-center flex-shrink-0 py-0.5">
+                      <div className="w-[1px] h-full border-l border-dashed border-black/20 dark:border-white/20" />
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-[3px] flex-shrink-0">
+                    {week.map((day, di) => (
+                      <div
+                        key={di}
+                        className={`w-[13px] h-[13px] rounded-[3px] transition-all duration-150 ${cellClass(day.count, day.future)}`}
+                        onMouseEnter={e => !day.future && setTooltip({ day, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setTooltip(null)}
+                      />
+                    ))}
+                  </div>
+                </React.Fragment>
+              );
+            })}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Tooltip */}

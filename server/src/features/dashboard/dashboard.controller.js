@@ -5,6 +5,7 @@ const User = require('../users/User.model');
 const Clan = require('../clans/Clan.model');
 const { sendSuccess } = require('../../../utils/response');
 const { getUserRank } = require('../../../utils/leaderboard');
+const { getAllBadgesForUser } = require('../badges/badge.service');
 
 const getDashboardSummary = async (req, res, next) => {
   try {
@@ -198,6 +199,9 @@ const getProfileStats = async (req, res, next) => {
       .sort({ submittedAt: -1 })
       .limit(10);
 
+    // Compute unlocked badges dynamically
+    const unlockedBadges = await getAllBadgesForUser(userId);
+
     return sendSuccess(res, {
       data: {
         totalSubmissions: stats?.totalSubmissions || 0,
@@ -215,7 +219,8 @@ const getProfileStats = async (req, res, next) => {
         heatmapData,
         rank,
         streak: currentStreak,
-        maxStreak
+        maxStreak,
+        badges: unlockedBadges,
       },
     });
   } catch (err) {
@@ -346,6 +351,9 @@ const getUserProfile = async (req, res, next) => {
     // Global rank using shared utility (DB-level, no full array in RAM)
     const rank = await getUserRank(userId);
 
+    // Compute unlocked badges dynamically
+    const unlockedBadges = await getAllBadgesForUser(userId);
+
     // Send back formatted data matching what the frontend expects
     return sendSuccess(res, {
       data: {
@@ -375,7 +383,7 @@ const getUserProfile = async (req, res, next) => {
           medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
           hard: { solved: stats?.hardSolved || 0, total: totalsMap.Hard },
         },
-        badges: user.badges || [],
+        badges: unlockedBadges,
         createdAt: user.createdAt,
         heatmapData,
         recentSubmissions,

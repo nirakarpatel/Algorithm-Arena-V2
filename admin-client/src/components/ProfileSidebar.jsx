@@ -1,11 +1,11 @@
 import React, { useRef } from "react";
 import { Link } from "react-router-dom";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, AnimatePresence } from "framer-motion";
 import {
   FiEdit2, FiAward, FiShield, FiUsers, FiZap,
   FiStar, FiTarget, FiTrendingUp, FiClock, FiExternalLink,
   FiArrowRight, FiGithub, FiTwitter, FiLinkedin, FiGlobe,
-  FiCode, FiCpu,
+  FiCode, FiCpu, FiChevronLeft, FiChevronRight, FiX,
 } from "react-icons/fi";
 import Logo from "./Logo";
 
@@ -114,8 +114,77 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
   const hard   = profile?.difficultyBreakdown?.hard   ?? { solved: 0, total: 0 };
 
-  const displayBadges = badges?.length ? badges : FALLBACK_BADGES;
+  const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+  const sortedBadges = React.useMemo(() => {
+    const baseBadges = badges?.length 
+      ? badges 
+      : FALLBACK_BADGES.map(b => ({ ...b, isUnlocked: true }));
+
+    return [...baseBadges].sort((a, b) => {
+      // Unlocked first
+      const statusA = a.isUnlocked ? 1 : 0;
+      const statusB = b.isUnlocked ? 1 : 0;
+      if (statusA !== statusB) {
+        return statusB - statusA;
+      }
+      // Prestige order (Legendary > Epic > Rare > Common)
+      const prestigeA = PRESTIGE_ORDER[a.rarity] || 0;
+      const prestigeB = PRESTIGE_ORDER[b.rarity] || 0;
+      if (prestigeA !== prestigeB) {
+        return prestigeB - prestigeA;
+      }
+      // Name fallback
+      return a.name.localeCompare(b.name);
+    });
+  }, [badges, PRESTIGE_ORDER]);
+
+  const [showModal, setShowModal] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState("all");
+  const [sortBy, setSortBy] = React.useState("rarity-desc");
+
+  const modalBadges = React.useMemo(() => {
+    let filtered = [...sortedBadges];
+    if (statusFilter === "achieved") {
+      filtered = filtered.filter(b => b.isUnlocked);
+    } else if (statusFilter === "locked") {
+      filtered = filtered.filter(b => !b.isUnlocked);
+    }
+
+    return [...filtered].sort((a, b) => {
+      // If filtering "all", achieved badges always go first
+      if (statusFilter === "all") {
+        const statusA = a.isUnlocked ? 1 : 0;
+        const statusB = b.isUnlocked ? 1 : 0;
+        if (statusA !== statusB) {
+          return statusB - statusA;
+        }
+      }
+
+      // Rarity comparison
+      const prestigeA = PRESTIGE_ORDER[a.rarity] || 0;
+      const prestigeB = PRESTIGE_ORDER[b.rarity] || 0;
+      if (prestigeA !== prestigeB) {
+        return sortBy === "rarity-desc" ? prestigeB - prestigeA : prestigeA - prestigeB;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [sortedBadges, statusFilter, sortBy, PRESTIGE_ORDER]);
+
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+  const [scrollIndex, setScrollIndex] = React.useState(0);
+  const visibleBadges = React.useMemo(() => {
+    return sortedBadges.slice(scrollIndex, scrollIndex + 4);
+  }, [sortedBadges, scrollIndex]);
+
+  const handlePrev = () => {
+    setScrollIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setScrollIndex(prev => Math.min(sortedBadges.length - 4, prev + 1));
+  };
 
   return (
     <aside className="w-full xl:w-72 flex-shrink-0 space-y-4">
@@ -159,7 +228,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                 }}
               >
                 {user?.profilePicture
-                  ? <img src={user.profilePicture} alt="" className="w-full h-full object-cover" />
+                  ? <img src={user.profilePicture} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                   : initials
                 }
               </div>
@@ -295,36 +364,94 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
               <FiAward size={12} className="text-yellow-400" /> Achievements
             </h3>
-            <span className="text-[9px] font-black text-tertiary bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-2 py-0.5">
-              {displayBadges.length}
-            </span>
+            <button
+              onClick={() => setShowModal(true)}
+              className="text-[9px] font-black text-tertiary bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-2 py-0.5 hover:text-accent hover:border-accent/30 transition-colors"
+            >
+              {sortedBadges.filter(b => b.isUnlocked).length} / {sortedBadges.length}
+            </button>
           </div>
 
-          {/* Badge grid */}
-          <div className="grid grid-cols-4 gap-2">
-            {displayBadges.slice(0, 8).map((badge, i) => {
-              const r = RARITY[badge.rarity] || RARITY.COMMON;
-              return (
-                <motion.div
-                  key={badge._id}
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.15 + i * 0.06, type: "spring", stiffness: 300, damping: 22 }}
-                  whileHover={{ scale: 1.18, y: -2 }}
-                  title={`${badge.name} — ${badge.description || badge.rarity}`}
-                  className="relative aspect-square rounded-xl flex items-center justify-center text-xl cursor-help"
-                  style={{
-                    background: r.bg,
-                    border: `1px solid ${r.border}`,
-                    boxShadow: `0 0 12px rgba(${r.glow})`,
-                  }}
-                >
-                  {badge.icon}
-                  <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-black/30"
-                    style={{ background: r.label }} />
-                </motion.div>
-              );
-            })}
+          {/* Badge grid with Slider */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handlePrev}
+              disabled={scrollIndex === 0}
+              className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 flex items-center justify-center text-secondary disabled:opacity-30 disabled:pointer-events-none transition-colors shrink-0"
+            >
+              <FiChevronLeft size={14} />
+            </button>
+
+            <div className="flex-1 grid grid-cols-4 gap-2">
+              {visibleBadges.map((badge, i) => {
+                const r = RARITY[badge.rarity] || RARITY.COMMON;
+                const isUnlocked = badge.isUnlocked;
+                return (
+                  <motion.div
+                    key={badge._id}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={isUnlocked ? {
+                      scale: 1,
+                      opacity: 1,
+                      boxShadow: [
+                        "0 0 8px rgba(250, 204, 21, 0.3)",
+                        "0 0 18px rgba(250, 204, 21, 0.7)",
+                        "0 0 8px rgba(250, 204, 21, 0.3)"
+                      ]
+                    } : {
+                      scale: 1,
+                      opacity: 1
+                    }}
+                    transition={isUnlocked ? {
+                      boxShadow: {
+                        repeat: Infinity,
+                        duration: 2,
+                        ease: "easeInOut"
+                      },
+                      scale: { type: "spring", stiffness: 300, damping: 22 }
+                    } : {}}
+                    whileHover={{ scale: 1.18, y: -2 }}
+                    title={`${badge.name} — ${badge.description || badge.rarity} ${isUnlocked ? '(Achieved)' : '(Locked)'}`}
+                    className="group relative aspect-square rounded-xl flex items-center justify-center text-2xl transition-all duration-300 overflow-hidden cursor-help"
+                    style={{
+                      background: r.bg,
+                      border: isUnlocked 
+                        ? "2px solid #facc15" 
+                        : `1px solid ${r.border}`,
+                    }}
+                  >
+                    {badge.icon}
+                    {isUnlocked && (
+                      <>
+                        {/* Shining sweeping line */}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent pointer-events-none -skew-x-12"
+                          initial={{ x: "-150%" }}
+                          animate={{ x: "150%" }}
+                          transition={{
+                            repeat: Infinity,
+                            repeatType: "loop",
+                            duration: 2.2,
+                            ease: "linear",
+                            delay: i * 0.2
+                          }}
+                        />
+                        {/* Status dot in corner */}
+                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-black/30 bg-[#facc15] shadow-[0_0_6px_#facc15]" />
+                      </>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={handleNext}
+              disabled={scrollIndex >= sortedBadges.length - 4}
+              className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 flex items-center justify-center text-secondary disabled:opacity-30 disabled:pointer-events-none transition-colors shrink-0"
+            >
+              <FiChevronRight size={14} />
+            </button>
           </div>
 
           {/* Rarity legend */}
@@ -337,12 +464,13 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             ))}
           </div>
 
-          {displayBadges.length > 8 && (
-            <Link to="/badges" className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-accent hover:text-accent/80 transition-colors">
-              View all {displayBadges.length} badges <FiArrowRight size={11} />
-            </Link>
-          )}
-          {displayBadges.length === 0 && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-accent hover:text-accent/80 transition-colors w-full mt-2"
+          >
+            View all achievements <FiArrowRight size={11} />
+          </button>
+          {sortedBadges.length === 0 && (
             <p className="text-[11px] text-tertiary text-center py-2">Complete challenges to unlock achievements.</p>
           )}
         </div>
@@ -364,6 +492,180 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowModal(false)}
+              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-lg max-h-[80vh] rounded-2xl border border-white/10 bg-white dark:bg-[#0f172a] text-black dark:text-white shadow-2xl flex flex-col overflow-hidden z-10"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-white/10 flex items-center justify-between bg-slate-900/85">
+                <div className="flex items-center gap-2.5">
+                  <FiAward className="text-yellow-400 text-xl" />
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-wider text-white">All Achievements</h3>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      {sortedBadges.filter(b => b.isUnlocked).length} achieved of {sortedBadges.length} total
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+
+              {/* Filters & Sorting */}
+              <div className="px-5 py-3.5 bg-slate-900/50 border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
+                {/* Status Tabs */}
+                <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "achieved", label: "Achieved" },
+                    { id: "locked", label: "Locked" },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setStatusFilter(tab.id)}
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                        statusFilter === tab.id
+                          ? "bg-accent text-white shadow-md shadow-accent/20"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Sort By</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-white outline-none cursor-pointer focus:border-accent/50 transition-colors"
+                  >
+                    <option value="rarity-desc">Rarity: High to Low</option>
+                    <option value="rarity-asc">Rarity: Low to High</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Content Grid */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0 bg-slate-950/20">
+                {modalBadges.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
+                    <span className="text-3xl">🔒</span>
+                    <p className="text-sm font-bold">No badges matching this filter.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {modalBadges.map((badge, i) => {
+                      const r = RARITY[badge.rarity] || RARITY.COMMON;
+                      const isUnlocked = badge.isUnlocked;
+                      return (
+                        <div
+                          key={badge._id}
+                          className="relative rounded-xl p-3.5 flex gap-3.5 border transition-all duration-300 overflow-hidden min-h-[80px] items-center pr-12"
+                          style={{
+                            background: isUnlocked ? `${r.bg}55` : "rgba(255,255,255,0.01)",
+                            borderColor: isUnlocked ? "#facc15" : `${r.border}44`,
+                            boxShadow: isUnlocked ? `0 0 15px rgba(${r.glow})` : "none",
+                          }}
+                        >
+                          {/* Left Icon box */}
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 relative overflow-hidden"
+                            style={{
+                              background: r.bg,
+                              border: isUnlocked ? "2px solid #facc15" : `1px solid ${r.border}`,
+                            }}
+                          >
+                            {badge.icon}
+                            {isUnlocked && (
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none -skew-x-12"
+                                initial={{ x: "-150%" }}
+                                animate={{ x: "150%" }}
+                                transition={{
+                                  repeat: Infinity,
+                                  repeatType: "loop",
+                                  duration: 2.2,
+                                  ease: "linear",
+                                  delay: i * 0.15
+                                }}
+                              />
+                            )}
+                          </div>
+
+                          {/* Right Info Box */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h4 className="text-sm font-black tracking-tight text-white leading-none">
+                                {badge.name}
+                              </h4>
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest leading-none shrink-0"
+                                style={{ background: `${r.border}33`, color: r.label }}
+                              >
+                                {badge.rarity}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 line-clamp-2 leading-tight">
+                              {badge.description || "No description provided."}
+                            </p>
+                          </div>
+
+                          {/* Unlocked marker or status tag */}
+                          <div className="absolute top-2 right-2 shrink-0">
+                            {isUnlocked ? (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-[#facc15] bg-[#facc15]/10 border border-[#facc15]/20 px-1.5 py-0.5 rounded-full leading-none">
+                                Achieved
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-white/5 border border-white/5 px-1.5 py-0.5 rounded-full leading-none">
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Footer Action */}
+              <div className="p-4 border-t border-white/10 bg-slate-900/85 flex justify-end">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-white transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </aside>
   );

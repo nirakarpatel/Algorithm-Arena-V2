@@ -83,7 +83,7 @@ const IdentityHoverCard = ({ userId, username, position }) => {
                     <div className="w-24 h-24 md:w-28 md:h-28 rounded-[1.5rem] bg-black/[0.05] dark:bg-black border-2 border-accent/20 flex items-center justify-center text-4xl font-black text-primary dark:text-white relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent opacity-50" />
                       {p.profilePicture ? (
-                        <img src={p.profilePicture} className="relative z-10 w-full h-full object-cover" alt="" />
+                        <img src={p.profilePicture} referrerPolicy="no-referrer" className="relative z-10 w-full h-full object-cover" alt="" />
                       ) : (
                         <span className="relative z-10">{(p.username || "?")[0].toUpperCase()}</span>
                       )}
