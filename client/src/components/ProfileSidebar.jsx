@@ -5,22 +5,26 @@ import {
   FiEdit2, FiAward, FiShield, FiUsers, FiZap,
   FiStar, FiTarget, FiTrendingUp, FiClock, FiExternalLink,
   FiArrowRight, FiGithub, FiTwitter, FiLinkedin, FiGlobe,
-  FiCode, FiCpu, FiChevronLeft, FiChevronRight, FiX,
+  FiCode, FiCpu, FiChevronLeft, FiChevronRight, FiX, FiShare2
 } from "react-icons/fi";
+import toast from "react-hot-toast";
 import Logo from "./Logo";
+import { useAuth } from "../context/useAuth";
 
 /* ── Rarity configs ─────────────────────────────────────── */
 const RARITY = {
-  COMMON:    { glow: "0,0,0,0",         border: "#334155", bg: "#1e293b", label: "#94a3b8" },
-  RARE:      { glow: "59,130,246,0.5",  border: "#3b82f6", bg: "#1e3a5f", label: "#60a5fa" },
-  EPIC:      { glow: "168,85,247,0.55", border: "#a855f7", bg: "#3b1f6e", label: "#c084fc" },
+  COMMON: { glow: "0,0,0,0", border: "#334155", bg: "#1e293b", label: "#94a3b8" },
+  RARE: { glow: "59,130,246,0.5", border: "#3b82f6", bg: "#1e3a5f", label: "#60a5fa" },
+  EPIC: { glow: "168,85,247,0.55", border: "#a855f7", bg: "#3b1f6e", label: "#c084fc" },
   LEGENDARY: { glow: "250,204,21,0.65", border: "#facc15", bg: "#422006", label: "#fde047" },
 };
 
+const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+
 const FALLBACK_BADGES = [
-  { _id: "b1", name: "First Blood",      icon: "🩸", rarity: "COMMON",    description: "First successful submission" },
-  { _id: "b2", name: "Night Owl",        icon: "🦉", rarity: "RARE",      description: "Solved between 12am–4am" },
-  { _id: "b3", name: "Flawless",         icon: "✨", rarity: "EPIC",      description: "First-attempt perfect solve" },
+  { _id: "b1", name: "First Blood", icon: "🩸", rarity: "COMMON", description: "First successful submission" },
+  { _id: "b2", name: "Night Owl", icon: "🦉", rarity: "RARE", description: "Solved between 12am–4am" },
+  { _id: "b3", name: "Flawless", icon: "✨", rarity: "EPIC", description: "First-attempt perfect solve" },
   { _id: "b4", name: "Algorithm Master", icon: "👑", rarity: "LEGENDARY", description: "100 problems solved" },
 ];
 
@@ -99,25 +103,39 @@ const DiffBar = ({ label, solved, total, color, delay }) => {
    ══════════════════════════════════════════════════════════ */
 const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const initials = (user?.username || "?")[0].toUpperCase();
-  const solved   = summary?.solved ?? profile?.acceptedCount ?? 0;
-  const total    = summary?.totalChallenges ?? 0;
-  const pending  = summary?.pending ?? profile?.pendingCount ?? 0;
-  const streak   = profile?.streak ?? 0;
+  const solved = summary?.solved ?? profile?.acceptedCount ?? 0;
+  const total = summary?.totalChallenges ?? 0;
+  const pending = summary?.pending ?? profile?.pendingCount ?? 0;
+  const streak = profile?.streak ?? 0;
   const maxStreak = profile?.maxStreak ?? 0;
-  const xp       = profile?.totalPoints ?? 0;
-  const rank     = profile?.rank ?? "—";
+  const xp = profile?.totalPoints ?? 0;
+  const rank = profile?.rank ?? "—";
   const roleName = user?.role === "admin" ? "Admin"
     : user?.role === "clan-chief" ? "Clan Chief"
     : "Member";
 
-  const easy   = profile?.difficultyBreakdown?.easy   ?? { solved: 0, total: 0 };
-  const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
-  const hard   = profile?.difficultyBreakdown?.hard   ?? { solved: 0, total: 0 };
+  const { user: authUser } = useAuth();
+  const isOwnProfile = authUser?.username === user?.username;
 
-  const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+  const handleShare = () => {
+    const url = `${window.location.origin}/profile/${user?.username}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Profile link copied to clipboard!", {
+      style: {
+        background: '#1e293b',
+        color: '#fff',
+        border: '1px solid rgba(168,85,247,0.3)',
+      },
+      iconTheme: {
+        primary: '#a855f7',
+        secondary: '#fff',
+      },
+    });
+  };
+
   const sortedBadges = React.useMemo(() => {
-    const baseBadges = badges?.length 
-      ? badges 
+    const baseBadges = badges?.length
+      ? badges
       : FALLBACK_BADGES.map(b => ({ ...b, isUnlocked: true }));
 
     return [...baseBadges].sort((a, b) => {
@@ -274,18 +292,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
           {/* Stats 2×2 grid */}
           <div className="grid grid-cols-2 gap-2">
-            <StatPill icon={FiTarget}     value={`${solved}/${total}`} label="Solved"       color="text-green-400" />
-            <StatPill icon={FiStar}       value={rank !== "—" ? `#${rank}` : "—"}  label="Global Rank"  color="text-yellow-400" />
-            <StatPill icon={FiZap}        value={`${streak}d`}          label="Streak"       color="text-accent" sublabel={maxStreak > 0 ? `best ${maxStreak}d` : undefined} />
-            <StatPill icon={FiClock}      value={pending}               label="Pending"      color="text-orange-400" />
-          </div>
-
-          {/* Diff bars */}
-          <div className="space-y-2.5">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-tertiary">Difficulty Breakdown</p>
-            <DiffBar label="Easy"   solved={easy.solved}   total={easy.total}   color="#22c55e" delay={0.1} />
-            <DiffBar label="Medium" solved={medium.solved} total={medium.total} color="#eab308" delay={0.2} />
-            <DiffBar label="Hard"   solved={hard.solved}   total={hard.total}   color="#ef4444" delay={0.3} />
+            <StatPill icon={FiTarget} value={`${solved}/${total}`} label="Solved" color="text-green-400" />
+            <StatPill icon={FiStar} value={rank !== "—" ? `#${rank}` : "—"} label="Global Rank" color="text-yellow-400" />
+            <StatPill icon={FiZap} value={`${streak}d`} label="Streak" color="text-accent" sublabel={maxStreak > 0 ? `best ${maxStreak}d` : undefined} />
+            <StatPill icon={FiClock} value={pending} label="Pending" color="text-orange-400" />
           </div>
 
           {/* Divider */}
@@ -334,15 +344,25 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             </div>
           )}
 
-          {/* Edit profile CTA */}
-          <Link
-            to="/settings"
-            className="group flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-black/[0.07] dark:border-white/[0.07] bg-black/[0.01] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-accent/30 transition-all text-xs font-bold text-secondary hover:text-primary"
-          >
-            <FiEdit2 size={11} className="group-hover:text-accent transition-colors" />
-            Edit Profile
-            <FiExternalLink size={10} className="ml-auto opacity-0 group-hover:opacity-60 transition-opacity" />
-          </Link>
+          {/* Actions CTA */}
+          <div className="flex gap-2 w-full">
+            {isOwnProfile && (
+              <Link
+                to="/settings"
+                className="group flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-black/[0.07] dark:border-white/[0.07] bg-black/[0.01] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-accent/30 transition-all text-xs font-bold text-secondary hover:text-primary"
+              >
+                <FiEdit2 size={11} className="group-hover:text-accent transition-colors" />
+                Edit
+              </Link>
+            )}
+            <button
+              onClick={handleShare}
+              className={`group flex items-center justify-center gap-2 py-2.5 rounded-xl border border-black/[0.07] dark:border-white/[0.07] bg-black/[0.01] dark:bg-white/[0.02] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:border-accent/30 transition-all text-xs font-bold text-secondary hover:text-primary ${isOwnProfile ? 'flex-1' : 'w-full'}`}
+            >
+              <FiShare2 size={11} className="group-hover:text-accent transition-colors" />
+              Share
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -415,8 +435,8 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                     className="group relative aspect-square rounded-xl flex items-center justify-center text-2xl transition-all duration-300 overflow-hidden cursor-help"
                     style={{
                       background: r.bg,
-                      border: isUnlocked 
-                        ? "2px solid #facc15" 
+                      border: isUnlocked
+                        ? "2px solid #facc15"
                         : `1px solid ${r.border}44`,
                     }}
                   >
@@ -425,7 +445,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                       <>
                         {/* Aura Ring Light */}
                         <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: "inset 0 0 12px #facc15" }} />
-                        
+
                         {/* Shining sweeping line */}
                         <motion.div
                           className="absolute top-0 bottom-0 w-full bg-gradient-to-r from-transparent via-white/60 to-transparent pointer-events-none -skew-x-12"
@@ -547,11 +567,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                     <button
                       key={tab.id}
                       onClick={() => setStatusFilter(tab.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                        statusFilter === tab.id
+                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${statusFilter === tab.id
                           ? "bg-accent text-white shadow-md shadow-accent/20"
                           : "text-slate-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -588,10 +607,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                           key={badge._id}
                           className="relative rounded-xl p-3.5 flex gap-3.5 border transition-all duration-300 overflow-hidden min-h-[80px] items-center w-full pr-16 bg-white/5 dark:bg-black/5"
                           style={{
-                              background: isUnlocked ? `${r.border}22` : `${r.border}0D`,
-                              borderColor: isUnlocked ? "#facc15" : `${r.border}44`,
-                              boxShadow: isUnlocked ? `0 0 15px rgba(${r.glow})` : "none",
-                            }}
+                            background: isUnlocked ? `${r.border}22` : `${r.border}0D`,
+                            borderColor: isUnlocked ? "#facc15" : `${r.border}44`,
+                            boxShadow: isUnlocked ? `0 0 15px rgba(${r.glow})` : "none",
+                          }}
                         >
                           {/* Wide Card Sweeping Shine */}
                           {isUnlocked && (
@@ -612,7 +631,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                           {/* Locked Watermark */}
                           {!isUnlocked && (
                             <div className="absolute inset-0 flex items-center justify-end pr-2 pointer-events-none select-none z-0 overflow-hidden opacity-[0.15]">
-                              <span 
+                              <span
                                 className="text-5xl font-black uppercase tracking-widest -rotate-6"
                                 style={{ color: r.border, textShadow: `0 0 15px ${r.border}` }}
                               >
@@ -635,7 +654,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                               <>
                                 {/* Aura Ring Light */}
                                 <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: "inset 0 0 12px #facc15" }} />
-                                
+
                                 {/* Shining sweeping line */}
                                 <motion.div
                                   className="absolute top-0 bottom-0 w-full bg-gradient-to-r from-transparent via-white/60 to-transparent pointer-events-none -skew-x-12"

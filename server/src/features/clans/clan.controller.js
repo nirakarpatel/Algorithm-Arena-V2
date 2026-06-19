@@ -105,7 +105,7 @@ const getMyClan = async (req, res, next) => {
     const userId = req.user.id;
 
     // Find clan where user is chief or a member
-    const clan = await Clan.findOne({
+    const clanDoc = await Clan.findOne({
       $or: [{ chief: userId }, { members: userId }]
     })
       .populate('chief', 'username email')
@@ -115,8 +115,36 @@ const getMyClan = async (req, res, next) => {
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
 
-    if (!clan) {
+    if (!clanDoc) {
       return res.status(404).json({ success: false, message: 'You are not assigned to any clan' });
+    }
+
+    const clan = clanDoc.toObject();
+    
+    // Dynamically calculate totalPoints based on members' accepted submissions
+    const memberIds = clan.members.map(m => m._id);
+    if (memberIds.length > 0) {
+      const [stats] = await Submission.aggregate([
+        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
+        {
+          $lookup: {
+            from: 'challenges',
+            localField: 'challengeId',
+            foreignField: '_id',
+            as: 'challenge',
+          },
+        },
+        { $unwind: '$challenge' },
+        {
+          $group: {
+            _id: null,
+            totalPoints: { $sum: '$challenge.points' },
+          },
+        },
+      ]);
+      clan.totalPoints = stats?.totalPoints || 0;
+    } else {
+      clan.totalPoints = 0;
     }
 
     return sendSuccess(res, { data: clan });
@@ -128,7 +156,7 @@ const getMyClan = async (req, res, next) => {
 
 const getClans = async (req, res, next) => {
   try {
-    const clans = await Clan.find(getClanStatusFilter(req.query.status))
+    const clansDocs = await Clan.find(getClanStatusFilter(req.query.status))
       .populate('chief', 'username email')
       .populate('members', 'username email status codingLevel points')
       .populate('requests', 'username email')
@@ -136,6 +164,35 @@ const getClans = async (req, res, next) => {
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email')
       .sort({ createdAt: -1 });
+
+    const clans = await Promise.all(clansDocs.map(async (clanDoc) => {
+      const clan = clanDoc.toObject();
+      const memberIds = clan.members.map(m => m._id);
+      if (memberIds.length > 0) {
+        const [stats] = await Submission.aggregate([
+          { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
+          {
+            $lookup: {
+              from: 'challenges',
+              localField: 'challengeId',
+              foreignField: '_id',
+              as: 'challenge',
+            },
+          },
+          { $unwind: '$challenge' },
+          {
+            $group: {
+              _id: null,
+              totalPoints: { $sum: '$challenge.points' },
+            },
+          },
+        ]);
+        clan.totalPoints = stats?.totalPoints || 0;
+      } else {
+        clan.totalPoints = 0;
+      }
+      return clan;
+    }));
 
     return sendSuccess(res, { data: clans });
   } catch (err) {
@@ -146,7 +203,7 @@ const getClans = async (req, res, next) => {
 // GET /api/clans/:id — single clan detail
 const getClan = async (req, res, next) => {
   try {
-    const clan = await Clan.findById(req.params.id)
+    const clanDoc = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
       .populate('members', 'username email status codingLevel points')
       .populate('requests', 'username email')
@@ -154,8 +211,35 @@ const getClan = async (req, res, next) => {
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
 
-    if (!clan) {
+    if (!clanDoc) {
       return res.status(404).json({ success: false, message: 'Clan not found' });
+    }
+
+    const clan = clanDoc.toObject();
+
+    const memberIds = clan.members.map(m => m._id);
+    if (memberIds.length > 0) {
+      const [stats] = await Submission.aggregate([
+        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
+        {
+          $lookup: {
+            from: 'challenges',
+            localField: 'challengeId',
+            foreignField: '_id',
+            as: 'challenge',
+          },
+        },
+        { $unwind: '$challenge' },
+        {
+          $group: {
+            _id: null,
+            totalPoints: { $sum: '$challenge.points' },
+          },
+        },
+      ]);
+      clan.totalPoints = stats?.totalPoints || 0;
+    } else {
+      clan.totalPoints = 0;
     }
 
     return sendSuccess(res, { data: clan });

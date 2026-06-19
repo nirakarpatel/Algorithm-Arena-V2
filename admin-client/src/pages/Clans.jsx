@@ -55,10 +55,6 @@ const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
   const [activeTab, setActiveTab] = useState('roster'); // roster, notices
   const isArchived = clan.status === 'archived';
 
-  // Calculate real-time stats from populated members
-  const realTimeTotalXp = members.reduce((sum, member) => sum + (member.points || 0), 0);
-  const realTimeAvgXp = members.length ? Math.round(realTimeTotalXp / members.length) : 0;
-
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -106,8 +102,8 @@ const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard icon={FiUsers} label="Members" value={members.length} color="bg-accent/15 text-accent" />
-        <StatCard icon={FiTrendingUp} label="Total XP" value={realTimeTotalXp.toLocaleString()} color="bg-green-500/15 text-green-400" />
-        <StatCard icon={FiTarget} label="Avg XP" value={realTimeAvgXp.toLocaleString()} color="bg-purple-500/15 text-purple-400" />
+        <StatCard icon={FiTrendingUp} label="Total XP" value={(clan.totalPoints || 0).toLocaleString()} color="bg-green-500/15 text-green-400" />
+        <StatCard icon={FiTarget} label="Avg XP" value={members.length ? Math.round((clan.totalPoints || 0) / members.length).toLocaleString() : '0'} color="bg-purple-500/15 text-purple-400" />
         <StatCard icon={FiAward} label="Chief" value={clan.chief?.username || 'None'} color="bg-yellow-500/15 text-yellow-400" />
       </div>
 
