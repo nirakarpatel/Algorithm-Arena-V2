@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { FiActivity, FiCpu, FiArrowRight, FiCalendar, FiZap, FiMapPin, FiLink, FiGithub, FiTwitter } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiActivity, FiCpu, FiArrowRight, FiCalendar, FiZap, FiMapPin, FiLink, FiGithub, FiTwitter, FiX } from "react-icons/fi";
 import { api } from "../lib/api";
 import { useAuth } from "../context/useAuth";
 import SkeletonCard from "../components/SkeletonCard";
@@ -159,6 +159,7 @@ const LegendItem = ({ label, solved, total, color, bg, shadow, onMouseEnter, onM
 const Profile = () => {
   const { user } = useAuth();
   const { username } = useParams();
+  const [showAllSubs, setShowAllSubs] = React.useState(false);
 
   const profileQ = useQuery({
     queryKey: ["full-profile-stats", username || "me"],
@@ -187,7 +188,7 @@ const Profile = () => {
   const submissions = useMemo(() => subsQ.data || [], [subsQ.data]);
 
   const recentSubs = useMemo(() => {
-    return [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 8);
+    return [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 10);
   }, [submissions]);
 
   if (profileQ.isLoading || subsQ.isLoading) {
@@ -222,7 +223,7 @@ const Profile = () => {
       <ProfileSidebar user={displayUser} profile={profile} badges={profile?.badges} />
 
       <div className="flex-1 min-w-0 space-y-6">
-        <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md">
+        <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md shrink-0">
           <div className="absolute top-0 right-0 p-4 text-right z-10">
             <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
@@ -242,7 +243,7 @@ const Profile = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0">
           <motion.div {...fd(0.15)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-6 flex flex-col">
             <h2 className="text-xs font-black uppercase tracking-widest text-primary mb-2">Algorithm Mastery</h2>
             <MasteryPieChart easy={easy} medium={medium} hard={hard} total={total} solvedPct={solvedPct} />
@@ -253,60 +254,130 @@ const Profile = () => {
           </motion.div>
         </div>
 
-        <motion.div {...fd(0.25)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md overflow-hidden">
-          <div className="p-4 border-b border-black/[0.06] dark:border-b-white/[0.06] flex items-center justify-between">
+        <motion.div {...fd(0.25)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md overflow-hidden flex flex-col h-[380px]">
+          <div className="p-4 border-b border-black/[0.06] dark:border-b-white/[0.06] flex items-center justify-between shrink-0">
              <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                <FiActivity className="text-accent" /> Recent Submissions
              </h2>
-             {!username && (
-               <Link to="/dashboard" className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1">
-                 Go to Arena <FiArrowRight size={10} />
-               </Link>
-             )}
+             <button onClick={() => setShowAllSubs(true)} className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
+               View All <FiArrowRight size={10} />
+             </button>
           </div>
           
-          {recentSubs.length === 0 ? (
-            <div className="p-10 text-center">
-              <FiCpu size={32} className="text-black/10 dark:text-white/10 mx-auto mb-3" />
-              <p className="text-xs font-bold text-tertiary uppercase tracking-widest">No recent submissions</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-              {recentSubs.map((sub, i) => {
-                const ac = sub.status === "Accepted";
-                const wa = sub.status === "Rejected";
-                const badgeCls = ac
-                  ? "bg-green-500/10 text-green-400 border-green-500/20"
-                  : wa
-                    ? "bg-red-500/10 text-red-400 border-red-500/20"
-                    : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-                const badgeLabel = ac ? "ACCEPTED" : wa ? "REJECTED" : "PENDING";
+          <div className="overflow-y-auto flex-1 custom-scrollbar">
+            {recentSubs.length === 0 ? (
+              <div className="p-10 text-center h-full flex flex-col items-center justify-center">
+                <FiCpu size={32} className="text-black/10 dark:text-white/10 mx-auto mb-3" />
+                <p className="text-xs font-bold text-tertiary uppercase tracking-widest">No recent submissions</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04] pb-4">
+                {recentSubs.map((sub, i) => {
+                  const ac = sub.status === "Accepted";
+                  const wa = sub.status === "Rejected";
+                  const badgeCls = ac
+                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                    : wa
+                      ? "bg-red-500/10 text-red-400 border-red-500/20"
+                      : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+                  const badgeLabel = ac ? "ACCEPTED" : wa ? "REJECTED" : "PENDING";
 
-                return (
-                  <Link key={sub._id + i} to={`/submission/${sub._id}`} className="flex items-center justify-between p-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
-                    <div className="min-w-0 pr-4">
-                      <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors truncate">
-                        {sub.challengeId?.title || "Unknown Challenge"}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-mono text-tertiary">
-                          {new Date(sub.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                        <span className="text-[10px] text-tertiary">•</span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{sub.language}</span>
+                  return (
+                    <Link key={sub._id + i} to={`/submission/${sub._id}`} className="flex items-center justify-between p-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors group">
+                      <div className="min-w-0 pr-4">
+                        <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors truncate">
+                          {sub.challengeId?.title || "Unknown Challenge"}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-mono text-tertiary">
+                            {new Date(sub.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          <span className="text-[10px] text-tertiary">•</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{sub.language}</span>
+                        </div>
                       </div>
-                    </div>
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border shrink-0 ${badgeCls}`}>
-                      {badgeLabel}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border shrink-0 ${badgeCls}`}>
+                        {badgeLabel}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </motion.div>
 
       </div>
+
+      <AnimatePresence>
+        {showAllSubs && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-3xl max-h-[85vh] bg-[var(--bg-sidebar)] border border-black/[0.08] dark:border-white/[0.08] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            >
+              <div className="p-5 border-b border-black/[0.06] dark:border-white/[0.06] flex items-center justify-between bg-[var(--glass-surface)] shrink-0">
+                <h2 className="text-lg font-black text-primary flex items-center gap-2">
+                  <FiActivity className="text-accent" /> All Submissions
+                  <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full font-bold ml-2">
+                    {submissions.length}
+                  </span>
+                </h2>
+                <button
+                  onClick={() => setShowAllSubs(false)}
+                  className="p-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-secondary transition-colors"
+                >
+                  <FiX size={18} />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-2 sm:p-4 custom-scrollbar">
+                {submissions.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <FiCpu size={32} className="text-black/10 dark:text-white/10 mx-auto mb-3" />
+                    <p className="text-xs font-bold text-tertiary uppercase tracking-widest">No submissions found</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {submissions.map((sub, i) => {
+                      const ac = sub.status === "Accepted";
+                      const wa = sub.status === "Rejected";
+                      const badgeCls = ac
+                        ? "bg-green-500/10 text-green-400 border-green-500/20"
+                        : wa
+                          ? "bg-red-500/10 text-red-400 border-red-500/20"
+                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+                      const badgeLabel = ac ? "ACCEPTED" : wa ? "REJECTED" : "PENDING";
+
+                      return (
+                        <Link key={sub._id + i} to={`/submission/${sub._id}`} className="flex items-center justify-between p-4 rounded-xl border border-black/[0.04] dark:border-white/[0.04] bg-[var(--glass-surface)] hover:border-accent/40 transition-colors group">
+                          <div className="min-w-0 pr-4">
+                            <p className="text-sm font-bold text-primary group-hover:text-accent transition-colors truncate">
+                              {sub.challengeId?.title || "Unknown Challenge"}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] font-mono text-tertiary">
+                                {new Date(sub.submittedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              <span className="text-[10px] text-tertiary">•</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{sub.language}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border shrink-0 ${badgeCls}`}>
+                            {badgeLabel}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
