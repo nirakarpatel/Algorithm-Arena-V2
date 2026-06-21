@@ -5,11 +5,14 @@ const isGlobalOverride = (user) => GLOBAL_OVERRIDE_ROLES.has(user?.role);
 
 const isChief = (user) => CHIEF_ROLES.has(user?.role) || Boolean(user?.isChief);
 
-const getClanId = (clan) => {
-  if (!clan) return null;
-  if (typeof clan === 'string') return clan;
-  return clan._id || clan.id || clan.clanId || null;
+const toStr = (v) => {
+  if (!v) return null;
+  if (typeof v === 'string') return v;
+  if (v._id) return String(v._id);
+  return String(v);
 };
+
+const getClanId = (clan) => toStr(clan);
 
 const isClanArchived = (clan) => clan?.status === 'archived';
 
@@ -31,8 +34,8 @@ const canManageOwnClan = (user, clan) => {
   if (user?.role !== 'clan-chief') return false;
 
   const clanId = getClanId(clan);
-  const userClanId = getClanId(user?.clan) || getClanId(user?.clanId) || null;
-  return Boolean(clanId && userClanId && clanId.toString() === userClanId.toString());
+  const userClanId = getClanId(user?.clan) || toStr(user?.clanId);
+  return Boolean(clanId && userClanId === clanId);
 };
 
 const canArchiveClan = (user, clan) => {
@@ -49,14 +52,34 @@ const canApproveJoinRequests = (user, clan) => canManageOwnClan(user, clan) && !
 
 const canRemoveClanMember = (user, clan, memberId) => {
   if (!canManageOwnClan(user, clan) || isClanArchived(clan)) return false;
-  const chiefId = clan?.chief?._id || clan?.chief;
-  return memberId !== chiefId;
+  const chiefId = toStr(clan?.chief?._id || clan?.chief);
+  return toStr(memberId) !== chiefId;
 };
 
 const canIssueWarning = (user, targetUser, clan) => {
+  if (!user || !targetUser || !clan) return false;
+
+  // Don't allow warning yourself
+  const targetId = toStr(targetUser._id || targetUser.id);
+  const userId = toStr(user._id || user.id);
+  if (targetId && userId && targetId === userId) return false;
+
+  // Can't warn higher-privilege users
+  if (isGlobalOverride(targetUser) && !isGlobalOverride(user)) return false;
+
   if (!canManageOwnClan(user, clan) || isClanArchived(clan)) return false;
-  const targetClanId = targetUser?.clan?._id || targetUser?.clan || null;
-  return Boolean(targetClanId && targetClanId === getClanId(clan));
+
+  // The target is in this clan if their clan ID matches, OR they are in the members array
+  const clanId = getClanId(clan);
+  const targetClanId = getClanId(targetUser?.clan);
+  if (targetClanId && targetClanId === clanId) return true;
+
+  // Fallback: check if target is in clan.members (populated array)
+  if (clan?.members && Array.isArray(clan.members)) {
+    return clan.members.some(m => toStr(m?._id || m?.id || m) === targetId);
+  }
+
+  return true;
 };
 
 export {

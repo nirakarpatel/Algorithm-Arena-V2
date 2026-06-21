@@ -40,7 +40,7 @@ const ChiefMembersTab = ({ clan }) => {
       return res.data;
     },
     onSuccess: () => {
-      toast.success('Warning sent to member via email');
+      toast.success('yes this member is warned now');
       queryClient.invalidateQueries({ queryKey: ['chief-clan-info'] });
       setWarnModal({ open: false, user: null });
       setWarnMessage('');
