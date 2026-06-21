@@ -333,7 +333,7 @@ samp,
             background 150ms ease;
     }
 
-    .field-select option {
+    select option {
         background-color: var(--bg-app);
         color: var(--fg-primary);
     }

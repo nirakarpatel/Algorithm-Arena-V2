@@ -704,9 +704,8 @@ const ChallengeDetails = () => {
             />
           </div>
 
-          {/* ── Test / Result Panel (normal mode only) ── */}
-          {!isReviewMode && (
-            <div
+          {/* ── Test / Result Panel ── */}
+          <div
               className="relative flex flex-col border-t border-black/10 dark:border-white/10 shrink-0"
               style={{ height: bottomCollapsed ? "auto" : `${bottomHeight}px` }}
             >
@@ -940,7 +939,6 @@ const ChallengeDetails = () => {
               </div>
               )}
             </div>
-          )}
 
           {isReviewMode ? (
             /* ---- REVIEW MODE PANEL ---- */

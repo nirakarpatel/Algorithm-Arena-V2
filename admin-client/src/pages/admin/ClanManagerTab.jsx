@@ -159,17 +159,17 @@ const ClanManagerTab = () => {
     }
   });
 
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }) => {
-      return api.put(`/api/users/${userId}/role`, { role });
+  const removeChiefMutation = useMutation({
+    mutationFn: async ({ clanId }) => {
+      return api.delete(`/api/clans/${clanId}/chief`);
     },
     onSuccess: () => {
-      toast.success("Role updated");
+      toast.success("Chief demoted to regular member");
       queryClient.invalidateQueries({ queryKey: ['admin-clan-detail', viewClanId] });
       queryClient.invalidateQueries({ queryKey: ['admin-clans'] });
     },
     onError: () => {
-      toast.error("Failed to update role");
+      toast.error("Failed to demote chief");
     }
   });
 
@@ -177,14 +177,7 @@ const ClanManagerTab = () => {
     if (!window.confirm(`Demote ${member.username} to regular member?`)) {
       return;
     }
-    try {
-      await confirmSessionIfNeeded();
-      await updateRoleMutation.mutateAsync({ userId: member._id, role: 'member' });
-    } catch (err) {
-      if (err.message !== 'User cancelled re-authentication') {
-        toast.error(err.response?.data?.message || "Failed to update role");
-      }
-    }
+    removeChiefMutation.mutate({ clanId: viewClanId });
   };
 
   if (viewClanId) {

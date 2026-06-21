@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from 'react-hot-toast';
 import {
   FiArrowRight,
   FiZap,
@@ -64,6 +65,16 @@ const fd = (d = 0) => ({
    ══════════════════════════════════════════════ */
 const Dashboard = () => {
   const { user } = useAuth();
+
+  React.useEffect(() => {
+    if (user?.status === "Warned") {
+      const warnedToastShown = sessionStorage.getItem("warnedToastShown");
+      if (!warnedToastShown) {
+        toast.error('You have been warned', { icon: '⚠️', duration: 6000 });
+        sessionStorage.setItem("warnedToastShown", "true");
+      }
+    }
+  }, [user?.status]);
 
   const greeting = useMemo(() => getSessionGreeting(), []);
 

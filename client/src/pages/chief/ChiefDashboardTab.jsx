@@ -68,9 +68,12 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
       return res.data;
     },
     onSuccess: () => {
-      toast.success('Warning sent and user flagged.');
+      toast.success('Yes, this member is warned now');
       setWarningModal({ open: false, user: null, message: '' });
       queryClient.invalidateQueries({ queryKey: ['chief-clan-info'] });
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || 'Failed to warn user');
     }
   });
 
@@ -340,10 +343,10 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                   <button onClick={() => setWarningModal({ open: false, user: null, message: '' })} className="px-4 py-2 text-sm font-bold text-secondary hover:text-primary">Cancel</button>
                   <button 
                     onClick={() => warnMutation.mutate({ userId: warningModal.user._id, message: warningModal.message })}
-                    disabled={warnMutation.isLoading}
+                    disabled={warnMutation.isPending}
                     className="btn-primary bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 border-0"
                   >
-                    {warnMutation.isLoading ? 'Sending...' : 'Issue Warning'}
+                    {warnMutation.isPending ? 'Sending...' : 'Issue Warning'}
                   </button>
                 </div>
               </BaseCard>

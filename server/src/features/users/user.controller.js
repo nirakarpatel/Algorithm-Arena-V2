@@ -128,24 +128,28 @@ const warnUser = async (req, res, next) => {
     user.status = 'Warned';
     await user.save();
 
-    const { sendEmail } = require('../../../utils/emailService');
-    const { logger } = require('../../../utils/logger');
-    const safeUsername = escapeHtml(user.username);
-    const safeMessage = escapeHtml(message || 'Please improve your activity and adherence to clan rules.');
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ef4444; border-radius: 8px;">
-        <h2 style="color: #ef4444;">Official Warning</h2>
-        <p>Dear ${safeUsername},</p>
-        <p>You have received a warning from your Clan Chief/Admin:</p>
-        <blockquote style="border-left: 4px solid #ef4444; padding-left: 10px; color: #555;">
-          ${safeMessage}
-        </blockquote>
-        <p>Please log in to the Algorithm Arena and address this immediately.</p>
-      </div>
-    `;
-    await sendEmail(user.email, 'Algorithm Arena - Official Warning', htmlContent);
+    // Send warning email (non-blocking — don't crash if it fails)
+    try {
+      const { sendEmail } = require('../../../utils/emailService');
+      const safeUsername = escapeHtml(user.username || user.email || 'User');
+      const safeMessage = escapeHtml(message || 'Please improve your activity and adherence to clan rules.');
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ef4444; border-radius: 8px;">
+          <h2 style="color: #ef4444;">Official Warning</h2>
+          <p>Dear ${safeUsername},</p>
+          <p>You have received a warning from your Clan Chief/Admin:</p>
+          <blockquote style="border-left: 4px solid #ef4444; padding-left: 10px; color: #555;">
+            ${safeMessage}
+          </blockquote>
+          <p>Please log in to the Algorithm Arena and address this immediately.</p>
+        </div>
+      `;
+      await sendEmail(user.email, 'Algorithm Arena - Official Warning', htmlContent);
+    } catch (emailErr) {
+      console.error('Warning email failed (non-fatal):', emailErr.message);
+    }
 
-    return sendSuccess(res, { message: 'User warned and email sent' });
+    return sendSuccess(res, { data: { userId: user._id, status: user.status }, message: 'User warned successfully' });
   } catch (err) {
     return next(err);
   }

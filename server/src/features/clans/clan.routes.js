@@ -15,6 +15,7 @@ const {
   joinClan,
   leaveClan,
   assignChief,
+  removeChief,
   addMember,
   removeMember,
   approveJoinRequest,
@@ -107,6 +108,7 @@ router.patch('/:id/archive', protect, validate(clanIdParamsSchema), archiveClan)
 router.patch('/:id/restore', protect, admin, validate(clanIdParamsSchema), restoreClan);
 router.delete('/:id', protect, admin, validate(clanIdParamsSchema), deleteClan);
 router.put('/:id/chief', protect, admin, validate(clanIdParamsSchema), validate(clanAssignChiefSchema), assignChief);
+router.delete('/:id/chief', protect, admin, validate(clanIdParamsSchema), removeChief);
 router.post('/:id/members', protect, admin, validate(clanIdParamsSchema), validate(clanAddMemberSchema), addMember);
 router.delete('/:id/members/:userId', protect, validate(clanUserParamsSchema), removeMember);
 

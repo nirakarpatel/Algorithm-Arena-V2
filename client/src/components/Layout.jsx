@@ -3,10 +3,26 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Logo from "../components/Logo";
+import { useIdleTimeout } from "../hooks/useIdleTimeout";
+import toast from "react-hot-toast";
 
 const Layout = ({ onLogout }) => {
   const location = useLocation();
   const MotionContainer = motion.div;
+
+  // Log out after 20 minutes of true inactivity (no mouse moves, typing, etc.)
+  useIdleTimeout(() => {
+    toast('You were logged out due to inactivity.', { 
+      icon: '💤', 
+      id: 'idle-logout',
+      style: {
+        background: '#0f1115',
+        color: '#fff',
+        border: '1px solid rgba(168,85,247,0.3)',
+      }
+    });
+    onLogout();
+  }, 20 * 60 * 1000);
 
   return (
     <div className="min-h-screen flex flex-col bg-app text-primary transition-colors duration-300">

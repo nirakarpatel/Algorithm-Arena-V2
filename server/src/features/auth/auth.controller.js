@@ -211,6 +211,7 @@ const googleAuth = async (req, res, next) => {
     });
   } catch (err) {
     if (err.code === 'auth/id-token-expired' || err.code === 'auth/argument-error') {
+      console.error("FIREBASE VERIFY ERROR:", err);
       return res.status(401).json({ success: false, message: 'Invalid or expired Google token' });
     }
     return next(err);

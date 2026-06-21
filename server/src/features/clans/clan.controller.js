@@ -796,6 +796,55 @@ const assignChief = async (req, res, next) => {
   }
 };
 
+// DELETE /api/clans/:id/chief — admin removes a clan chief (demotes to member)
+const removeChief = async (req, res, next) => {
+  try {
+    let clanId = '';
+
+    await runWithOptionalTransaction(async (session) => {
+      const clan = await withSession(Clan.findById(req.params.id), session);
+
+      if (!clan) {
+        return res.status(404).json({ success: false, message: 'Clan not found' });
+      }
+
+      if (rejectArchivedClanMutation(res, clan)) {
+        return null;
+      }
+
+      clanId = clan._id.toString();
+
+      if (!clan.chief) {
+        return res.status(400).json({ success: false, message: 'Clan has no chief' });
+      }
+
+      const previousChiefId = clan.chief.toString();
+      clan.chief = null;
+      await clan.save({ session });
+
+      const oldChief = await withSession(User.findById(previousChiefId), session);
+      if (oldChief) {
+        oldChief.role = 'user'; // Or 'member', wait user role is usually 'user'
+        await oldChief.save({ session });
+      }
+
+      await reconcileChiefRoleForUser(previousChiefId, { session });
+      
+      return null;
+    });
+
+    if (res.headersSent) return null;
+
+    const populated = await Clan.findById(clanId)
+      .populate('chief', 'username email')
+      .populate('members', 'username email');
+
+    return sendSuccess(res, { data: populated, message: 'Clan chief removed' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 // POST /api/clans/:id/members — admin adds a member
 const addMember = async (req, res, next) => {
   try {
@@ -1091,6 +1140,7 @@ module.exports = {
   joinClan,
   leaveClan,
   assignChief,
+  removeChief,
   addMember,
   removeMember,
   approveJoinRequest,
