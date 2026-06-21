@@ -109,7 +109,7 @@ const getMyClan = async (req, res, next) => {
       $or: [{ chief: userId }, { members: userId }]
     })
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points solvedProblems regNo')
+      .populate('members', 'username email status codingLevel points solvedProblems regNo profilePicture')
       .populate('requests', 'username email regNo')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -158,19 +158,20 @@ const getClans = async (req, res, next) => {
   try {
     const clansDocs = await Clan.find(getClanStatusFilter(req.query.status))
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points')
+      .populate('members', 'username email status codingLevel points profilePicture')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email')
       .sort({ createdAt: -1 });
 
-    const clans = await Promise.all(clansDocs.map(async (clanDoc) => {
-      const clan = clanDoc.toObject();
-      const memberIds = clan.members.map(m => m._id);
-      if (memberIds.length > 0) {
-        const [stats] = await Submission.aggregate([
-          { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
+    // Collect all member IDs across all clans in one pass, then run a single
+    // aggregation to get per-clan points totals — eliminates N+1 queries.
+    const allMemberIds = clansDocs.flatMap((c) => c.members.map((m) => m._id));
+
+    const pointsRows = allMemberIds.length > 0
+      ? await Submission.aggregate([
+          { $match: { userId: { $in: allMemberIds }, status: 'Accepted' } },
           {
             $lookup: {
               from: 'challenges',
@@ -182,17 +183,25 @@ const getClans = async (req, res, next) => {
           { $unwind: '$challenge' },
           {
             $group: {
-              _id: null,
+              _id: '$userId',
               totalPoints: { $sum: '$challenge.points' },
             },
           },
-        ]);
-        clan.totalPoints = stats?.totalPoints || 0;
-      } else {
-        clan.totalPoints = 0;
-      }
+        ])
+      : [];
+
+    // Build a userId -> points lookup map
+    const pointsByUser = {};
+    pointsRows.forEach((r) => { pointsByUser[r._id.toString()] = r.totalPoints; });
+
+    const clans = clansDocs.map((clanDoc) => {
+      const clan = clanDoc.toObject();
+      clan.totalPoints = clan.members.reduce(
+        (sum, m) => sum + (pointsByUser[m._id.toString()] || 0),
+        0
+      );
       return clan;
-    }));
+    });
 
     return sendSuccess(res, { data: clans });
   } catch (err) {
@@ -205,7 +214,7 @@ const getClan = async (req, res, next) => {
   try {
     const clanDoc = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points')
+      .populate('members', 'username email status codingLevel points profilePicture')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -253,40 +262,35 @@ const getClanLeaderboard = async (req, res, next) => {
   try {
     const { window = 'all' } = req.query;
     const clanFilter = getClanStatusFilter(req.query.status);
-    
-    // Calculate date filter based on window
-    let dateFilter = {};
+
+    let dateMatch = {};
     if (window === '7d') {
-      dateFilter = { submittedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
+      dateMatch = { submittedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
     } else if (window === '30d') {
-      dateFilter = { submittedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
+      dateMatch = { submittedAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } };
     }
 
+    // Fetch clans (lightweight — only ids, members array, chief ref, name, tag, status)
     const clans = await Clan.find(clanFilter)
       .populate('chief', 'username')
       .lean();
 
-    // For each clan, aggregate member stats
-    const enriched = await Promise.all(
-      clans.map(async (clan) => {
-        const memberIds = clan.members || [];
-        if (memberIds.length === 0) {
-          return {
-            ...clan,
-            memberCount: 0,
-            solvedCount: 0,
-            totalPoints: 0,
-          };
-        }
+    if (clans.length === 0) {
+      return sendSuccess(res, { data: [] });
+    }
 
-        const [stats] = await Submission.aggregate([
-          { 
-            $match: { 
-              userId: { $in: memberIds }, 
-              status: 'Accepted',
-              ...dateFilter
-            } 
-          },
+    // Build a map: clanId -> memberIds so we can resolve per-clan totals from one aggregation
+    const clanMemberMap = {};
+    const allMemberIds = [];
+    clans.forEach((c) => {
+      clanMemberMap[c._id.toString()] = c.members || [];
+      allMemberIds.push(...(c.members || []));
+    });
+
+    // Single aggregation across all members — group by userId
+    const userStats = allMemberIds.length > 0
+      ? await Submission.aggregate([
+          { $match: { userId: { $in: allMemberIds }, status: 'Accepted', ...dateMatch } },
           {
             $lookup: {
               from: 'challenges',
@@ -298,21 +302,37 @@ const getClanLeaderboard = async (req, res, next) => {
           { $unwind: '$challenge' },
           {
             $group: {
-              _id: null,
+              _id: '$userId',
               solvedCount: { $sum: 1 },
               totalPoints: { $sum: '$challenge.points' },
             },
           },
-        ]);
+        ])
+      : [];
 
-        return {
-          ...clan,
-          memberCount: memberIds.length,
-          solvedCount: stats?.solvedCount || 0,
-          totalPoints: stats?.totalPoints || 0,
-        };
-      })
-    );
+    // Build userId -> stats map
+    const statsByUser = {};
+    userStats.forEach((r) => { statsByUser[r._id.toString()] = r; });
+
+    // Aggregate per clan from the user-level map
+    const enriched = clans.map((clan) => {
+      const memberIds = clanMemberMap[clan._id.toString()] || [];
+      let solvedCount = 0;
+      let totalPoints = 0;
+      memberIds.forEach((uid) => {
+        const s = statsByUser[uid.toString()];
+        if (s) {
+          solvedCount += s.solvedCount;
+          totalPoints += s.totalPoints;
+        }
+      });
+      return {
+        ...clan,
+        memberCount: memberIds.length,
+        solvedCount,
+        totalPoints,
+      };
+    });
 
     // Sort by totalPoints descending, assign ranks
     enriched.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount);
@@ -329,7 +349,7 @@ const getClanAdminStats = async (req, res, next) => {
   try {
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points regNo branch year')
+      .populate('members', 'username email status codingLevel points regNo branch year profilePicture')
       .populate('requests', 'username email regNo branch year')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -443,7 +463,7 @@ const updateClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email')
+      .populate('members', 'username email profilePicture')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -500,7 +520,7 @@ const archiveClan = async (req, res, next) => {
 
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email')
+      .populate('members', 'username email profilePicture')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -532,7 +552,7 @@ const restoreClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email')
+      .populate('members', 'username email profilePicture')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -727,7 +747,7 @@ const assignChief = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email');
+      .populate('members', 'username email profilePicture');
 
     sendSuccess(res, { data: populated, message: 'Clan chief assigned' });
 
@@ -814,7 +834,7 @@ const addMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email');
+      .populate('members', 'username email profilePicture');
 
     sendSuccess(res, { data: populated, message: 'Member added' });
 
@@ -895,7 +915,7 @@ const removeMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email');
+      .populate('members', 'username email profilePicture');
 
     return sendSuccess(res, { data: populated, message: 'Member removed' });
   } catch (err) {
@@ -951,6 +971,7 @@ const approveJoinRequest = async (req, res, next) => {
 // POST /api/clans/:id/reject/:userId — chief rejects request
 const rejectJoinRequest = async (req, res, next) => {
   try {
+    const { userId } = req.params;
     const clan = await Clan.findById(req.params.id);
     if (!clan) return res.status(404).json({ success: false, message: 'Clan not found' });
 
@@ -958,16 +979,16 @@ const rejectJoinRequest = async (req, res, next) => {
       return null;
     }
 
-    if (isClanArchived(clan)) {
-      return res.status(400).json({ success: false, message: 'Archived clans cannot be modified until restored' });
-    }
-
     const scopeCheck = await canActorManageClan(req.user, clan);
     if (!scopeCheck.allowed) {
       return res.status(403).json({ success: false, message: scopeCheck.reason || 'Only the chief or an admin can reject requests' });
     }
 
-    clan.requests.pull(req.params.userId);
+    if (!clan.requests.map((id) => id.toString()).includes(userId)) {
+      return res.status(400).json({ success: false, message: 'No such join request found' });
+    }
+
+    clan.requests.pull(userId);
     await clan.save();
 
     return sendSuccess(res, { message: 'Request rejected' });

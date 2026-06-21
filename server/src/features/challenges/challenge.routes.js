@@ -43,12 +43,12 @@ router.post('/import', protect, admin, upload.single('file'), importChallenges);
 
 router
   .route('/')
-  .get(validate(challengeQuerySchema), getChallenges)
+  .get(protect, validate(challengeQuerySchema), getChallenges)
   .post(protect, admin, validate(challengeCreateSchema), createChallenge);
 
 router
   .route('/:id')
-  .get(validate(challengeIdParamsSchema), getChallengeById)
+  .get(protect, validate(challengeIdParamsSchema), getChallengeById)
   .put(protect, admin, validate(challengeIdParamsSchema), validate(challengeUpdateSchema), updateChallenge)
   .delete(protect, admin, validate(challengeIdParamsSchema), deleteChallenge);
 

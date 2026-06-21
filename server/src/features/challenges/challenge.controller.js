@@ -251,12 +251,15 @@ const importChallenges = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No valid questions found in file' });
     }
 
+    // Strip HTML tags from all imported string fields to prevent stored XSS
+    const stripHtml = (str) => (str ? String(str).replace(/<[^>]*>/g, '').trim() : '');
+
     // Default formatting
     const formatted = challengesData.map(c => ({
-      title: c.title || 'Untitled',
-      description: c.description || 'No description provided.',
+      title: stripHtml(c.title) || 'Untitled',
+      description: stripHtml(c.description) || 'No description provided.',
       difficulty: ['Easy', 'Medium', 'Hard'].includes(c.difficulty) ? c.difficulty : 'Medium',
-      category: c.category || 'General',
+      category: stripHtml(c.category) || 'General',
       points: Number(c.points) || 100,
       testCases: c.testCases && Array.isArray(c.testCases) ? c.testCases : [],
     }));

@@ -22,7 +22,7 @@ const parseTestCaseArgs = (stdinStr, params) => {
 
 /**
  * Extract expected output strings from LeetCode's HTML description.
- */
+ */ 
 const extractExpectedOutputs = (html) => {
   const results = [];
   const rx = /<strong[^>]*>Output:<\/strong>:?\s*([^\n<]+)/gi;

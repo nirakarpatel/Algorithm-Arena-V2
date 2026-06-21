@@ -217,6 +217,7 @@ const getLeaderboard = async (req, res, next) => {
         $project: {
           _id: 1,
           username: '$user.username',
+          profilePicture: '$user.profilePicture',
           solvedCount: 1,
           totalPoints: 1,
         },

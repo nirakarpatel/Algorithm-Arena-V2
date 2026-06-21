@@ -354,42 +354,49 @@ const getUserProfile = async (req, res, next) => {
     // Compute unlocked badges dynamically
     const unlockedBadges = await getAllBadgesForUser(userId);
 
-    // Send back formatted data matching what the frontend expects
-    return sendSuccess(res, {
-      data: {
-        _id: user._id,
-        username: user.username,
-        role: user.role,
-        clan: user.clan,
-        profilePicture: user.profilePicture,
-        bio: user.bio,
-        branch: user.branch,
-        year: user.year,
-        section: user.section,
-        location: user.location,
-        github: user.github,
-        twitter: user.twitter,
-        linkedin: user.linkedin,
-        website: user.website,
-        regNo: user.regNo,
-        points: user.points,
-        solvedProblems: user.solvedProblems,
-        acceptedCount: stats?.acceptedCount || 0,
-        totalPoints: stats?.totalPoints || 0,
-        streak: currentStreak,
-        rank,
-        difficultyBreakdown: {
-          easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
-          medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
-          hard: { solved: stats?.hardSolved || 0, total: totalsMap.Hard },
-        },
-        badges: unlockedBadges,
-        createdAt: user.createdAt,
-        heatmapData,
-        recentSubmissions,
-        maxStreak,
+    // Determine whether the requester is the owner or an admin
+    const isOwner = req.user && req.user._id.toString() === user._id.toString();
+    const isAdmin = req.user && ['admin', 'superAdmin', 'moderator'].includes(req.user.role);
+    const canSeePrivate = isOwner || isAdmin;
+
+    const publicData = {
+      _id: user._id,
+      username: user.username,
+      role: user.role,
+      clan: user.clan,
+      profilePicture: user.profilePicture,
+      bio: user.bio,
+      location: user.location,
+      github: user.github,
+      twitter: user.twitter,
+      linkedin: user.linkedin,
+      website: user.website,
+      points: user.points,
+      solvedProblems: user.solvedProblems,
+      acceptedCount: stats?.acceptedCount || 0,
+      totalPoints: stats?.totalPoints || 0,
+      streak: currentStreak,
+      rank,
+      difficultyBreakdown: {
+        easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
+        medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
+        hard: { solved: stats?.hardSolved || 0, total: totalsMap.Hard },
       },
-    });
+      badges: unlockedBadges,
+      createdAt: user.createdAt,
+      heatmapData,
+      maxStreak,
+    };
+
+    if (canSeePrivate) {
+      publicData.regNo = user.regNo;
+      publicData.branch = user.branch;
+      publicData.year = user.year;
+      publicData.section = user.section;
+      publicData.recentSubmissions = recentSubmissions;
+    }
+
+    return sendSuccess(res, { data: publicData });
   } catch (err) {
     return next(err);
   }

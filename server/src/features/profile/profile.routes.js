@@ -6,8 +6,8 @@ const router = express.Router();
 
 router.get('/stats', protect, getProfileStats);
 
-// New public profile endpoints
-router.get('/user/:userId', getUserProfile);
+// Public — username only; sensitive fields are omitted in the controller
+router.get('/user/:userId', protect, getUserProfile);
 router.get('/username/:username', getUserProfile);
 
 module.exports = router;
