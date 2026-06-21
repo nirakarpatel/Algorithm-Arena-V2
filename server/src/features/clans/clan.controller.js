@@ -109,7 +109,7 @@ const getMyClan = async (req, res, next) => {
       $or: [{ chief: userId }, { members: userId }]
     })
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points solvedProblems regNo profilePicture')
+      .populate('members', 'username email status codingLevel points solvedProblems regNo profilePicture streak')
       .populate('requests', 'username email regNo')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -124,7 +124,7 @@ const getMyClan = async (req, res, next) => {
     // Dynamically calculate totalPoints based on members' accepted submissions
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const [stats] = await Submission.aggregate([
+      const stats = await Submission.aggregate([
         { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
         {
           $lookup: {
@@ -137,12 +137,22 @@ const getMyClan = async (req, res, next) => {
         { $unwind: '$challenge' },
         {
           $group: {
-            _id: null,
+            _id: '$userId',
             totalPoints: { $sum: '$challenge.points' },
           },
         },
       ]);
-      clan.totalPoints = stats?.totalPoints || 0;
+      const pointsByUser = {};
+      let totalClanPoints = 0;
+      stats.forEach(s => {
+        pointsByUser[s._id.toString()] = s.totalPoints;
+        totalClanPoints += s.totalPoints;
+      });
+      clan.members = clan.members.map(m => ({
+        ...m,
+        points: pointsByUser[m._id.toString()] || 0
+      }));
+      clan.totalPoints = totalClanPoints;
     } else {
       clan.totalPoints = 0;
     }
@@ -158,7 +168,7 @@ const getClans = async (req, res, next) => {
   try {
     const clansDocs = await Clan.find(getClanStatusFilter(req.query.status))
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture')
+      .populate('members', 'username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -196,10 +206,13 @@ const getClans = async (req, res, next) => {
 
     const clans = clansDocs.map((clanDoc) => {
       const clan = clanDoc.toObject();
-      clan.totalPoints = clan.members.reduce(
-        (sum, m) => sum + (pointsByUser[m._id.toString()] || 0),
-        0
-      );
+      let totalClanPoints = 0;
+      clan.members = clan.members.map(m => {
+        const p = pointsByUser[m._id.toString()] || 0;
+        totalClanPoints += p;
+        return { ...m, points: p };
+      });
+      clan.totalPoints = totalClanPoints;
       return clan;
     });
 
@@ -214,7 +227,7 @@ const getClan = async (req, res, next) => {
   try {
     const clanDoc = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture')
+      .populate('members', 'username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -228,7 +241,7 @@ const getClan = async (req, res, next) => {
 
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const [stats] = await Submission.aggregate([
+      const stats = await Submission.aggregate([
         { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
         {
           $lookup: {
@@ -241,12 +254,22 @@ const getClan = async (req, res, next) => {
         { $unwind: '$challenge' },
         {
           $group: {
-            _id: null,
+            _id: '$userId',
             totalPoints: { $sum: '$challenge.points' },
           },
         },
       ]);
-      clan.totalPoints = stats?.totalPoints || 0;
+      const pointsByUser = {};
+      let totalClanPoints = 0;
+      stats.forEach(s => {
+        pointsByUser[s._id.toString()] = s.totalPoints;
+        totalClanPoints += s.totalPoints;
+      });
+      clan.members = clan.members.map(m => ({
+        ...m,
+        points: pointsByUser[m._id.toString()] || 0
+      }));
+      clan.totalPoints = totalClanPoints;
     } else {
       clan.totalPoints = 0;
     }
@@ -348,7 +371,7 @@ const getClanAdminStats = async (req, res, next) => {
   try {
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points regNo branch year profilePicture')
+      .populate('members', 'username email status codingLevel points regNo branch year profilePicture streak')
       .populate('requests', 'username email regNo branch year')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -462,7 +485,7 @@ const updateClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture')
+      .populate('members', 'username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -519,7 +542,7 @@ const archiveClan = async (req, res, next) => {
 
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture')
+      .populate('members', 'username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -551,7 +574,7 @@ const restoreClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture')
+      .populate('members', 'username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -746,7 +769,7 @@ const assignChief = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture');
+      .populate('members', 'username email profilePicture points streak');
 
     sendSuccess(res, { data: populated, message: 'Clan chief assigned' });
 
@@ -882,7 +905,7 @@ const addMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture');
+      .populate('members', 'username email profilePicture points streak');
 
     sendSuccess(res, { data: populated, message: 'Member added' });
 
@@ -963,7 +986,7 @@ const removeMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture');
+      .populate('members', 'username email profilePicture points streak');
 
     return sendSuccess(res, { data: populated, message: 'Member removed' });
   } catch (err) {

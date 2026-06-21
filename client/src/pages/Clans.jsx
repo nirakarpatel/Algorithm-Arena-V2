@@ -30,6 +30,7 @@ import MemberHoverCard from '../components/MemberHoverCard';
 import ClanHoverCard from '../components/ClanHoverCard';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
+import { useSocket } from '../hooks/useSocket';
 
 
 
@@ -132,7 +133,9 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
               </div>
             </h3>
             <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-2" : "flex flex-col gap-2"}>
-              {members.map((member, i) => {
+              {[...members]
+                .sort((a, b) => (b.points || 0) - (a.points || 0))
+                .map((member, i) => {
                 const isMemberChief = clan.chief?._id === member._id;
                 return (
                   <motion.div
@@ -169,6 +172,9 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-accent/80 font-bold flex items-center gap-1 bg-accent/10 px-2 py-1 rounded-lg">
                         <FiStar size={10} /> {(member.points || 0).toLocaleString()} XP
+                      </span>
+                      <span className="text-[10px] text-orange-400 font-bold flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-lg" title={`${member.streak || 0} Day Streak`}>
+                        🔥 {member.streak || 0}
                       </span>
                       {isMemberChief ? (
                         <span className="text-[10px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded-lg font-bold">
@@ -344,6 +350,11 @@ const Clans = () => {
   const [leaving, setLeaving] = useState(false);
   const [viewingOtherClan, setViewingOtherClan] = useState(null);
   const [isBrowsingOthers, setIsBrowsingOthers] = useState(false);
+
+  useSocket("leaderboard_update", () => {
+    queryClient.invalidateQueries({ queryKey: ['my-clan'] });
+    queryClient.invalidateQueries({ queryKey: ['clans-list'] });
+  });
 
   const myClanQuery = useQuery({
     queryKey: ['my-clan'],

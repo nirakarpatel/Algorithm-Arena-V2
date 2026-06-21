@@ -267,17 +267,29 @@ const getSubmissionById = async (req, res, next) => {
     }
 
     const isOwner = submission.userId && submission.userId._id.toString() === req.user.id.toString();
+    
     if (!isOwner) {
+      if (!submission.userId) {
+        res.status(403);
+        throw new Error('Not authorized to view this submission');
+      }
+
       const scopeCheck = await canActorManageUser(req.user, submission.userId);
       if (!scopeCheck.allowed) {
-        res.status(403);
-        throw new Error(scopeCheck.reason || 'Not authorized to view this submission');
-      }
-    }
+        const myAccepted = await Submission.findOne({
+            userId: req.user.id,
+            challengeId: submission.challengeId._id,
+            status: 'Accepted'
+        });
 
-    if (!isOwner && !submission.userId) {
-      res.status(403);
-      throw new Error('Not authorized to view this submission');
+        if (!myAccepted) {
+            return res.status(403).json({
+                success: false,
+                message: 'Limited to Clan Chief',
+                challengeId: submission.challengeId._id
+            });
+        }
+      }
     }
 
     return sendSuccess(res, { data: submission });

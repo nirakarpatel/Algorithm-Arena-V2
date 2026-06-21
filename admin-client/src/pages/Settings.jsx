@@ -94,6 +94,13 @@ const Settings = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB');
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onloadend = () => {
       setFormData((prev) => ({ ...prev, profilePicture: reader.result }));

@@ -292,7 +292,9 @@ const Leaderboard = () => {
       </div>
 
       <AnimatePresence mode="wait">
-        <Podium key={leaderType} items={topThree} leaderType={leaderType} />
+        {filters.page === 1 && !search.trim() && (
+          <Podium key={leaderType} items={topThree} leaderType={leaderType} />
+        )}
       </AnimatePresence>
 
       {myRow && leaderType === "individual" && (

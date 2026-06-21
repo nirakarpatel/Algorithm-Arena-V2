@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiUser, FiMapPin, FiGithub, FiTwitter, FiGlobe, FiSave, FiCpu, FiBookOpen, FiLayers, FiGrid, FiAward, FiCalendar, FiLink, FiZap, FiEdit2, FiLinkedin, FiCheck } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
@@ -11,6 +12,7 @@ import Logo from '../components/Logo';
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = React.useRef(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [formData, setFormData] = useState({
@@ -96,6 +98,13 @@ const Settings = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('File size must be less than 2MB');
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onloadend = () => {
       setFormData((prev) => ({ ...prev, profilePicture: reader.result }));
@@ -111,6 +120,7 @@ const Settings = () => {
       const res = await api.put('/api/auth/update-me', formData);
       updateUser(res.data.data);
       toast.success('Profile updated successfully!');
+      navigate('/profile');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {

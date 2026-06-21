@@ -77,13 +77,34 @@ const SubmissionDetails = () => {
   }
 
   if (submissionQuery.isError || !submissionQuery.data) {
+    const errorData = submissionQuery.error?.response?.data || {};
+    const message = errorData.message || submissionQuery.error?.userMessage || 'Unable to fetch submission details.';
+    const challengeId = errorData.challengeId;
+
     return (
       <Card>
-        <h1 className="text-section-title font-bold mb-3">Submission Not Available</h1>
-        <p className="text-secondary mb-4">{submissionQuery.error?.userMessage || 'Unable to fetch submission details.'}</p>
-        <button className="btn-secondary" onClick={() => navigate('/dashboard')}>
-          Back to Dashboard
-        </button>
+        <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-2">
+                <FiXCircle className="text-red-500" size={32} />
+            </div>
+            <h1 className="text-xl font-bold text-red-400">Access Denied</h1>
+            <p className="text-secondary max-w-md">
+                {message === 'Limited to Clan Chief' ? 
+                    'Limited to Clan Chief. Solve the challenge yourself first to unlock and view other users\' solutions!' 
+                    : message}
+            </p>
+            
+            <div className="flex items-center gap-4 mt-6">
+                <button className="btn-secondary" onClick={() => navigate(-1)}>
+                    Go Back
+                </button>
+                {message === 'Limited to Clan Chief' && challengeId && (
+                    <button className="btn-primary" onClick={() => navigate(`/challenge/${challengeId}`)}>
+                        Solve Challenge to Unlock
+                    </button>
+                )}
+            </div>
+        </div>
       </Card>
     );
   }

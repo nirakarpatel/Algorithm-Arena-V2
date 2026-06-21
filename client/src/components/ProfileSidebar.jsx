@@ -113,7 +113,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const rank = profile?.rank ?? "—";
   const roleName = user?.role === "admin" ? "Admin"
     : user?.role === "clan-chief" ? "Clan Chief"
-    : "Member";
+      : "Member";
 
   const { user: authUser } = useAuth();
   const isOwnProfile = authUser?.username === user?.username;
@@ -575,8 +575,8 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                       key={tab.id}
                       onClick={() => setStatusFilter(tab.id)}
                       className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${statusFilter === tab.id
-                          ? "bg-accent text-white shadow-md shadow-accent/20"
-                          : "text-slate-400 hover:text-white"
+                        ? "bg-accent text-white shadow-md shadow-accent/20"
+                        : "text-slate-400 hover:text-white"
                         }`}
                     >
                       {tab.label}

@@ -5,7 +5,11 @@ const isGlobalOverride = (user) => GLOBAL_OVERRIDE_ROLES.has(user?.role);
 
 const isChief = (user) => CHIEF_ROLES.has(user?.role) || Boolean(user?.isChief);
 
-const getClanId = (clan) => clan?._id || clan?.id || clan?.clanId || null;
+const getClanId = (clan) => {
+  if (!clan) return null;
+  if (typeof clan === 'string') return clan;
+  return clan._id || clan.id || clan.clanId || null;
+};
 
 const isClanArchived = (clan) => clan?.status === 'archived';
 
@@ -27,7 +31,8 @@ const canManageOwnClan = (user, clan) => {
   if (user?.role !== 'clan-chief') return false;
 
   const clanId = getClanId(clan);
-  return Boolean(clanId && (user?.clanId === clanId || user?.clan === clanId));
+  const userClanId = getClanId(user?.clan) || getClanId(user?.clanId) || null;
+  return Boolean(clanId && userClanId && clanId.toString() === userClanId.toString());
 };
 
 const canArchiveClan = (user, clan) => {
