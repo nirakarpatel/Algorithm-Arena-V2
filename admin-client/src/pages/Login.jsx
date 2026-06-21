@@ -47,7 +47,7 @@ const Login = ({ onLoginSuccess }) => {
       const idToken = await result.user.getIdToken();
 
       // 2. Send Firebase ID token to our server
-      const res = await api.post('/api/auth/social', { idToken });
+      const res = await api.post('/api/auth/google', { idToken });
       const payload = res.data?.data;
 
       // 3. Admin-only check

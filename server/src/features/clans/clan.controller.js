@@ -756,9 +756,7 @@ const assignChief = async (req, res, next) => {
       clan.chief = userId;
       await clan.save({ session });
 
-      if (!['admin', 'superAdmin'].includes(newChief.role)) {
-        newChief.role = 'clan-chief';
-      }
+      newChief.role = 'clan-chief';
       newChief.clan = clan._id;
       await newChief.save({ session });
 

@@ -26,10 +26,6 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
     }
 
-    if (user.status === 'Banned') {
-      return res.status(403).json({ success: false, message: 'Your account has been banned' });
-    }
-
     req.user = user;
 
     // Track active presence: Update lastLoginDate if older than 5 minutes

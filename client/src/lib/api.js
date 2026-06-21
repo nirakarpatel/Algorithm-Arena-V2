@@ -15,7 +15,7 @@ const isAuthFlowRequest = (url = '') => {
   return (
     url.includes('/api/auth/login') ||
     url.includes('/api/auth/register') ||
-    url.includes('/api/auth/social') ||
+    url.includes('/api/auth/google') ||
     url.includes('/api/auth/refresh') ||
     url.includes('/api/auth/logout')
   );

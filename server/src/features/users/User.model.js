@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   },
   authProvider: {
     type: String,
-    enum: ['google', 'github', 'local'],
+    enum: ['google', 'local'],
     default: 'google',
   },
   username: {

@@ -36,17 +36,17 @@ const Login = ({ onLoginSuccess }) => {
     return () => observer.disconnect();
   }, []);
 
-  const handleSocialLogin = async (provider) => {
+  const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
 
     try {
-      // 1. Firebase popup
-      const result = await signInWithPopup(auth, provider);
+      // 1. Firebase Google popup
+      const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
 
       // 2. Send Firebase ID token to our server
-      const res = await api.post('/api/auth/social', { idToken });
+      const res = await api.post('/api/auth/google', { idToken });
       const payload = res.data?.data;
 
       // Block Admins / Super Admins from logging in on the participant site
@@ -135,7 +135,7 @@ const Login = ({ onLoginSuccess }) => {
             )}
 
             <button
-              onClick={() => handleSocialLogin(googleProvider)}
+              onClick={handleGoogleSignIn}
               disabled={loading}
               className="w-full py-3.5 rounded-xl bg-white dark:bg-white/10 hover:bg-gray-50 dark:hover:bg-white/15 border border-glass-border text-primary font-bold transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
             >

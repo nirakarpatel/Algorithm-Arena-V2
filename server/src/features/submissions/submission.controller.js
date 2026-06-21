@@ -41,11 +41,6 @@ const submitCode = async (req, res, next) => {
       language: language || 'javascript',
     });
 
-    if (req.user.status === 'Warned') {
-      const User = require('../users/User.model');
-      await User.findByIdAndUpdate(req.user.id, { $set: { status: 'Active' }, $unset: { warningMessage: '' } });
-    }
-
     const { emitEvent } = require('../../../config/socket');
     emitEvent('new_submission', {
       submissionId: submission._id,

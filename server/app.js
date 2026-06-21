@@ -98,7 +98,7 @@ const createApp = () => {
     legacyHeaders: false,
     message: { success: false, message: 'Too many authentication attempts, please try again later.' },
   });
-  app.use('/api/auth/social', authLimiter);
+  app.use('/api/auth/google', authLimiter);
   app.use('/api/auth/claim-username', authLimiter);
 
   app.use('/api/auth', authRoutes);

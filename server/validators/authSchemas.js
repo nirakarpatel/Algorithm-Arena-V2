@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-const socialAuthSchema = {
+const googleAuthSchema = {
   body: z.object({
     idToken: z.string().min(1, 'Firebase ID token is required'),
   }),
@@ -72,7 +72,7 @@ const confirmSessionSchema = {
 };
 
 module.exports = {
-  socialAuthSchema,
+  googleAuthSchema,
   claimUsernameSchema,
   refreshSchema,
   updateMeSchema,
