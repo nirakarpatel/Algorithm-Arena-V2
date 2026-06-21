@@ -68,6 +68,11 @@ const updateUserRole = async (req, res, next) => {
     user.role = role;
     await user.save();
 
+    if (previousValue === 'clan-chief' && role !== 'clan-chief') {
+      const Clan = require('../clans/Clan.model');
+      await Clan.updateMany({ chief: user._id }, { $set: { chief: null } });
+    }
+
     // 4. Create immutable Audit Log entry
     const AuditLog = require('../audit/AuditLog.model');
     await AuditLog.create({

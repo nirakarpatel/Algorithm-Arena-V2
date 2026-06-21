@@ -66,7 +66,10 @@ const fd = (d = 0) => ({
 const Dashboard = () => {
   const { user } = useAuth();
 
-  const [showWarning, setShowWarning] = useState(true);
+  const [showWarning, setShowWarning] = useState(() => {
+    return localStorage.getItem("warningDismissed") !== "true";
+  });
+
   useEffect(() => {
     if (user?.status === "Warned") {
       const warnedToastShown = sessionStorage.getItem("warnedToastShown");
@@ -74,10 +77,15 @@ const Dashboard = () => {
         toast.error('You have been warned', { icon: '⚠️', duration: 6000 });
         sessionStorage.setItem("warnedToastShown", "true");
       }
-      const t = setTimeout(() => setShowWarning(false), 20000);
-      return () => clearTimeout(t);
+    } else {
+      localStorage.removeItem("warningDismissed");
     }
   }, [user?.status]);
+
+  const handleDismissWarning = () => {
+    localStorage.setItem("warningDismissed", "true");
+    setShowWarning(false);
+  };
 
   const greeting = useMemo(() => getSessionGreeting(), []);
 
@@ -181,13 +189,21 @@ const Dashboard = () => {
       {user?.status === "Warned" && showWarning && (
         <motion.div
           {...fd(0)}
-          className="flex items-center gap-3 p-4 rounded-xl border border-red-500/40 bg-red-500/8"
+          className="flex items-center justify-between gap-3 p-4 rounded-xl border border-red-500/40 bg-red-500/8"
         >
-          <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0" />
-          <p className="text-sm text-red-400">
-            <strong className="font-black mr-2">Official Warning:</strong>
-            {user?.warningMessage || "You have an active warning from your Clan Chief. Please review your activity."}
-          </p>
+          <div className="flex items-center gap-3">
+            <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0" />
+            <p className="text-sm text-red-400">
+              <strong className="font-black mr-2">Official Warning:</strong>
+              {user?.warningMessage || "You have an active warning from your Clan Chief. Please review your activity."}
+            </p>
+          </div>
+          <button 
+            onClick={handleDismissWarning}
+            className="px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold rounded-lg border border-red-500/30 transition-colors"
+          >
+            Accept & Dismiss
+          </button>
         </motion.div>
       )}
 

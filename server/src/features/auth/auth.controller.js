@@ -79,10 +79,10 @@ const issueSession = async (req, res, user, { statusCode = 200, message = 'Succe
 };
 
 
-// @desc    Authenticate with Google (Firebase ID token)
-// @route   POST /api/auth/google
+// @desc    Authenticate with Social OAuth (Firebase ID token)
+// @route   POST /api/auth/social
 // @access  Public
-const googleAuth = async (req, res, next) => {
+const socialAuth = async (req, res, next) => {
   try {
     const { idToken } = req.body;
 
@@ -93,12 +93,17 @@ const googleAuth = async (req, res, next) => {
     // 1. Verify Firebase ID token checking for revocation
     const decodedToken = await firebaseAuth.verifyIdToken(idToken, true);
     const { uid, email, picture, email_verified } = decodedToken;
+    const providerStr = decodedToken.firebase?.sign_in_provider || 'google.com';
+    if (!providerStr.includes('google')) {
+      return res.status(400).json({ success: false, message: 'Only Google login is supported' });
+    }
+    const provider = 'google';
 
     if (!email) {
-      return res.status(400).json({ success: false, message: 'Google account must have an email address' });
+      return res.status(400).json({ success: false, message: 'Account must have an email address' });
     }
 
-    if (!email_verified) {
+    if (provider === 'google' && !email_verified) {
       return res.status(400).json({ success: false, message: 'Google email address is not verified' });
     }
 
@@ -117,13 +122,10 @@ const googleAuth = async (req, res, next) => {
       user = await User.findOne({ email: email.toLowerCase() });
 
       if (user) {
-        // Prevent account takeover: if user has a different firebaseUid linked, reject
-        if (user.firebaseUid && user.firebaseUid !== uid) {
-          return res.status(400).json({ success: false, message: 'This email is already linked to another Google account' });
-        }
-        // Link existing account to Firebase
+        // Update the firebaseUid to the latest one from Firebase
+        // This handles cases where a user was deleted in Firebase console but not in MongoDB
         user.firebaseUid = uid;
-        user.authProvider = 'google';
+        user.authProvider = provider;
         if (picture) {
           const isCurrentPicGoogle = !user.profilePicture || user.profilePicture.includes('googleusercontent.com');
           if (isCurrentPicGoogle) {
@@ -145,7 +147,7 @@ const googleAuth = async (req, res, next) => {
         // Brand new user — no username yet
         user = await User.create({
           firebaseUid: uid,
-          authProvider: 'google',
+          authProvider: provider,
           email: email.toLowerCase(),
           profilePicture: picture || null,
           usernameSet: false,
@@ -379,6 +381,10 @@ const googleLogin = async (req, res, next) => {
       });
     }
 
+    if (user.status === 'Banned') {
+      return res.status(403).json({ success: false, message: 'Your account has been banned' });
+    }
+
     // Daily Login XP: award 50 XP if first login of the day
     let dailyXpAwarded = false;
     const now = new Date();
@@ -435,6 +441,13 @@ const refresh = async (req, res, next) => {
       await existingToken.save();
       clearRefreshTokenCookie(res);
       return res.status(401).json({ success: false, message: 'User not found for refresh token' });
+    }
+
+    if (user.status === 'Banned') {
+      existingToken.revokedAt = new Date();
+      await existingToken.save();
+      clearRefreshTokenCookie(res);
+      return res.status(403).json({ success: false, message: 'Your account has been banned' });
     }
 
     const nextRefreshToken = generateRefreshToken();
@@ -718,7 +731,7 @@ const testLogin = async (req, res, next) => {
 };
 
 module.exports = {
-  googleAuth,
+  socialAuth,
   claimUsername,
   checkUsername,
   refresh,

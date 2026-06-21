@@ -1,6 +1,6 @@
 const express = require('express');
 const { 
-  googleAuth, 
+  socialAuth, 
   claimUsername, 
   checkUsername, 
   refresh, 
@@ -14,11 +14,11 @@ const {
 } = require('./auth.controller');
 const { protect } = require('../../../middleware/auth');
 const { validate } = require('../../../middleware/validate');
-const { googleAuthSchema, claimUsernameSchema, refreshSchema, updateMeSchema, confirmSessionSchema } = require('../../../validators/authSchemas');
+const { socialAuthSchema, claimUsernameSchema, refreshSchema, updateMeSchema, confirmSessionSchema } = require('../../../validators/authSchemas');
 
 const router = express.Router();
 
-router.post('/google', validate(googleAuthSchema), googleAuth);
+router.post('/social', validate(socialAuthSchema), socialAuth);
 router.post('/refresh', validate(refreshSchema), refresh);
 router.post('/logout', logout);
 router.post('/logout-all', protect, logoutAll);
