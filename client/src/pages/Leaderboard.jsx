@@ -23,8 +23,7 @@ import ClanHoverCard from "../components/ClanHoverCard";
 const MotionDiv = motion.div;
 const MotionRow = motion.tr;
 
-const Podium = ({ items, leaderType }) => {
-  const podiumSteps = [items[1], items[0], items[2]];
+const Podium = ({ items, leaderType, loading }) => {
   const colors = [
     "from-slate-400/70 to-transparent",
     "from-yellow-500/70 to-transparent",
@@ -33,9 +32,38 @@ const Podium = ({ items, leaderType }) => {
   const heights = ["h-32 md:h-44", "h-40 md:h-60", "h-24 md:h-36"];
   const delays = [0.15, 0, 0.3];
 
+  if (loading) {
+    return (
+      <div className="mt-12 mb-16 flex items-end justify-center gap-2 px-4 md:gap-8 animate-pulse">
+        {[1, 0, 2].map((stepIndex) => {
+          const isFirst = stepIndex === 0;
+          return (
+            <div
+              key={stepIndex}
+              className="relative flex max-w-[120px] flex-1 flex-col items-center md:max-w-[200px]"
+            >
+              <div className="mb-6 text-center space-y-2 flex flex-col items-center w-full">
+                <div
+                  className={`mx-auto mb-3 h-14 w-14 rounded-full bg-black/10 dark:bg-white/10 md:h-20 md:w-20 ${isFirst ? "border-2 border-yellow-400/20" : ""}`}
+                />
+                <div className="h-3 w-16 bg-black/10 dark:bg-white/10 rounded-full" />
+                <div className="h-3 w-10 bg-black/15 dark:bg-white/15 rounded-full" />
+              </div>
+              <div
+                className={`w-full rounded-t-3xl bg-black/5 dark:bg-white/5 border-t border-black/10 dark:border-white/10 ${heights[stepIndex]}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (!items.length) {
     return null;
   }
+
+  const podiumSteps = [items[1], items[0], items[2]];
 
   return (
     <div className="mt-12 mb-16 flex items-end justify-center gap-2 px-4 md:gap-8">
@@ -50,16 +78,23 @@ const Podium = ({ items, leaderType }) => {
             key={item._id}
             initial={{ opacity: 0, y: 100, scaleY: 0.95 }}
             animate={{ opacity: 1, y: 0, scaleY: 1 }}
-            exit={{ opacity: 0, y: 120, scaleY: 0.95, transition: { duration: 0.3, ease: "easeIn" } }}
-            transition={{ delay: delays[index], duration: 0.6, ease: "easeOut" }}
+            exit={{
+              opacity: 0,
+              y: 120,
+              scaleY: 0.95,
+              transition: { duration: 0.3, ease: "easeIn" },
+            }}
+            transition={{
+              delay: delays[index],
+              duration: 0.6,
+              ease: "easeOut",
+            }}
             className="relative flex max-w-[120px] flex-1 flex-col items-center md:max-w-[200px]"
           >
             <div className="mb-6 text-center">
               <div
                 className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-glass-surface shadow-2xl md:h-20 md:w-20 ${
-                  isFirst
-                    ? "border-yellow-400/50 "
-                    : "border-white/10"
+                  isFirst ? "border-yellow-400/50 " : "border-white/10"
                 }`}
               >
                 {item.profilePicture ? (
@@ -97,7 +132,6 @@ const Podium = ({ items, leaderType }) => {
                   {item.totalPoints.toLocaleString()}
                 </p>
               </div>
-
             </div>
 
             <div
@@ -292,9 +326,12 @@ const Leaderboard = () => {
       </div>
 
       <AnimatePresence mode="wait">
-        {filters.page === 1 && !search.trim() && (
-          <Podium key={leaderType} items={topThree} leaderType={leaderType} />
-        )}
+        <Podium
+          key={leaderType}
+          items={topThree}
+          leaderType={leaderType}
+          loading={loading}
+        />
       </AnimatePresence>
 
       {myRow && leaderType === "individual" && (
@@ -319,9 +356,82 @@ const Leaderboard = () => {
 
       <div className="overflow-hidden p-0 macos-glass">
         {loading ? (
-          <div className="space-y-3 p-4">
-            <SkeletonCard />
-            <SkeletonCard />
+          <div>
+            {/* Desktop Table Skeleton */}
+            <div className="hidden md:block">
+              <table className="responsive-table text-left w-full">
+                <thead>
+                  <tr
+                    className="text-xs font-bold uppercase tracking-widest text-secondary"
+                    style={{
+                      borderBottom: "1px solid rgba(var(--accent-rgb), 0.08)",
+                    }}
+                  >
+                    <th className="p-6">Rank</th>
+                    <th className="p-6">
+                      {leaderType === "individual" ? "Coder" : "Clan"}
+                    </th>
+                    <th className="p-6 text-center">
+                      {leaderType === "individual" ? "Solved" : "Members"}
+                    </th>
+                    <th className="p-6 text-right">XP Points</th>
+                  </tr>
+                </thead>
+                <tbody className="animate-pulse">
+                  {[...Array(8)].map((_, i) => (
+                    <tr
+                      key={i}
+                      className="border-b border-black/[0.04] dark:border-white/[0.04]"
+                    >
+                      <td className="p-6">
+                        <div className="h-8 w-8 rounded-full bg-black/10 dark:bg-white/10" />
+                      </td>
+                      <td className="p-6">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-black/10 dark:bg-white/10" />
+                          <div className="space-y-2">
+                            <div className="h-3.5 w-24 bg-black/15 dark:bg-white/15 rounded-full" />
+                            {leaderType === "clans" && (
+                              <div className="h-2.5 w-12 bg-black/10 dark:bg-white/10 rounded-full" />
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-6">
+                        <div className="h-3.5 w-8 bg-black/10 dark:bg-white/10 rounded-full mx-auto" />
+                      </td>
+                      <td className="p-6">
+                        <div className="h-3.5 w-16 bg-black/15 dark:bg-white/15 rounded-full ml-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards List Skeleton */}
+            <div className="space-y-3 p-4 md:hidden animate-pulse">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-white/[0.02] p-5"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-5 w-8 bg-black/15 dark:bg-white/15 rounded-full" />
+                      <div className="h-4 w-28 bg-black/15 dark:bg-white/15 rounded-full" />
+                    </div>
+                    <div className="h-4 w-16 bg-black/15 dark:bg-white/15 rounded-full" />
+                  </div>
+                  <div className="flex justify-between">
+                    <div className="h-3 w-16 bg-black/10 dark:bg-white/10 rounded-full" />
+                    {leaderType === "clans" && (
+                      <div className="h-3 w-12 bg-black/10 dark:bg-white/10 rounded-full" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : visibleRows.length === 0 ? (
           <div className="p-12 text-center">
@@ -396,7 +506,9 @@ const Leaderboard = () => {
                                   {item.tag.toUpperCase()}
                                 </span>
                               ) : (
-                                (item.username || item.name || "?")[0].toUpperCase()
+                                (item.username ||
+                                  item.name ||
+                                  "?")[0].toUpperCase()
                               )}
                             </div>
                             <div>
@@ -477,7 +589,9 @@ const Leaderboard = () => {
                           </MemberHoverCard>
                         ) : (
                           <ClanHoverCard clanId={item._id}>
-                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer">{item.name}</span>
+                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer">
+                              {item.name}
+                            </span>
                           </ClanHoverCard>
                         )}
                       </div>

@@ -193,7 +193,7 @@ const Dashboard = () => {
 
       {/* ── Greeting ────────────────────────── */}
       <motion.div {...fd(0.04)}>
-        <h2 className="text-3xl font-black text-primary mb-1 font-h2">
+        <h2 className="text-2xl font-black text-primary mb-1 font-h2">
           {greeting.heading.replace("{username}", user?.username || "Operative")}
         </h2>
         <p className="text-secondary text-sm">
@@ -217,83 +217,117 @@ const Dashboard = () => {
 
           {/* slides */}
           <div className="relative overflow-hidden">
-            <AnimatePresence mode="wait" initial={false} custom={heroDir}>
-              <motion.div
-                key={clampedIdx}
-                custom={heroDir}
-                variants={{
-                  enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
-                  center: { x: 0, opacity: 1 },
-                  exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.28, ease: "easeInOut" }}
-                className="p-8"
-              >
+            {setsQ.isLoading ? (
+              <div className="p-8 animate-pulse">
                 <div className="relative z-30 flex flex-col md:flex-row md:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    {/* deadline badge */}
-                    {activeSet && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent">
-                          {activeSets.length > 1
-                            ? `Challenge ${clampedIdx + 1} of ${activeSets.length}`
-                            : "This Week's Challenge"}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-                          <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                        </span>
-                      </div>
-                    )}
-                    {!activeSet && (
-                      <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent mb-4">
-                        This Week's Challenge
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Tag skeleton */}
+                    <div className="h-3 w-32 bg-black/10 dark:bg-white/10 rounded-full" />
+                    
+                    {/* Title skeleton */}
+                    <div className="space-y-2">
+                      <div className="h-8 md:h-10 w-2/3 bg-black/15 dark:bg-white/15 rounded-xl" />
+                      <div className="h-8 md:h-10 w-1/2 bg-black/15 dark:bg-white/15 rounded-xl" />
+                    </div>
 
-                    <h1 className="text-4xl md:text-5xl font-black leading-[1.1] dark:text-white text-black mb-3 font-h1">
-                      {activeSet ? (
-                        <>
-                          {activeSet.title.split(" ").slice(0, -1).join(" ")}{" "}
-                          <span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                            {activeSet.title.split(" ").slice(-1)[0]}
-                          </span>
-                        </>
-                      ) : (
-                        <>Mastering Dynamic{" "}<span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Programming</span></>
-                      )}
-                    </h1>
+                    {/* Description skeleton */}
+                    <div className="space-y-2 max-w-md pt-2">
+                      <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full" />
+                      <div className="h-3 w-5/6 bg-black/10 dark:bg-white/10 rounded-full" />
+                    </div>
 
-                    <p className="text-secondary text-sm leading-relaxed mb-6 max-w-md">
-                      {activeSet
-                        ? `Target Level: ${activeSet.targetLevel} · ${activeSet.questions?.length || 0} questions `
-                        : "Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards."}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 z-10">
-                      <Link
-                        to={activeSet ? `/missions?setId=${activeSet._id}` : "/missions"}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 z-30 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95"
-                        style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))", boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)" }}
-                      >
-                        Enter Arena <FiArrowRight size={14} />
-                      </Link>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-tertiary">
-                        <FiZap className="text-yellow-400" size={13} />+
-                        {activeSet?.questions?.reduce((a, q) => a + (q.points || 0), 0) || 50} XP
-                      </div>
+                    {/* Action button + XP indicator skeleton */}
+                    <div className="flex items-center gap-4 pt-4">
+                      <div className="h-10 w-36 bg-black/15 dark:bg-white/15 rounded-xl" />
+                      <div className="h-5 w-20 bg-black/10 dark:bg-white/10 rounded-full" />
                     </div>
                   </div>
 
-                  {/* watermark */}
-                  <div className="clip md:flex items-center justify-center flex-shrink-0 opacity-[0.08] group-hover:opacity-[0.4] transition-all duration-700 group-hover:rotate-6">
-                    <FiCpu size={180} className="text-accent" />
+                  {/* Watermark watermark CPU skeleton */}
+                  <div className="hidden md:flex items-center justify-center flex-shrink-0 opacity-[0.03]">
+                    <div className="w-40 h-40 bg-black/20 dark:bg-white/20 rounded-full" />
                   </div>
                 </div>
-              </motion.div>
-            </AnimatePresence>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait" initial={false} custom={heroDir}>
+                <motion.div
+                  key={clampedIdx}
+                  custom={heroDir}
+                  variants={{
+                    enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+                    center: { x: 0, opacity: 1 },
+                    exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.28, ease: "easeInOut" }}
+                  className="p-8"
+                >
+                  <div className="relative z-30 flex flex-col md:flex-row md:items-center gap-6">
+                    <div className="flex-1 min-w-0">
+                      {/* deadline badge */}
+                      {activeSet && (
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent">
+                            {activeSets.length > 1
+                              ? `Challenge ${clampedIdx + 1} of ${activeSets.length}`
+                              : "This Week's Challenge"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                            <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                          </span>
+                        </div>
+                      )}
+                      {!activeSet && (
+                        <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent mb-4">
+                          This Week's Challenge
+                        </span>
+                      )}
+
+                      <h1 className="text-2xl md:text-3xl font-black leading-[1.1] dark:text-white text-black mb-3 font-h1">
+                        {activeSet ? (
+                          <>
+                            {activeSet.title.split(" ").slice(0, -1).join(" ")}{" "}
+                            <span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                              {activeSet.title.split(" ").slice(-1)[0]}
+                            </span>
+                          </>
+                        ) : (
+                          <>Mastering Dynamic{" "}<span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Programming</span></>
+                        )}
+                      </h1>
+
+                      <p className="text-secondary text-sm leading-relaxed mb-6 max-w-md">
+                        {activeSet
+                          ? `Target Level: ${activeSet.targetLevel} · ${activeSet.questions?.length || 0} questions `
+                          : "Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards."}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 z-10">
+                        <Link
+                          to={activeSet ? `/missions?setId=${activeSet._id}` : "/missions"}
+                          className="inline-flex items-center gap-2 px-6 py-2.5 z-30 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95"
+                          style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))", boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)" }}
+                        >
+                          Enter Arena <FiArrowRight size={14} />
+                        </Link>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-tertiary">
+                          <FiZap className="text-yellow-400" size={13} />+
+                          {activeSet?.questions?.reduce((a, q) => a + (q.points || 0), 0) || 50} XP
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* watermark */}
+                    <div className="clip md:flex items-center justify-center flex-shrink-0 opacity-[0.08] group-hover:opacity-[0.4] transition-all duration-700 group-hover:rotate-6">
+                      <FiCpu size={180} className="text-accent" />
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
 
           {/* edge-click navigation zones — only when multiple sets */}
@@ -362,31 +396,27 @@ const Dashboard = () => {
               icon: FiTarget,
               label: "Total Challenges",
               value: total,
-              delta: "+2%",
               color: "text-accent",
             },
             {
               icon: FiCheckCircle,
               label: "Solved",
               value: solved,
-              delta: "+2%",
               color: "text-green-400",
             },
             {
               icon: FiClock,
               label: "Pending Reviews",
               value: pending,
-              delta: "+2%",
               color: "text-yellow-400",
             },
             {
               icon: FiTrendingUp,
               label: "Solver Rate",
               value: `${solvedPct}%`,
-              delta: "+2%",
               color: "text-purple-400",
             },
-          ].map(({ icon: Icon, label, value, delta, color }) => (
+          ].map(({ icon: Icon, label, value, color }) => (
             <div
               key={label}
               className="flex items-center gap-3 p-4 rounded-xl border border-black/[0.15] dark:border-white/[0.11] transition-all hover:scale-[1.02]
@@ -399,10 +429,11 @@ const Dashboard = () => {
                   {label}
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-black ${color} font-h2`}>{value}</span>
-                  <span className="text-[10px] text-green-500 font-bold">
-                    {delta}
-                  </span>
+                  {summaryQ.isLoading || profileQ.isLoading ? (
+                    <div className="h-6 w-12 bg-black/10 dark:bg-white/10 rounded-md animate-pulse mt-0.5" />
+                  ) : (
+                    <span className={`text-xl font-black ${color} font-h2`}>{value}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -574,7 +605,19 @@ const Dashboard = () => {
           </h2>
 
           <div className="rounded-2xl border border-black/[0.12] dark:border-white/[0.06] overflow-hidden">
-            {recentSubs.length === 0 ? (
+            {summaryQ.isLoading || profileQ.isLoading ? (
+              <div className="divide-y divide-black/[0.08] dark:divide-white/[0.04]">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-4 animate-pulse">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="h-3.5 w-2/3 bg-black/10 dark:bg-white/10 rounded-full" />
+                      <div className="h-2.5 w-1/3 bg-black/10 dark:bg-white/10 rounded-full" />
+                    </div>
+                    <div className="h-5 w-16 bg-black/10 dark:bg-white/10 rounded-md ml-3" />
+                  </div>
+                ))}
+              </div>
+            ) : recentSubs.length === 0 ? (
               <div className="p-8 text-center">
                 <FiCpu size={32} className="text-white/10 mx-auto mb-3" />
                 <p className="text-xs text-tertiary">
