@@ -66,15 +66,23 @@ const Missions = () => {
 
   const activeSet = activeSetQuery.data;
 
-  const clearSetFilter = () => {
-    navigate('/missions', { replace: true });
-    setFilters(prev => ({ ...prev, setId: '' }));
-  };
+  const [filters, setFilters] = useState({
+    page: 1,
+    limit: 50, // Increase limit when grouping to show all related items
+    search: "",
+    difficulty: "",
+    category: "",
+    status: "All", // 'All', 'Accepted', 'Pending'
+    setId: searchParams.get('setId') || '',
+    sortBy: "createdAt",
+    sortDir: "desc",
+    grouping: "none", // 'none', 'weekly', 'monthly'
+  });
+  const [viewMode, setViewMode] = useState(
+    () => localStorage.getItem("missions:view") || "grid",
+  );
 
-  useEffect(() => {
-    const currentSetId = searchParams.get('setId') || '';
-    setFilters(prev => ({ ...prev, setId: currentSetId, page: 1 }));
-  }, [searchParams]);
+  const queryKey = useMemo(() => ["challenges", filters], [filters]);
 
   const submissionsQuery = useQuery({
     queryKey: ['my-submissions'],
@@ -100,27 +108,25 @@ const Missions = () => {
     });
     return map;
   }, [submissionsQuery.data]);
-  const [filters, setFilters] = useState({
-    page: 1,
-    limit: 50, // Increase limit when grouping to show all related items
-    search: "",
-    difficulty: "",
-    category: "",
-    status: "All", // 'All', 'Accepted', 'Pending'
-    setId: initialSetId,
-    sortBy: "createdAt",
-    sortDir: "desc",
-    grouping: "none", // 'none', 'weekly', 'monthly'
-  });
-  const [viewMode, setViewMode] = useState(
-    () => localStorage.getItem("missions:view") || "grid",
-  );
+
+  const clearSetFilter = () => {
+    navigate('/missions', { replace: true });
+    setFilters(prev => ({ ...prev, setId: '' }));
+  };
+
+  // Synced with searchParams using react-router-dom state instead of synchronous effect where possible,
+  // or simple location-based dependency.
+  useEffect(() => {
+    const currentSetId = searchParams.get('setId') || '';
+    if (filters.setId !== currentSetId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFilters(prev => ({ ...prev, setId: currentSetId, page: 1 }));
+    }
+  }, [searchParams, filters.setId]);
 
   useEffect(() => {
     localStorage.setItem("missions:view", viewMode);
   }, [viewMode]);
-
-  const queryKey = useMemo(() => ["challenges", filters], [filters]);
 
   const challengesQuery = useQuery({
     queryKey,
