@@ -140,16 +140,12 @@ const Podium = ({ items, leaderType, loading }) => {
               <span className="select-none text-5xl font-black text-white/50 md:text-8xl">
                 {index === 1 ? "1" : index === 0 ? "2" : "3"}
               </span>
-              <FiAward
-                size={40}
-                className={`absolute -top-6 ${
-                  index === 1
-                    ? "text-yellow-400"
-                    : index === 0
-                      ? "text-slate-300"
-                      : "text-orange-500"
-                }`}
-              />
+              {isFirst && (
+                <FiAward
+                  size={40}
+                  className="absolute -top-6 text-yellow-400"
+                />
+              )}
             </div>
           </MotionDiv>
         );

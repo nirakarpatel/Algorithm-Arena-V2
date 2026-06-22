@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from 'react-hot-toast';
 import {
   FiArrowRight,
   FiZap,
@@ -24,6 +25,56 @@ import ChallengeCard from "../components/Card";
 import { getSessionGreeting } from "../constants/greetings";
 
 /* ── helpers ─────────────────────────────────── */
+const getLocalDrafts = () => {
+  const drafts = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("challenge-draft:")) {
+        const challengeId = key.split(":")[1];
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const draft = JSON.parse(raw);
+          const hasCode = draft.codeByLang && Object.values(draft.codeByLang).some(c => c && c.trim());
+          if (draft.repoUrl?.trim() || hasCode) {
+            drafts.push({
+              _id: `draft-${challengeId}`,
+              challengeId: {
+                _id: challengeId,
+                title: draft.challengeTitle || "Unknown Challenge",
+                difficulty: draft.challengeDifficulty || "Easy",
+                points: draft.challengePoints || 0,
+              },
+              status: "Attempted",
+              submittedAt: draft.updatedAt || new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error reading drafts from localStorage", e);
+  }
+  return drafts;
+};
+
+const getCardBadge = (chId, subsMap, drafts) => {
+  if (subsMap[chId] === "Accepted") {
+    return { label: "Solved", cls: "bg-green-500/10 text-green-400 border-green-500/20" };
+  }
+  const hasDraft = drafts.some((d) => d.challengeId?._id === chId);
+  if (hasDraft) {
+    return { label: "Attempted", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+  }
+  if (subsMap[chId] === "Rejected") {
+    return { label: "Rejected", cls: "bg-red-500/10 text-red-400 border-red-500/20" };
+  }
+  if (subsMap[chId] === "Pending") {
+    return { label: "Pending Review", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" };
+  }
+  return null;
+};
+
 const getRGB = (d) =>
   d === "Easy"
     ? "34,197,94"
@@ -64,6 +115,19 @@ const fd = (d = 0) => ({
    ══════════════════════════════════════════════ */
 const Dashboard = () => {
   const { user } = useAuth();
+
+  const [showWarning, setShowWarning] = useState(true);
+  useEffect(() => {
+    if (user?.status === "Warned") {
+      const warnedToastShown = sessionStorage.getItem("warnedToastShown");
+      if (!warnedToastShown) {
+        toast.error('You have been warned', { icon: '⚠️', duration: 6000 });
+        sessionStorage.setItem("warnedToastShown", "true");
+      }
+      const t = setTimeout(() => setShowWarning(false), 20000);
+      return () => clearTimeout(t);
+    }
+  }, [user?.status]);
 
   const greeting = useMemo(() => getSessionGreeting(), []);
 
@@ -117,14 +181,101 @@ const Dashboard = () => {
     },
   });
 
+  const mySubmissionsQ = useQuery({
+    queryKey: ["my-submissions"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/api/submissions/my-submissions");
+        return res.data.data || [];
+      } catch {
+        return [];
+      }
+    },
+  });
+
   /* ── derived ─────────────────────────────── */
   const summary = summaryQ.data;
   const profile = profileQ.data;
-  const challenges = challengesQ.data || [];
-  const allSubs = useMemo(
-    () => profile?.recentSubmissions || summary?.recentActivity || [],
-    [profile, summary],
-  );
+  const challenges = challengesQ.data;
+
+  const subsMap = useMemo(() => {
+    const map = {};
+    (mySubmissionsQ.data || []).forEach((sub) => {
+      const cid = sub.challengeId?._id || sub.challengeId;
+      if (!cid) return;
+      if (!map[cid] || sub.status === "Accepted") {
+        map[cid] = sub.status;
+      }
+    });
+    return map;
+  }, [mySubmissionsQ.data]);
+
+  const availableChallenges = useMemo(() => {
+    return (challenges || []).filter((ch) => subsMap[ch._id] !== "Accepted");
+  }, [challenges, subsMap]);
+
+  const drafts = useMemo(() => {
+    const rawDrafts = getLocalDrafts();
+    return rawDrafts
+      .map((d) => {
+        if (d.challengeId?.title === "Unknown Challenge") {
+          const matched = (challenges || []).find((c) => c._id === d.challengeId._id);
+          if (matched) {
+            d.challengeId.title = matched.title;
+            d.challengeId.difficulty = matched.difficulty;
+            d.challengeId.points = matched.points;
+          }
+        }
+        return d;
+      })
+      .filter((d) => d.challengeId?.title !== "Unknown Challenge");
+  }, [challenges]);
+
+  const combinedSubs = useMemo(() => {
+    const dbSubs = mySubmissionsQ.data || [];
+    const uniqueMap = new Map();
+
+    dbSubs.forEach((sub) => {
+      const cid = sub.challengeId?._id || sub.challengeId;
+      if (!cid) return;
+      const existing = uniqueMap.get(cid);
+      if (
+        !existing ||
+        sub.status === "Accepted" ||
+        new Date(sub.submittedAt) > new Date(existing.submittedAt)
+      ) {
+        uniqueMap.set(cid, sub);
+      }
+    });
+
+    drafts.forEach((draft) => {
+      const cid = draft.challengeId?._id;
+      if (!cid) return;
+      const existing = uniqueMap.get(cid);
+      if (!existing || existing.status !== "Accepted") {
+        uniqueMap.set(cid, draft);
+      }
+    });
+
+    const list = Array.from(uniqueMap.values());
+    const statusWeight = {
+      "Attempted": 1,
+      "Rejected": 2,
+      "Pending": 3,
+      "Accepted": 4
+    };
+
+    return list.sort((a, b) => {
+      const weightA = statusWeight[a.status] || 3;
+      const weightB = statusWeight[b.status] || 3;
+      if (weightA !== weightB) {
+        return weightA - weightB;
+      }
+      return new Date(b.submittedAt) - new Date(a.submittedAt);
+    });
+  }, [mySubmissionsQ.data, drafts]);
+
+  const recentSubs = useMemo(() => combinedSubs.slice(0, 6), [combinedSubs]);
 
   const solved = summary?.solved ?? profile?.acceptedCount ?? 0;
   const total = summary?.totalChallenges ?? 0;
@@ -146,13 +297,7 @@ const Dashboard = () => {
     setHeroIdx((i) => Math.max(0, Math.min(activeSets.length - 1, i + dir)));
   };
 
-  const recentSubs = useMemo(
-    () =>
-      [...allSubs]
-        .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
-        .slice(0, 6),
-    [allSubs],
-  );
+
 
   const diffChips = [
     { v: "", l: "All" },
@@ -164,22 +309,22 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 pb-12">
       {/* ── Warning ─────────────────────────── */}
-      {user?.status === "Warned" && (
+      {user?.status === "Warned" && showWarning && (
         <motion.div
           {...fd(0)}
           className="flex items-center gap-3 p-4 rounded-xl border border-red-500/40 bg-red-500/8"
         >
           <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0" />
           <p className="text-sm text-red-400">
-            You have an active warning from your Clan Chief. Please review your
-            activity.
+            <strong className="font-black mr-2">Official Warning:</strong>
+            {user?.warningMessage || "You have an active warning from your Clan Chief. Please review your activity."}
           </p>
         </motion.div>
       )}
 
       {/* ── Greeting ────────────────────────── */}
       <motion.div {...fd(0.04)}>
-        <h2 className="text-3xl font-black text-primary mb-1 font-h2">
+        <h2 className="text-2xl font-black text-primary mb-1 font-h2">
           {greeting.heading.replace("{username}", user?.username || "Operative")}
         </h2>
         <p className="text-secondary text-sm">
@@ -203,83 +348,117 @@ const Dashboard = () => {
 
           {/* slides */}
           <div className="relative overflow-hidden">
-            <AnimatePresence mode="wait" initial={false} custom={heroDir}>
-              <motion.div
-                key={clampedIdx}
-                custom={heroDir}
-                variants={{
-                  enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
-                  center: { x: 0, opacity: 1 },
-                  exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.28, ease: "easeInOut" }}
-                className="p-8"
-              >
+            {setsQ.isLoading ? (
+              <div className="p-8 animate-pulse">
                 <div className="relative z-30 flex flex-col md:flex-row md:items-center gap-6">
-                  <div className="flex-1 min-w-0">
-                    {/* deadline badge */}
-                    {activeSet && (
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent">
-                          {activeSets.length > 1
-                            ? `Challenge ${clampedIdx + 1} of ${activeSets.length}`
-                            : "This Week's Challenge"}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-                          <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                        </span>
-                      </div>
-                    )}
-                    {!activeSet && (
-                      <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent mb-4">
-                        This Week's Challenge
-                      </span>
-                    )}
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Tag skeleton */}
+                    <div className="h-3 w-32 bg-black/10 dark:bg-white/10 rounded-full" />
+                    
+                    {/* Title skeleton */}
+                    <div className="space-y-2">
+                      <div className="h-8 md:h-10 w-2/3 bg-black/15 dark:bg-white/15 rounded-xl" />
+                      <div className="h-8 md:h-10 w-1/2 bg-black/15 dark:bg-white/15 rounded-xl" />
+                    </div>
 
-                    <h1 className="text-2xl sm:text-4xl md:text-5xl font-black leading-[1.1] dark:text-white text-black mb-3 font-h1">
-                      {activeSet ? (
-                        <>
-                          {activeSet.title.split(" ").slice(0, -1).join(" ")}{" "}
-                          <span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                            {activeSet.title.split(" ").slice(-1)[0]}
-                          </span>
-                        </>
-                      ) : (
-                        <>Mastering Dynamic{" "}<span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Programming</span></>
-                      )}
-                    </h1>
+                    {/* Description skeleton */}
+                    <div className="space-y-2 max-w-md pt-2">
+                      <div className="h-3 w-full bg-black/10 dark:bg-white/10 rounded-full" />
+                      <div className="h-3 w-5/6 bg-black/10 dark:bg-white/10 rounded-full" />
+                    </div>
 
-                    <p className="text-secondary text-sm leading-relaxed mb-6 max-w-md">
-                      {activeSet
-                        ? `Target Level: ${activeSet.targetLevel} · ${activeSet.questions?.length || 0} questions `
-                        : "Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards."}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 z-10">
-                      <Link
-                        to={activeSet ? `/missions?setId=${activeSet._id}` : "/missions"}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 z-30 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95"
-                        style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))", boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)" }}
-                      >
-                        Enter Arena <FiArrowRight size={14} />
-                      </Link>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-tertiary">
-                        <FiZap className="text-yellow-400" size={13} />+
-                        {activeSet?.questions?.reduce((a, q) => a + (q.points || 0), 0) || 50} XP
-                      </div>
+                    {/* Action button + XP indicator skeleton */}
+                    <div className="flex items-center gap-4 pt-4">
+                      <div className="h-10 w-36 bg-black/15 dark:bg-white/15 rounded-xl" />
+                      <div className="h-5 w-20 bg-black/10 dark:bg-white/10 rounded-full" />
                     </div>
                   </div>
 
-                  {/* watermark */}
-                  <div className="hidden md:flex items-center justify-center flex-shrink-0 opacity-[0.08] group-hover:opacity-[0.4] transition-all duration-700 group-hover:rotate-6">
-                    <FiCpu size={180} className="text-accent" />
+                  {/* Watermark watermark CPU skeleton */}
+                  <div className="hidden md:flex items-center justify-center flex-shrink-0 opacity-[0.03]">
+                    <div className="w-40 h-40 bg-black/20 dark:bg-white/20 rounded-full" />
                   </div>
                 </div>
-              </motion.div>
-            </AnimatePresence>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait" initial={false} custom={heroDir}>
+                <motion.div
+                  key={clampedIdx}
+                  custom={heroDir}
+                  variants={{
+                    enter: (dir) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
+                    center: { x: 0, opacity: 1 },
+                    exit: (dir) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.28, ease: "easeInOut" }}
+                  className="p-8"
+                >
+                  <div className="relative z-30 flex flex-col md:flex-row md:items-center gap-6">
+                    <div className="flex-1 min-w-0">
+                      {/* deadline badge */}
+                      {activeSet && (
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent">
+                            {activeSets.length > 1
+                              ? `Challenge ${clampedIdx + 1} of ${activeSets.length}`
+                              : "This Week's Challenge"}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+                            <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                          </span>
+                        </div>
+                      )}
+                      {!activeSet && (
+                        <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent mb-4">
+                          This Week's Challenge
+                        </span>
+                      )}
+
+                      <h1 className="text-2xl md:text-3xl font-black leading-[1.1] dark:text-white text-black mb-3 font-h1">
+                        {activeSet ? (
+                          <>
+                            {activeSet.title.split(" ").slice(0, -1).join(" ")}{" "}
+                            <span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                              {activeSet.title.split(" ").slice(-1)[0]}
+                            </span>
+                          </>
+                        ) : (
+                          <>Mastering Dynamic{" "}<span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Programming</span></>
+                        )}
+                      </h1>
+
+                      <p className="text-secondary text-sm leading-relaxed mb-6 max-w-md">
+                        {activeSet
+                          ? `Target Level: ${activeSet.targetLevel?.toLowerCase() === "both" ? "Beginner and intermediate" : activeSet.targetLevel} · ${activeSet.questions?.length || 0} questions `
+                          : "Push your limits with this week's elite challenge. Solve complex optimizations and climb the global leaderboards."}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 z-10">
+                        <Link
+                          to={activeSet ? `/missions?setId=${activeSet._id}` : "/missions"}
+                          className="inline-flex items-center gap-2 px-6 py-2.5 z-30 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95"
+                          style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))", boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)" }}
+                        >
+                          Enter Arena <FiArrowRight size={14} />
+                        </Link>
+                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-tertiary">
+                          <FiZap className="text-yellow-400" size={13} />+
+                          {activeSet?.questions?.reduce((a, q) => a + (q.points || 0), 0) || 50} XP
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* watermark */}
+                    <div className="clip md:flex items-center justify-center flex-shrink-0 opacity-[0.08] group-hover:opacity-[0.4] transition-all duration-700 group-hover:rotate-6">
+                      <FiCpu size={180} className="text-accent" />
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
           </div>
 
           {/* edge-click navigation zones — only when multiple sets */}
@@ -342,37 +521,33 @@ const Dashboard = () => {
 
       {/* ── Stat bar ────────────────────────── */}
       <motion.div {...fd(0.12)}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             {
               icon: FiTarget,
               label: "Total Challenges",
               value: total,
-              delta: "+2%",
               color: "text-accent",
             },
             {
               icon: FiCheckCircle,
               label: "Solved",
               value: solved,
-              delta: "+2%",
               color: "text-green-400",
             },
             {
               icon: FiClock,
               label: "Pending Reviews",
               value: pending,
-              delta: "+2%",
               color: "text-yellow-400",
             },
             {
               icon: FiTrendingUp,
               label: "Solver Rate",
               value: `${solvedPct}%`,
-              delta: "+2%",
               color: "text-purple-400",
             },
-          ].map(({ icon: Icon, label, value, delta, color }) => (
+          ].map(({ icon: Icon, label, value, color }) => (
             <div
               key={label}
               className="flex items-center gap-3 p-4 rounded-xl border border-black/[0.15] dark:border-white/[0.11] transition-all hover:scale-[1.02]
@@ -385,10 +560,11 @@ const Dashboard = () => {
                   {label}
                 </p>
                 <div className="flex items-baseline gap-2">
-                  <span className={`text-xl font-black ${color} font-h2`}>{value}</span>
-                  <span className="text-[10px] text-green-500 font-bold">
-                    {delta}
-                  </span>
+                  {summaryQ.isLoading || profileQ.isLoading ? (
+                    <div className="h-6 w-12 bg-black/10 dark:bg-white/10 rounded-md animate-pulse mt-0.5" />
+                  ) : (
+                    <span className={`text-xl font-black ${color} font-h2`}>{value}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -471,20 +647,21 @@ const Dashboard = () => {
                 <SkeletonCard key={i} />
               ))}
             </div>
-          ) : challenges.length === 0 ? (
+          ) : availableChallenges.length === 0 ? (
             <EmptyState
               title="No missions found"
               description="Adjust filters or check back later."
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {challenges.map((ch, i) => {
+              {availableChallenges.map((ch, i) => {
                 const diffCls =
                   ch.difficulty === "Easy"
                     ? "bg-green-500/15 text-green-400 border-green-500/25"
                     : ch.difficulty === "Medium"
                       ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25"
                       : "bg-red-500/15 text-red-400 border-red-500/25";
+                const badge = getCardBadge(ch._id, subsMap, drafts);
                 return (
                   <motion.div
                     key={ch._id}
@@ -502,11 +679,20 @@ const Dashboard = () => {
                         difficultyColor={getRGB(ch.difficulty)}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span
-                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${diffCls}`}
-                          >
-                            {ch.difficulty}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${diffCls}`}
+                            >
+                              {ch.difficulty}
+                            </span>
+                            {badge && (
+                              <span
+                                className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${badge.cls}`}
+                              >
+                                {badge.label}
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] font-black text-accent">
                             {ch.points} XP
                           </span>
@@ -560,7 +746,19 @@ const Dashboard = () => {
           </h2>
 
           <div className="rounded-2xl border border-black/[0.12] dark:border-white/[0.06] overflow-hidden">
-            {recentSubs.length === 0 ? (
+            {summaryQ.isLoading || profileQ.isLoading ? (
+              <div className="divide-y divide-black/[0.08] dark:divide-white/[0.04]">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-4 animate-pulse">
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="h-3.5 w-2/3 bg-black/10 dark:bg-white/10 rounded-full" />
+                      <div className="h-2.5 w-1/3 bg-black/10 dark:bg-white/10 rounded-full" />
+                    </div>
+                    <div className="h-5 w-16 bg-black/10 dark:bg-white/10 rounded-md ml-3" />
+                  </div>
+                ))}
+              </div>
+            ) : recentSubs.length === 0 ? (
               <div className="p-8 text-center">
                 <FiCpu size={32} className="text-white/10 mx-auto mb-3" />
                 <p className="text-xs text-tertiary">
@@ -572,20 +770,25 @@ const Dashboard = () => {
                 {recentSubs.map((sub, i) => {
                   const ac = sub.status === "Accepted";
                   const wa = sub.status === "Rejected";
+                  const att = sub.status === "Attempted";
                   const badgeCls = ac
                     ? "bg-green-500/15 text-green-400 border-green-500/25"
                     : wa
                       ? "bg-red-500/15 text-red-400 border-red-500/25"
-                      : "bg-yellow-500/15 text-yellow-400 border-yellow-500/25";
+                      : att
+                        ? "bg-blue-500/15 text-blue-400 border-blue-500/25"
+                        : "bg-yellow-500/15 text-yellow-400 border-yellow-500/25";
                   const badgeLabel = ac
-                    ? "ACCEPTED"
+                    ? "SOLVED"
                     : wa
                       ? "REJECTED"
-                      : "PENDING";
+                      : att
+                        ? "ATTEMPTED"
+                        : "PENDING REVIEW";
                   return (
                     <Link
                       key={sub._id + i}
-                      to={`/submission/${sub._id}`}
+                      to={att ? `/challenge/${sub.challengeId?._id}` : `/submission/${sub._id}`}
                       className="group flex items-center justify-between px-4 py-3.5 hover:bg-white/[0.03] transition-all"
                     >
                       <div className="min-w-0 flex-1">

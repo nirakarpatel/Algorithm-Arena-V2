@@ -25,7 +25,7 @@ const Layout = ({ onLogout }) => {
   }, 20 * 60 * 1000);
 
   return (
-    <div className="min-h-screen flex flex-col bg-app text-primary transition-colors duration-300 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-app text-primary transition-colors duration-300">
       {/* 1. Animated Background Layer */}
       <div className="cosmos-background">
         <div className="orb orb-1"></div>

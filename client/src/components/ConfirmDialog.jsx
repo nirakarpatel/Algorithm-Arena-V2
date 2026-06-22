@@ -1,17 +1,15 @@
 import React from 'react';
 
 const ConfirmDialog = ({
-  open = true,
+  open,
   title = 'Confirm action',
-  description,
-  message,
+  description = 'Are you sure?',
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
 }) => {
   if (!open) return null;
-  const displayText = description || message || 'Are you sure?';
 
   return (
     <div
@@ -22,7 +20,7 @@ const ConfirmDialog = ({
     >
       <div className="macos-glass w-full max-w-md p-6">
         <h3 className="text-lg font-bold mb-2">{title}</h3>
-        <p className="text-secondary mb-6">{displayText}</p>
+        <p className="text-secondary mb-6">{description}</p>
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}

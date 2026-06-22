@@ -486,7 +486,7 @@ const Home = () => {
             />
           </div>
 
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-2">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-2">
             <span className="text-primary block">Compete.</span>
             <span className="text-primary block">
               Solve.{" "}
