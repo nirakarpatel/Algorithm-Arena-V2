@@ -212,7 +212,7 @@ const ClaimUsername = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Username */}
-              <div className="space-y-1.5 col-span-2">
+              <div className="space-y-1.5 col-span-1 md:col-span-2">
                 <label className="field-label">Username</label>
                 <div className="relative group">
                   <FiUser className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
@@ -343,13 +343,7 @@ const ClaimUsername = () => {
         </Card>
       </div>
 
-      <p className="text-sm text-secondary">
-        Copyright 2026 Algorithm Arena. Built for{" "}
-        <span className="text-primary font-semibold">
-          GDG On Campus - SOA ITER
-        </span>
-        .
-      </p>
+
     </div>
   );
 };

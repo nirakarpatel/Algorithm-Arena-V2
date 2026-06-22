@@ -37,6 +37,9 @@ const QuestionSetsTab = () => {
   const [snippetLang,setSnippetLang] = useState('');
   const [editingSetId,setEditingSetId] = useState(null);
   const [deleteSetTarget,setDeleteSetTarget] = useState(null);
+  const [showConfirmUpload, setShowConfirmUpload] = useState(false);
+  const [confirmUploadMessage, setConfirmUploadMessage] = useState('');
+  const [pendingPublishData, setPendingPublishData] = useState(null);
 
   const blankForm = ()=>({title:'',weekNumber:1,deadline:'',targetLevel:'Both',questions:[{...initialQuestionState}]});
 
@@ -143,7 +146,58 @@ const QuestionSetsTab = () => {
     });
     setView('create');
   };
-  const handlePublish=(e)=>{e.preventDefault();const fq=form.questions.map(q=>({...q,testCases:prepareTestCases(q.testCases||[])}));if(editingSetId){updateSetMutation.mutate({id:editingSetId,body:{...form,questions:fq}})}else{createSetMutation.mutate({...form,questions:fq})}};
+  const executePublish = (payload) => {
+    if (editingSetId) {
+      updateSetMutation.mutate({ id: editingSetId, body: payload });
+    } else {
+      createSetMutation.mutate(payload);
+    }
+  };
+
+  const handlePublish = (e) => {
+    e.preventDefault();
+    const fq = form.questions.map(q => ({ ...q, testCases: prepareTestCases(q.testCases || []) }));
+    const payload = { ...form, questions: fq };
+
+    const existingSets = setsQuery.data || [];
+    const activeBlockers = [];
+    const historyMatches = [];
+
+    for (const q of fq) {
+      const qTitle = q.title.trim().toLowerCase();
+      if (!qTitle) continue;
+
+      for (const s of existingSets) {
+        if (editingSetId && s._id === editingSetId) continue;
+
+        const hasDuplicate = (s.questions || []).some(sq => sq.title.trim().toLowerCase() === qTitle);
+        if (hasDuplicate) {
+          const isAct = new Date(s.deadline) >= new Date();
+          if (isAct) {
+            activeBlockers.push({ qTitle: q.title, setTitle: s.title, deadline: s.deadline });
+          } else {
+            historyMatches.push({ qTitle: q.title, setTitle: s.title, setId: s._id, weekNumber: s.weekNumber });
+          }
+        }
+      }
+    }
+
+    if (activeBlockers.length > 0) {
+      const msg = `Cannot upload. Question "${activeBlockers[0].qTitle}" is already active in Set "${activeBlockers[0].setTitle}" (deadline: ${new Date(activeBlockers[0].deadline).toLocaleDateString()}).`;
+      toast.error(msg);
+      return;
+    }
+
+    if (historyMatches.length > 0) {
+      const matchMsg = `Question "${historyMatches[0].qTitle}" has already been pushed on previous set "${historyMatches[0].setTitle}" (Week ${historyMatches[0].weekNumber}). Do you want to push it again?`;
+      setPendingPublishData(payload);
+      setConfirmUploadMessage(matchMsg);
+      setShowConfirmUpload(true);
+      return;
+    }
+
+    executePublish(payload);
+  };
   const handleCreateChallengeSubmit=(e)=>{e.preventDefault();createChallengeMutation.mutate({...createChallengeForm,testCases:prepareTestCases(createChallengeForm.testCases)})};
   const handleUpdateChallengeSubmit=(e)=>{e.preventDefault();if(!editingChallenge)return;updateChallengeMutation.mutate({id:editingChallenge._id,body:{title:editingChallenge.title,description:editingChallenge.description,link:editingChallenge.link||'',difficulty:editingChallenge.difficulty,points:Number(editingChallenge.points),category:editingChallenge.category,functionName:editingChallenge.functionName||'',testCases:prepareTestCases(editingChallenge.testCases||[])}})};
 
@@ -358,6 +412,36 @@ const QuestionSetsTab = () => {
       {deleteTarget&&<ConfirmDialog open={true} title="Delete Challenge" description={`Delete "${deleteTarget.title}"?`} onConfirm={()=>deleteChallengeMutation.mutate(deleteTarget._id)} onCancel={()=>setDeleteTarget(null)}/>}
 
       {deleteSetTarget&&<ConfirmDialog open={true} title="Delete Question Set" description={`Delete "${deleteSetTarget.title}" and its generated challenges? This cannot be undone.`} onConfirm={()=>deleteSetMutation.mutate(deleteSetTarget._id)} onCancel={()=>setDeleteSetTarget(null)}/>}
+
+      {showConfirmUpload && (
+        <ConfirmDialog
+          title="Duplicate Question Warning"
+          message={confirmUploadMessage}
+          onConfirm={() => {
+            setShowConfirmUpload(false);
+            if (pendingPublishData) executePublish(pendingPublishData);
+          }}
+          onCancel={() => {
+            setShowConfirmUpload(false);
+            setPendingPublishData(null);
+          }}
+        />
+      )}
+
+      {showConfirmUpload && (
+        <ConfirmDialog
+          title="Duplicate Question Warning"
+          message={confirmUploadMessage}
+          onConfirm={() => {
+            setShowConfirmUpload(false);
+            if (pendingPublishData) executePublish(pendingPublishData);
+          }}
+          onCancel={() => {
+            setShowConfirmUpload(false);
+            setPendingPublishData(null);
+          }}
+        />
+      )}
 
       {/* Import Modal */}
       <AnimatePresence>
