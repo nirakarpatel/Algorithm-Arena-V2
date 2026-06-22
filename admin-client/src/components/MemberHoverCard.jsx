@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import {
   FiX, FiZap, FiTarget, FiStar, FiCalendar, FiUsers, FiShield, FiActivity
 } from "react-icons/fi";

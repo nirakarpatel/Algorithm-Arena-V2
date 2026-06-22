@@ -6,11 +6,9 @@ import { FiUsers, FiUserPlus, FiPercent, FiX, FiShield, FiArrowLeft, FiTrash2, F
 import BaseCard from '../../components/BaseCard';
 import MemberHoverCard from '../../components/MemberHoverCard';
 import { api } from '../../lib/api';
-import { useAuth } from '../../context/useAuth';
 
 const ClanManagerTab = () => {
   const queryClient = useQueryClient();
-  const { confirmSessionIfNeeded } = useAuth();
   const [assignModal, setAssignModal] = useState({ open: false, user: null });
   const [selectedClanForAssign, setSelectedClanForAssign] = useState('');
   const [viewClanId, setViewClanId] = useState(null);

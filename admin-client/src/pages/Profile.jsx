@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { FiActivity, FiCpu, FiArrowRight, FiZap } from "react-icons/fi";
+import { FiActivity, FiCpu, FiArrowRight, FiZap, FiAward, FiFilter } from "react-icons/fi";
 import { api } from "../lib/api";
 import { useAuth } from "../context/useAuth";
 import SkeletonCard from "../components/SkeletonCard";
@@ -42,9 +42,29 @@ const DiffBar = ({ label, solved, total, color }) => {
   );
 };
 
+const RARITY = {
+  COMMON:    { glow: "0,0,0,0",         border: "#334155", bg: "#1e293b", label: "#94a3b8" },
+  RARE:      { glow: "59,130,246,0.5",  border: "#3b82f6", bg: "#1e3a5f", label: "#60a5fa" },
+  EPIC:      { glow: "168,85,247,0.55", border: "#a855f7", bg: "#3b1f6e", label: "#c084fc" },
+  LEGENDARY: { glow: "250,204,21,0.65", border: "#facc15", bg: "#422006", label: "#fde047" },
+};
+
+const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+
+const FALLBACK_BADGES = [
+  { _id: "b1", name: "First Blood",      icon: "🩸", rarity: "COMMON",    description: "First successful submission" },
+  { _id: "b2", name: "Night Owl",        icon: "🦉", rarity: "RARE",      description: "Solved between 12am–4am" },
+  { _id: "b3", name: "Flawless",         icon: "✨", rarity: "EPIC",      description: "First-attempt perfect solve" },
+  { _id: "b4", name: "Algorithm Master", icon: "👑", rarity: "LEGENDARY", description: "100 problems solved" },
+];
+
 const Profile = () => {
   const { user } = useAuth();
   const { username } = useParams();
+
+  const [activeTab, setActiveTab] = useState("overview");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("rarity-desc");
 
   const profileQ = useQuery({
     queryKey: ["full-profile-stats", username || "me"],
@@ -76,6 +96,42 @@ const Profile = () => {
     return [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 8);
   }, [submissions]);
 
+  const profile = profileQ.data || {};
+  const displayUser = username ? profile : user;
+
+  const sortedBadges = useMemo(() => {
+    const baseBadges = profile.badges?.length 
+      ? profile.badges 
+      : FALLBACK_BADGES.map(b => ({ ...b, isUnlocked: true }));
+
+    let filtered = [...baseBadges];
+    if (statusFilter === "achieved") {
+      filtered = filtered.filter(b => b.isUnlocked);
+    } else if (statusFilter === "locked") {
+      filtered = filtered.filter(b => !b.isUnlocked);
+    }
+
+    return filtered.sort((a, b) => {
+      // If filtering "all", achieved badges always go first
+      if (statusFilter === "all") {
+        const statusA = a.isUnlocked ? 1 : 0;
+        const statusB = b.isUnlocked ? 1 : 0;
+        if (statusA !== statusB) {
+          return statusB - statusA;
+        }
+      }
+
+      // Rarity comparison
+      const prestigeA = PRESTIGE_ORDER[a.rarity] || 0;
+      const prestigeB = PRESTIGE_ORDER[b.rarity] || 0;
+      if (prestigeA !== prestigeB) {
+        return sortBy === "rarity-desc" ? prestigeB - prestigeA : prestigeA - prestigeB;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [profile.badges, statusFilter, sortBy]);
+
   if (profileQ.isLoading || subsQ.isLoading) {
     return (
       <div className="flex flex-col lg:flex-row gap-6 p-4 md:p-8">
@@ -90,9 +146,6 @@ const Profile = () => {
       </div>
     );
   }
-
-  const profile = profileQ.data || {};
-  const displayUser = username ? profile : user;
 
   const easy = profile?.difficultyBreakdown?.easy ?? { solved: 0, total: 0 };
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };

@@ -24,6 +24,8 @@ const FALLBACK_BADGES = [
   { _id: "b4", name: "Algorithm Master", icon: "👑", rarity: "LEGENDARY", description: "100 problems solved" },
 ];
 
+const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+
 /* ── XP Level helper ─────────────────────────────────────── */
 const XP_PER_LEVEL = 500;
 const getLevel = (xp) => Math.floor(xp / XP_PER_LEVEL) + 1;
@@ -114,7 +116,6 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
   const hard   = profile?.difficultyBreakdown?.hard   ?? { solved: 0, total: 0 };
 
-  const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
   const sortedBadges = React.useMemo(() => {
     const baseBadges = badges?.length 
       ? badges 
@@ -136,7 +137,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
       // Name fallback
       return a.name.localeCompare(b.name);
     });
-  }, [badges, PRESTIGE_ORDER]);
+  }, [badges]);
 
   const [showModal, setShowModal] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState("all");
@@ -169,7 +170,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
       return a.name.localeCompare(b.name);
     });
-  }, [sortedBadges, statusFilter, sortBy, PRESTIGE_ORDER]);
+  }, [sortedBadges, statusFilter, sortBy]);
 
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 

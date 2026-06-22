@@ -26,6 +26,10 @@ export const AuthProvider = ({ children }) => {
 
   const refreshMe = useCallback(async () => {
     try {
+      if (!localStorage.getItem('token')) {
+        clearSession();
+        return null;
+      }
       const res = await api.get('/api/auth/me');
       const me = res.data?.data;
       if (me?.role === 'admin') {

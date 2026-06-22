@@ -127,12 +127,6 @@ const MembersTab = () => {
   const handleRoleChange = async (targetUser, role) => {
     if (!canManageUsers) return;
 
-    const actionText = role === 'admin' 
-      ? `elevate ${targetUser.username} to Admin` 
-      : role === 'clan-chief'
-      ? `elevate ${targetUser.username} to Clan Chief`
-      : `demote ${targetUser.username} to Member`;
-
     // Bypass window.confirm to avoid browser blocking issues
 
     try {

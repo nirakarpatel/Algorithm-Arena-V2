@@ -50,7 +50,6 @@ const StatCard = ({ icon, label, value, color }) => {
 
 const ClanDashboard = ({ clan, userId, onLeave, globalNotice }) => {
   const members = clan.members || [];
-  const requests = clan.requests || [];
   const notices = clan.notices || ['No announcements yet. Stay tuned!'];
   const [activeTab, setActiveTab] = useState('roster'); // roster, notices
   const isArchived = clan.status === 'archived';
