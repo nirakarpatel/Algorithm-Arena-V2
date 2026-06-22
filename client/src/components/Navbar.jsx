@@ -195,7 +195,7 @@ const Navbar = ({ onLogout }) => {
 
       <aside
         className={clsx(
-          "md:hidden fixed top-16 right-0 z-50 w-72 h-[calc(100vh-4rem)] bg-glass-surface backdrop-blur-xl border-l border-glass-border transform transition-transform duration-300 overflow-y-auto",
+          "md:hidden fixed top-16 right-0 z-50 w-72 h-[calc(100vh-4rem)] bg-glass-surface backdrop-blur-xl border-l border-glass-border transform transition-transform duration-300",
           menuOpen ? "translate-x-0" : "translate-x-full",
         )}
         aria-label="Mobile navigation"

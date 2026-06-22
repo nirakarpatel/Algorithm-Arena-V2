@@ -49,32 +49,14 @@ const getChallenges = async (req, res, next) => {
     }
 
     const sortOrder = sortDir === 'asc' ? 1 : -1;
-    const sort = sortBy === 'difficulty' ? { createdAt: -1 } : { [sortBy]: sortOrder };
+    const sort = { [sortBy]: sortOrder };
 
     const skip = (page - 1) * limit;
 
     let [total, challenges] = await Promise.all([
       Challenge.countDocuments(filter),
-      Challenge.find(filter).populate('questionSetId').sort(sort),
+      Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(limit),
     ]);
-
-    // Handle custom difficulty sorting: Hard -> Medium -> Easy
-    if (sortBy === 'difficulty') {
-      const diffOrder = { 'Hard': 1, 'Medium': 2, 'Easy': 3 };
-      challenges.sort((a, b) => {
-        const orderA = diffOrder[a.difficulty] || 99;
-        const orderB = diffOrder[b.difficulty] || 99;
-        if (orderA !== orderB) {
-          return (orderA - orderB) * sortOrder;
-        }
-        // Fallback to createdAt if difficulties are same
-        return (new Date(b.createdAt) - new Date(a.createdAt));
-      });
-    }
-
-    // Apply pagination post-sorting (necessary if sorted in memory)
-    total = challenges.length;
-    challenges = challenges.slice(skip, skip + Number(limit));
 
     // Auto-create Challenge documents for question sets that don't have them yet
     if (setId && total === 0 && !search && !difficulty && !category) {
