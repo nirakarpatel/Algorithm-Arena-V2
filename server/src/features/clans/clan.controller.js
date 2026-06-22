@@ -127,9 +127,14 @@ const getMyClan = async (req, res, next) => {
       const stats = await Submission.aggregate([
         { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
         {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
+        },
+        {
           $lookup: {
             from: 'challenges',
-            localField: 'challengeId',
+            localField: '_id.challengeId',
             foreignField: '_id',
             as: 'challenge',
           },
@@ -137,7 +142,7 @@ const getMyClan = async (req, res, next) => {
         { $unwind: '$challenge' },
         {
           $group: {
-            _id: '$userId',
+            _id: '$_id.userId',
             totalPoints: { $sum: '$challenge.points' },
           },
         },
@@ -183,9 +188,14 @@ const getClans = async (req, res, next) => {
       ? await Submission.aggregate([
           { $match: { userId: { $in: allMemberIds }, status: 'Accepted' } },
           {
+            $group: {
+              _id: { userId: '$userId', challengeId: '$challengeId' }
+            }
+          },
+          {
             $lookup: {
               from: 'challenges',
-              localField: 'challengeId',
+              localField: '_id.challengeId',
               foreignField: '_id',
               as: 'challenge',
             },
@@ -193,7 +203,7 @@ const getClans = async (req, res, next) => {
           { $unwind: '$challenge' },
           {
             $group: {
-              _id: '$userId',
+              _id: '$_id.userId',
               totalPoints: { $sum: '$challenge.points' },
             },
           },
@@ -244,9 +254,14 @@ const getClan = async (req, res, next) => {
       const stats = await Submission.aggregate([
         { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
         {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
+        },
+        {
           $lookup: {
             from: 'challenges',
-            localField: 'challengeId',
+            localField: '_id.challengeId',
             foreignField: '_id',
             as: 'challenge',
           },
@@ -254,7 +269,7 @@ const getClan = async (req, res, next) => {
         { $unwind: '$challenge' },
         {
           $group: {
-            _id: '$userId',
+            _id: '$_id.userId',
             totalPoints: { $sum: '$challenge.points' },
           },
         },
