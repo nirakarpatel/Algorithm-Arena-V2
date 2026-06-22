@@ -214,7 +214,22 @@ const Dashboard = () => {
     return (challenges || []).filter((ch) => subsMap[ch._id] !== "Accepted");
   }, [challenges, subsMap]);
 
-  const drafts = useMemo(() => getLocalDrafts(), []);
+  const drafts = useMemo(() => {
+    const rawDrafts = getLocalDrafts();
+    return rawDrafts
+      .map((d) => {
+        if (d.challengeId?.title === "Unknown Challenge") {
+          const matched = (challenges || []).find((c) => c._id === d.challengeId._id);
+          if (matched) {
+            d.challengeId.title = matched.title;
+            d.challengeId.difficulty = matched.difficulty;
+            d.challengeId.points = matched.points;
+          }
+        }
+        return d;
+      })
+      .filter((d) => d.challengeId?.title !== "Unknown Challenge");
+  }, [challenges]);
 
   const combinedSubs = useMemo(() => {
     const dbSubs = mySubmissionsQ.data || [];

@@ -231,8 +231,15 @@ const ChallengeDetails = () => {
   const challengeQuery = useQuery({
     queryKey: ["challenge", id],
     queryFn: async () => {
-      const res = await api.get(`/api/challenges/${id}`);
-      return res.data.data;
+      try {
+        const res = await api.get(`/api/challenges/${id}`);
+        return res.data.data;
+      } catch (err) {
+        if (err.response?.status === 404) {
+          localStorage.removeItem(draftKey);
+        }
+        throw err;
+      }
     },
   });
 

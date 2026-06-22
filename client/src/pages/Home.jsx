@@ -296,7 +296,25 @@ const Home = () => {
     enabled: isAuthenticated,
   });
 
-  const drafts = useMemo(() => getLocalDrafts(), []);
+  const drafts = useMemo(() => {
+    const rawDrafts = getLocalDrafts();
+    return rawDrafts
+      .map((d) => {
+        if (d.challengeId?.title === "Unknown Challenge") {
+          const dbSubs = submissionsQuery.data || [];
+          const matchedSub = dbSubs.find(
+            (sub) => (sub.challengeId?._id || sub.challengeId) === d.challengeId._id
+          );
+          if (matchedSub?.challengeId?.title) {
+            d.challengeId.title = matchedSub.challengeId.title;
+            d.challengeId.difficulty = matchedSub.challengeId.difficulty || "Easy";
+            d.challengeId.points = matchedSub.challengeId.points || 0;
+          }
+        }
+        return d;
+      })
+      .filter((d) => d.challengeId?.title !== "Unknown Challenge");
+  }, [submissionsQuery.data]);
 
   const recentActivities = useMemo(() => {
     const dbSubs = submissionsQuery.data || [];
