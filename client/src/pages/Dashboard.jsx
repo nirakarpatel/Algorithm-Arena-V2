@@ -148,7 +148,8 @@ const Dashboard = () => {
   const challengesQ = useQuery({
     queryKey: ["dash-challenges", filters],
     queryFn: async () => {
-      const r = await api.get(`/api/challenges?${buildQS(filters)}`);
+      const queryParams = { ...filters, limit: 100 };
+      const r = await api.get(`/api/challenges?${buildQS(queryParams)}`);
       return r.data.data || [];
     },
   });
@@ -201,17 +202,53 @@ const Dashboard = () => {
   const subsMap = useMemo(() => {
     const map = {};
     (mySubmissionsQ.data || []).forEach((sub) => {
-      const cid = sub.challengeId?._id || sub.challengeId;
+      if (!sub.challengeId) return;
+      const cid = typeof sub.challengeId === 'object'
+        ? (sub.challengeId._id || sub.challengeId.id)
+        : sub.challengeId;
       if (!cid) return;
-      if (!map[cid] || sub.status === "Accepted") {
-        map[cid] = sub.status;
+      const cidStr = cid.toString();
+      if (!map[cidStr] || sub.status === "Accepted" || (sub.status === "Pending" && map[cidStr] !== "Accepted")) {
+        map[cidStr] = sub.status;
+      }
+      
+      const titleKey = sub.challengeId?.title?.trim().toLowerCase();
+      if (titleKey) {
+        if (!map[titleKey] || sub.status === "Accepted" || (sub.status === "Pending" && map[titleKey] !== "Accepted")) {
+          map[titleKey] = sub.status;
+        }
       }
     });
     return map;
   }, [mySubmissionsQ.data]);
 
   const availableChallenges = useMemo(() => {
-    return (challenges || []).filter((ch) => subsMap[ch._id] !== "Accepted");
+    // 1. Group and filter out duplicate questions by title (case-insensitive)
+    const seen = new Set();
+    const unique = [];
+    for (const ch of (challenges || [])) {
+      const titleKey = ch.title?.trim().toLowerCase();
+      if (titleKey && !seen.has(titleKey)) {
+        seen.add(titleKey);
+        unique.push(ch);
+      }
+    }
+
+    // 2. Filter out solved and pending challenges by ID or by title
+    const filtered = unique.filter((ch) => {
+      const chId = ch._id?.toString();
+      const titleKey = ch.title?.trim().toLowerCase();
+      const statusById = subsMap[chId];
+      const statusByTitle = titleKey ? subsMap[titleKey] : null;
+      
+      const isSolved = statusById === "Accepted" || statusByTitle === "Accepted";
+      const isPending = statusById === "Pending" || statusByTitle === "Pending";
+      
+      return !isSolved && !isPending;
+    });
+
+    // 3. Return at most 4 challenges
+    return filtered.slice(0, 4);
   }, [challenges, subsMap]);
 
   const drafts = useMemo(() => {

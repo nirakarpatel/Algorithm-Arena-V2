@@ -564,4 +564,31 @@ samp,
     --accent-glow: rgba(234, 190, 17, 0.4);
 }
 
+/* Responsive Viewport Improvements */
+@media (max-width: 640px) {
+    .app-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .segmented {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+    }
+    
+    .segmented-btn {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+    
+    .chip-btn {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.6rem;
+    }
+}
+
 

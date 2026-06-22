@@ -117,10 +117,21 @@ const Missions = () => {
   const subsMap = useMemo(() => {
     const map = {};
     (submissionsQuery.data || []).forEach(sub => {
-      const cid = sub.challengeId?._id || sub.challengeId;
+      if (!sub.challengeId) return;
+      const cid = typeof sub.challengeId === 'object'
+        ? (sub.challengeId._id || sub.challengeId.id)
+        : sub.challengeId;
       if (!cid) return;
-      if (!map[cid] || sub.status === 'Accepted') {
-        map[cid] = sub.status;
+      const cidStr = cid.toString();
+      if (!map[cidStr] || sub.status === 'Accepted' || (sub.status === 'Pending' && map[cidStr] !== 'Accepted')) {
+        map[cidStr] = sub.status;
+      }
+      
+      const titleKey = sub.challengeId?.title?.trim().toLowerCase();
+      if (titleKey) {
+        if (!map[titleKey] || sub.status === 'Accepted' || (sub.status === 'Pending' && map[titleKey] !== 'Accepted')) {
+          map[titleKey] = sub.status;
+        }
       }
     });
     return map;
@@ -132,7 +143,10 @@ const Missions = () => {
     if (subsMap[chId] === 'Accepted') {
       return { label: 'Solved', cls: 'bg-green-500/10 text-green-400 border-green-500/20' };
     }
-    const hasDraft = drafts.some((d) => d.challengeId?._id === chId);
+    const hasDraft = drafts.some((d) => {
+      const dcid = d.challengeId?._id || d.challengeId;
+      return dcid && dcid.toString() === chId.toString();
+    });
     if (hasDraft) {
       return { label: 'Attempted', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
     }
@@ -189,13 +203,14 @@ const Missions = () => {
   // When filtering by setId, if no standalone Challenge docs exist, fall back
   // to the questions embedded in the QuestionSet document itself.
   const challenges = useMemo(() => {
-    const apiData = challengesQuery.data?.data || [];
+    let apiData = challengesQuery.data?.data || [];
 
     if (filters.setId) {
-      if (apiData.length > 0) return apiData;
-      // Fallback: use the embedded questions from the question set
-      if (activeSet?.questions?.length) {
-        return activeSet.questions.map((q, i) => ({
+      if (apiData.length > 0) {
+        // use apiData
+      } else if (activeSet?.questions?.length) {
+        // Fallback: use the embedded questions from the question set
+        apiData = activeSet.questions.map((q, i) => ({
           _id: `set-q-${i}`,
           title: q.title,
           description: q.description || '',
@@ -209,11 +224,22 @@ const Missions = () => {
           createdAt: activeSet.createdAt,
           questionSetId: filters.setId,
         }));
+      } else {
+        apiData = [];
       }
-      return [];
     }
 
-    return apiData;
+    // Group and filter out duplicate questions by title (case-insensitive)
+    const seen = new Set();
+    const unique = [];
+    for (const ch of apiData) {
+      const titleKey = ch.title?.trim().toLowerCase();
+      if (titleKey && !seen.has(titleKey)) {
+        seen.add(titleKey);
+        unique.push(ch);
+      }
+    }
+    return unique;
   }, [challengesQuery.data, filters.setId, activeSet]);
 
   const meta = challengesQuery.data?.meta || { page: 1, totalPages: 1, total: challenges.length };
@@ -260,19 +286,34 @@ const Missions = () => {
   // API has no per-user status, so we match against the user's own submissions.
   const statusFilteredChallenges = useMemo(() => {
     if (filters.status === 'Accepted') {
-      return challenges.filter((ch) => subsMap[ch._id] === 'Accepted');
+      return challenges.filter((ch) => {
+        const titleKey = ch.title?.trim().toLowerCase();
+        return subsMap[ch._id] === 'Accepted' || (titleKey && subsMap[titleKey] === 'Accepted');
+      });
     }
     if (filters.status === 'Pending') {
-      return challenges.filter((ch) => subsMap[ch._id] === 'Pending');
+      return challenges.filter((ch) => {
+        const titleKey = ch.title?.trim().toLowerCase();
+        return subsMap[ch._id] === 'Pending' || (titleKey && subsMap[titleKey] === 'Pending');
+      });
     }
     if (filters.status === 'Rejected') {
-      return challenges.filter((ch) => subsMap[ch._id] === 'Rejected');
+      return challenges.filter((ch) => {
+        const titleKey = ch.title?.trim().toLowerCase();
+        return subsMap[ch._id] === 'Rejected' || (titleKey && subsMap[titleKey] === 'Rejected');
+      });
     }
-    if (filters.status === 'Attempted') {
-      return challenges.filter((ch) => drafts.some(d => d.challengeId?._id === ch._id) && subsMap[ch._id] !== 'Accepted');
-    }
-    return challenges;
-  }, [challenges, filters.status, subsMap, drafts]);
+    // Default: Hide already solved and pending challenges from the dashboard
+    return challenges.filter((ch) => {
+      const chId = ch._id?.toString();
+      const titleKey = ch.title?.trim().toLowerCase();
+      const statusById = subsMap[chId];
+      const statusByTitle = titleKey ? subsMap[titleKey] : null;
+      const isSolved = statusById === 'Accepted' || statusByTitle === 'Accepted';
+      const isPending = statusById === 'Pending' || statusByTitle === 'Pending';
+      return !isSolved && !isPending;
+    });
+  }, [challenges, filters.status, subsMap]);
 
   const groupedChallenges = useMemo(() => {
     if (filters.grouping === 'none') return { "All Missions": statusFilteredChallenges };
@@ -416,12 +457,11 @@ const Missions = () => {
 
           {/* Status Tabs */}
           <div className="flex bg-glass-border/30 rounded-lg p-1 flex-wrap gap-1">
-            {['All', 'Accepted', 'Pending', 'Rejected', 'Attempted'].map(st => {
+            {['All', 'Accepted', 'Pending', 'Rejected'].map(st => {
               const label =
                 st === 'Accepted' ? 'Solved' :
                 st === 'Pending' ? 'Pending Review' :
-                st === 'Rejected' ? 'Rejected' :
-                st === 'Attempted' ? 'Attempted' : 'All';
+                st === 'Rejected' ? 'Rejected' : 'All';
               return (
                 <button
                   key={st}

@@ -49,14 +49,60 @@ const getChallenges = async (req, res, next) => {
     }
 
     const sortOrder = sortDir === 'asc' ? 1 : -1;
-    const sort = { [sortBy]: sortOrder };
-
     const skip = (page - 1) * limit;
 
-    let [total, challenges] = await Promise.all([
-      Challenge.countDocuments(filter),
-      Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(limit),
-    ]);
+    let total;
+    let challenges;
+
+    if (sortBy === 'difficulty') {
+      const countPromise = Challenge.countDocuments(filter);
+      const aggPromise = Challenge.aggregate([
+        { $match: filter },
+        {
+          $addFields: {
+            difficultyOrder: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ['$difficulty', 'Hard'] }, then: 3 },
+                  { case: { $eq: ['$difficulty', 'Medium'] }, then: 2 },
+                  { case: { $eq: ['$difficulty', 'Easy'] }, then: 1 }
+                ],
+                default: 0
+              }
+            }
+          }
+        },
+        { $sort: { difficultyOrder: sortOrder, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: Number(limit) },
+        {
+          $lookup: {
+            from: 'questionsets',
+            localField: 'questionSetId',
+            foreignField: '_id',
+            as: 'questionSetId'
+          }
+        },
+        {
+          $unwind: {
+            path: '$questionSetId',
+            preserveNullAndEmptyArrays: true
+          }
+        }
+      ]);
+
+      const [totalCount, aggResults] = await Promise.all([countPromise, aggPromise]);
+      total = totalCount;
+      challenges = aggResults;
+    } else {
+      const sort = { [sortBy]: sortOrder };
+      const [totalCount, findResults] = await Promise.all([
+        Challenge.countDocuments(filter),
+        Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(limit),
+      ]);
+      total = totalCount;
+      challenges = findResults;
+    }
 
     // Auto-create Challenge documents for question sets that don't have them yet
     if (setId && total === 0 && !search && !difficulty && !category) {
