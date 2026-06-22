@@ -45,6 +45,25 @@ const DashboardTab = ({ setActiveTab }) => {
         </motion.div>
       )}
 
+      {/* Clans Without Chief Alert */}
+      {summaryQ.data?.clansWithoutChief > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-4 rounded-xl border border-red-500/30 bg-red-500/10"
+        >
+          <div className="flex items-center gap-3">
+            <FiAlertCircle className="text-red-400 text-xl" />
+            <div>
+              <p className="font-bold text-red-400 text-sm">Action Required</p>
+              <p className="text-red-400/80 text-xs">There are {summaryQ.data.clansWithoutChief} clans without a Clan Chief.</p>
+            </div>
+          </div>
+          <button onClick={() => setActiveTab('clans')} className="px-4 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors">
+            Assign Now
+          </button>
+        </motion.div>
+      )}
+
       {/* 6 Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((stat, i) => {

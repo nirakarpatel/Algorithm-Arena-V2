@@ -367,7 +367,12 @@ const MembersTab = () => {
                           return;
                         }
                         const rect = e.currentTarget.getBoundingClientRect();
-                        setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        if (spaceBelow < 180) {
+                          setMenuPos({ bottom: window.innerHeight - rect.top + 6, right: window.innerWidth - rect.right });
+                        } else {
+                          setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                        }
                         setMenuOpen(user._id);
                       }}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors text-tertiary hover:text-primary"
@@ -396,7 +401,7 @@ const MembersTab = () => {
           <>
             <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
             <div
-              style={{ top: menuPos.top, right: menuPos.right }}
+              style={{ ...menuPos }}
               className="fixed w-48 bg-[#121218] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
             >
               <div className="p-1">

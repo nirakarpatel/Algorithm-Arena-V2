@@ -95,7 +95,7 @@ const ChiefDashboardTab = ({ clan }) => {
   const members = clan.members || [];
   const activeCount = members.filter(m => m.status !== 'Warned' && m.status !== 'Inactive').length;
   const warnedCount = members.filter(m => m.status === 'Warned').length;
-  const pendingReviews = clan.requests?.length ?? 0;
+  const pendingReviews = clan.pendingSubmissionsCount ?? 0;
 
   // Compute real completion rate: avg of (solvedProblems / target) across members
   const TARGET_PROBLEMS = 5;

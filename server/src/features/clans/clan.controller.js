@@ -121,40 +121,22 @@ const getMyClan = async (req, res, next) => {
 
     const clan = clanDoc.toObject();
     
-    // Dynamically calculate totalPoints based on members' accepted submissions
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const stats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: 'challengeId',
-            foreignField: '_id',
-            as: 'challenge',
-          },
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: '$userId',
-            totalPoints: { $sum: '$challenge.points' },
-          },
-        },
-      ]);
-      const pointsByUser = {};
       let totalClanPoints = 0;
-      stats.forEach(s => {
-        pointsByUser[s._id.toString()] = s.totalPoints;
-        totalClanPoints += s.totalPoints;
+      clan.members.forEach(m => {
+        totalClanPoints += (m.points || 0);
       });
-      clan.members = clan.members.map(m => ({
-        ...m,
-        points: pointsByUser[m._id.toString()] || 0
-      }));
       clan.totalPoints = totalClanPoints;
+
+      const pendingSubmissionsCount = await Submission.countDocuments({
+        userId: { $in: memberIds },
+        status: 'Pending'
+      });
+      clan.pendingSubmissionsCount = pendingSubmissionsCount;
     } else {
       clan.totalPoints = 0;
+      clan.pendingSubmissionsCount = 0;
     }
 
     return sendSuccess(res, { data: clan });
@@ -175,42 +157,11 @@ const getClans = async (req, res, next) => {
       .populate('restoredBy', 'username email')
       .sort({ createdAt: -1 });
 
-    // Collect all member IDs across all clans in one pass, then run a single
-    // aggregation to get per-clan points totals — eliminates N+1 queries.
-    const allMemberIds = clansDocs.flatMap((c) => c.members.map((m) => m._id));
-
-    const pointsRows = allMemberIds.length > 0
-      ? await Submission.aggregate([
-          { $match: { userId: { $in: allMemberIds }, status: 'Accepted' } },
-          {
-            $lookup: {
-              from: 'challenges',
-              localField: 'challengeId',
-              foreignField: '_id',
-              as: 'challenge',
-            },
-          },
-          { $unwind: '$challenge' },
-          {
-            $group: {
-              _id: '$userId',
-              totalPoints: { $sum: '$challenge.points' },
-            },
-          },
-        ])
-      : [];
-
-    // Build a userId -> points lookup map
-    const pointsByUser = {};
-    pointsRows.forEach((r) => { pointsByUser[r._id.toString()] = r.totalPoints; });
-
     const clans = clansDocs.map((clanDoc) => {
       const clan = clanDoc.toObject();
       let totalClanPoints = 0;
-      clan.members = clan.members.map(m => {
-        const p = pointsByUser[m._id.toString()] || 0;
-        totalClanPoints += p;
-        return { ...m, points: p };
+      clan.members.forEach(m => {
+        totalClanPoints += (m.points || 0);
       });
       clan.totalPoints = totalClanPoints;
       return clan;
@@ -241,34 +192,10 @@ const getClan = async (req, res, next) => {
 
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const stats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: 'challengeId',
-            foreignField: '_id',
-            as: 'challenge',
-          },
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: '$userId',
-            totalPoints: { $sum: '$challenge.points' },
-          },
-        },
-      ]);
-      const pointsByUser = {};
       let totalClanPoints = 0;
-      stats.forEach(s => {
-        pointsByUser[s._id.toString()] = s.totalPoints;
-        totalClanPoints += s.totalPoints;
+      clan.members.forEach(m => {
+        totalClanPoints += (m.points || 0);
       });
-      clan.members = clan.members.map(m => ({
-        ...m,
-        points: pointsByUser[m._id.toString()] || 0
-      }));
       clan.totalPoints = totalClanPoints;
     } else {
       clan.totalPoints = 0;

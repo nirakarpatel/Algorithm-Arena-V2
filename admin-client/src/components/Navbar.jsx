@@ -36,7 +36,7 @@ const Navbar = ({ onLogout }) => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-glass-surface shadow-sm transition-all duration-300">
+      <nav className="sticky top-0 z-50 w-full border-b border-white/10 bg-glass-surface backdrop-blur-md shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 gap-10">
             <Link
