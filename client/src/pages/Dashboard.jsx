@@ -112,7 +112,10 @@ const fd = (d = 0) => ({
 /* ══════════════════════════════════════════════
    DASHBOARD
    ══════════════════════════════════════════════ */
+const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
+
 const Dashboard = () => {
+  const [now] = useState(() => Date.now());
   const { user } = useAuth();
 
   const [showWarning, setShowWarning] = useState(true);
@@ -221,7 +224,6 @@ const Dashboard = () => {
     return map;
   }, [mySubmissionsQ.data]);
 
-  const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
   const availableChallenges = useMemo(() => {
     // 1. Group and filter out duplicate questions by title (case-insensitive)
     const seen = new Set();
@@ -250,7 +252,6 @@ const Dashboard = () => {
     // 3. Sort by selected criteria
     const sorted = [...filtered].sort((a, b) => {
       if (filters.sortBy === 'deadline') {
-        const now = Date.now();
         const dlA = a.questionSetId?.deadline ? new Date(a.questionSetId.deadline).getTime() : Infinity;
         const dlB = b.questionSetId?.deadline ? new Date(b.questionSetId.deadline).getTime() : Infinity;
         
@@ -278,7 +279,7 @@ const Dashboard = () => {
 
     // 4. Return at most 4 challenges
     return sorted.slice(0, 4);
-  }, [challenges, subsMap, filters.sortBy]);
+  }, [challenges, subsMap, filters.sortBy, now]);
 
   const drafts = useMemo(() => {
     const rawDrafts = getLocalDrafts();

@@ -75,7 +75,10 @@ const getLocalDrafts = () => {
   return drafts;
 };
 
+const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
+
 const Missions = () => {
+  const [now] = useState(() => Date.now());
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const initialSetId = searchParams.get('setId') || '';
@@ -315,11 +318,9 @@ const Missions = () => {
   }, [challenges, filters.status, subsMap]);
 
   // Sort by selected criteria. Deadline is P1 only when 'deadline' is selected.
-  const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
   const sortedChallenges = useMemo(() => {
     return [...statusFilteredChallenges].sort((a, b) => {
       if (filters.sortBy === 'deadline') {
-        const now = Date.now();
         // Sort by question-set deadline (earliest upcoming first, then past, then no-deadline last)
         const dlA = a.questionSetId?.deadline ? new Date(a.questionSetId.deadline).getTime() : Infinity;
         const dlB = b.questionSetId?.deadline ? new Date(b.questionSetId.deadline).getTime() : Infinity;
@@ -346,7 +347,7 @@ const Missions = () => {
       // Tie-breaker: newest first
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
-  }, [statusFilteredChallenges, filters.sortBy]);
+  }, [statusFilteredChallenges, filters.sortBy, now]);
 
   const groupedChallenges = useMemo(() => {
     if (filters.grouping === 'none') return { "All Missions": sortedChallenges };
