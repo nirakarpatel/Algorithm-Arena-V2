@@ -14,7 +14,7 @@ export const GREETINGS = {
     },
     {
       heading: "System Booted, {username}",
-      subtext: "Your synapses are firing at $O(1)$. Time to crush the daily challenge."
+      subtext: "Your synapses are firing at O(1). Time to crush the daily challenge."
     }
   ],
   afternoon: [
@@ -88,7 +88,7 @@ export const getTimeCategory = () => {
  * Returns a greeting selected once per session to maintain consistency across navigation.
  */
 export const getSessionGreeting = () => {
-  const SESSION_KEY = "algo_arena_session_greeting";
+  const SESSION_KEY = "algo_arena_session_greeting_v2";
   try {
     const saved = sessionStorage.getItem(SESSION_KEY);
     if (saved) {

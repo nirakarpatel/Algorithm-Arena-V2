@@ -44,7 +44,8 @@ const rejectArchivedClanMutation = (res, clan) => {
 
 const isTransactionUnsupported = (error) => {
   const message = (error && error.message) || '';
-  return message.includes('Transaction numbers are only allowed on a replica set member or mongos');
+  return message.includes('Transaction') && 
+         (message.includes('replica set') || message.includes('mongos') || message.includes('supported'));
 };
 
 const runWithOptionalTransaction = async (work) => {
@@ -153,9 +154,30 @@ const getMyClan = async (req, res, next) => {
         pointsByUser[s._id.toString()] = s.totalPoints;
         totalClanPoints += s.totalPoints;
       });
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weeklyStats = await Submission.aggregate([
+        { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
+        {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.userId',
+            weeklySolved: { $sum: 1 }
+          }
+        }
+      ]);
+      const weeklyByUser = {};
+      weeklyStats.forEach(s => {
+        weeklyByUser[s._id.toString()] = s.weeklySolved;
+      });
+
       clan.members = clan.members.map(m => ({
         ...m,
-        points: pointsByUser[m._id.toString()] || 0
+        points: pointsByUser[m._id.toString()] || 0,
+        weeklySolved: weeklyByUser[m._id.toString()] || 0
       }));
       clan.totalPoints = totalClanPoints;
     } else {
@@ -280,9 +302,30 @@ const getClan = async (req, res, next) => {
         pointsByUser[s._id.toString()] = s.totalPoints;
         totalClanPoints += s.totalPoints;
       });
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weeklyStats = await Submission.aggregate([
+        { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
+        {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.userId',
+            weeklySolved: { $sum: 1 }
+          }
+        }
+      ]);
+      const weeklyByUser = {};
+      weeklyStats.forEach(s => {
+        weeklyByUser[s._id.toString()] = s.weeklySolved;
+      });
+
       clan.members = clan.members.map(m => ({
         ...m,
-        points: pointsByUser[m._id.toString()] || 0
+        points: pointsByUser[m._id.toString()] || 0,
+        weeklySolved: weeklyByUser[m._id.toString()] || 0
       }));
       clan.totalPoints = totalClanPoints;
     } else {

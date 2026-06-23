@@ -125,14 +125,21 @@ const Missions = () => {
         : sub.challengeId;
       if (!cid) return;
       const cidStr = cid.toString();
-      if (!map[cidStr] || sub.status === 'Accepted' || (sub.status === 'Pending' && map[cidStr] !== 'Accepted')) {
+      
+      // We iterate newest to oldest. If not in map, it's the newest status.
+      // If it's already in map, we only overwrite if the older submission was 'Accepted'.
+      if (!map[cidStr]) {
         map[cidStr] = sub.status;
+      } else if (sub.status === 'Accepted') {
+        map[cidStr] = 'Accepted';
       }
       
       const titleKey = sub.challengeId?.title?.trim().toLowerCase();
       if (titleKey) {
-        if (!map[titleKey] || sub.status === 'Accepted' || (sub.status === 'Pending' && map[titleKey] !== 'Accepted')) {
+        if (!map[titleKey]) {
           map[titleKey] = sub.status;
+        } else if (sub.status === 'Accepted') {
+          map[titleKey] = 'Accepted';
         }
       }
     });
@@ -549,10 +556,20 @@ const Missions = () => {
             <SkeletonCard />
             <SkeletonCard />
           </div>
-        ) : challenges.length === 0 ? (
+        ) : sortedChallenges.length === 0 ? (
           <EmptyState
-            title="No challenges found"
-            description="Try changing filters, or ask admin to publish new challenges."
+            title={
+              filters.status === 'Accepted' ? "No solved missions yet" :
+              filters.status === 'Pending' ? "No pending reviews" :
+              filters.status === 'Rejected' ? "No rejected missions" :
+              "You have attempted all the questions!"
+            }
+            description={
+              filters.status === 'Accepted' ? "Start solving challenges to see them here." :
+              filters.status === 'Pending' ? "You don't have any challenges waiting for review." :
+              filters.status === 'Rejected' ? "Great job! You don't have any rejected solutions." :
+              "No missions found for the current filters. Great job pushing your limits!"
+            }
             actionLabel="Reset Filters"
             onAction={() =>
               setFilters({

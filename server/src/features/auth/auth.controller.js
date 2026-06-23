@@ -117,9 +117,10 @@ const googleAuth = async (req, res, next) => {
       user = await User.findOne({ email: email.toLowerCase() });
 
       if (user) {
-        // Prevent account takeover: if user has a different firebaseUid linked, reject
+        // If the user's Firebase UID changed (e.g. account deleted from Firebase console and recreated),
+        // we trust the verified email from Firebase and update the UID to prevent them from being locked out.
         if (user.firebaseUid && user.firebaseUid !== uid) {
-          return res.status(400).json({ success: false, message: 'This email is already linked to another Google account' });
+          console.warn(`Updating firebaseUid for user ${email} from ${user.firebaseUid} to ${uid}`);
         }
         // Link existing account to Firebase
         user.firebaseUid = uid;

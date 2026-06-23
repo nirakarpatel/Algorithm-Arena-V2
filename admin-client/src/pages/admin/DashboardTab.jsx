@@ -6,7 +6,7 @@ import BaseCard from '../../components/BaseCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import { api } from '../../lib/api';
 
-const DashboardTab = ({ setActiveTab }) => {
+const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
   const summaryQ = useQuery({
     queryKey: ['admin-dashboard-summary'],
     queryFn: async () => {
@@ -39,7 +39,7 @@ const DashboardTab = ({ setActiveTab }) => {
               <p className="text-orange-400/80 text-xs">There are {summaryQ.data.pendingAssignments} unassigned members awaiting a clan.</p>
             </div>
           </div>
-          <button onClick={() => setActiveTab('members')} className="px-4 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-colors">
+          <button onClick={() => { if(setInitialClanFilter) setInitialClanFilter('unassigned'); setActiveTab('members'); }} className="px-4 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-colors">
             Assign Now
           </button>
         </motion.div>

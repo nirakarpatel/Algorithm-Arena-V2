@@ -20,6 +20,7 @@ import ReviewTab from './admin/ReviewTab';
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [initialClanFilter, setInitialClanFilter] = useState('');
 
   const tabs = [
     { id: 'dashboard', label: 'Overview', icon: FiActivity },
@@ -54,7 +55,7 @@ const AdminPanel = () => {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); setInitialClanFilter(''); }}
               className={clsx(
                 "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-300",
                 isActive 
@@ -78,13 +79,13 @@ const AdminPanel = () => {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.25 }}
         >
-          {activeTab === 'dashboard' && <DashboardTab setActiveTab={setActiveTab} />}
+          {activeTab === 'dashboard' && <DashboardTab setActiveTab={setActiveTab} setInitialClanFilter={setInitialClanFilter} />}
           {activeTab === 'review' && <ReviewTab />}
           {activeTab === 'sets' && <QuestionSetsTab />}
 
           {activeTab === 'clans' && <ClanManagerTab />}
           {activeTab === 'resources' && <ResourcesTab />}
-          {activeTab === 'members' && <MembersTab />}
+          {activeTab === 'members' && <MembersTab initialClanFilter={initialClanFilter} />}
         </motion.div>
       </AnimatePresence>
     </div>

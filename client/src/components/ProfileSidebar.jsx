@@ -105,7 +105,12 @@ const DiffBar = ({ label, solved, total, color, delay }) => {
 const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const initials = (user?.username || "?")[0].toUpperCase();
   const solved = summary?.solved ?? profile?.acceptedCount ?? 0;
-  const total = summary?.totalChallenges ?? 0;
+  const total = summary?.totalChallenges ?? 
+    (profile?.difficultyBreakdown ? 
+      (profile.difficultyBreakdown.easy.total + 
+       profile.difficultyBreakdown.medium.total + 
+       profile.difficultyBreakdown.hard.total) 
+      : 0);
   const pending = summary?.pending ?? profile?.pendingCount ?? 0;
   const streak = profile?.streak ?? 0;
   const maxStreak = profile?.maxStreak ?? 0;

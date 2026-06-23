@@ -114,9 +114,9 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
   const warnedCount = members.filter(m => m.status === 'Warned').length;
   const pendingReviews = clan.requests?.length ?? 0;
 
-  // Compute real completion rate: avg of (solvedProblems / target) across members
+  // Compute real completion rate: cap each member's contribution at TARGET_PROBLEMS
   const TARGET_PROBLEMS = 5;
-  const totalSolved = members.reduce((sum, m) => sum + (m.solvedProblems || 0), 0);
+  const totalSolved = members.reduce((sum, m) => sum + Math.min(m.weeklySolved || 0, TARGET_PROBLEMS), 0);
   const totalPossible = members.length * TARGET_PROBLEMS;
   const completionRate = totalPossible > 0 ? Math.round((totalSolved / totalPossible) * 100) : 0;
 
@@ -240,7 +240,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
             {members.slice(0, 6).map((member) => {
               const { text: timeText, isOnline } = getRelativeTime(member.lastLoginDate || member.createdAt);
               const isWarned = member.status === 'Warned';
-              const solved = member.solvedProblems || 0;
+              const solved = Math.min(member.weeklySolved || 0, TARGET_PROBLEMS);
               const total = TARGET_PROBLEMS;
               const progressPct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
               const canWarnMember = canIssueWarning(user, member, clan);

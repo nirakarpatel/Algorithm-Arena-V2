@@ -208,10 +208,9 @@ const getLeaderboard = async (req, res, next) => {
         $group: {
           _id: '$_id.userId',
           solvedCount: { $sum: 1 },
-          totalPoints: { $sum: '$challenge.points' },
+          challengePoints: { $sum: '$challenge.points' },
         },
       },
-      { $sort: { totalPoints: -1, solvedCount: -1 } },
       {
         $lookup: {
           from: 'users',
@@ -221,6 +220,12 @@ const getLeaderboard = async (req, res, next) => {
         },
       },
       { $unwind: '$user' },
+      {
+        $addFields: {
+          totalPoints: window === 'all' ? { $ifNull: ['$user.points', 0] } : '$challengePoints',
+        },
+      },
+      { $sort: { totalPoints: -1, solvedCount: -1 } },
       {
         $project: {
           _id: 1,
@@ -383,12 +388,20 @@ const updateSubmissionStatus = async (req, res, next) => {
         const pointsDiff = isNowAccepted ? challengePoints : -challengePoints;
         const solvedDiff = isNowAccepted ? 1 : -1;
 
-        await User.findByIdAndUpdate(
-          submission.userId._id,
-          {
-            $inc: { points: pointsDiff, solvedProblems: solvedDiff },
+        const userToUpdate = await User.findById(submission.userId._id);
+        if (userToUpdate) {
+          userToUpdate.points = Math.max(0, (userToUpdate.points || 0) + pointsDiff);
+          userToUpdate.solvedProblems = Math.max(0, (userToUpdate.solvedProblems || 0) + solvedDiff);
+          
+          if (userToUpdate.solvedProblems >= 30) {
+            userToUpdate.codingLevel = 'Advanced';
+          } else if (userToUpdate.solvedProblems >= 10) {
+            userToUpdate.codingLevel = 'Intermediate';
+          } else {
+            userToUpdate.codingLevel = 'Beginner';
           }
-        );
+          await userToUpdate.save();
+        }
       }
     }
 

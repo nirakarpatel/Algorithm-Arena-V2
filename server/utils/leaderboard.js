@@ -27,8 +27,22 @@ const getUserRank = async (userId) => {
     {
       $group: {
         _id: '$userId',
-        totalPoints: { $sum: '$challenge.points' },
+        challengePoints: { $sum: '$challenge.points' },
         solvedCount: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user',
+      },
+    },
+    { $unwind: '$user' },
+    {
+      $addFields: {
+        totalPoints: { $ifNull: ['$user.points', 0] },
       },
     },
     // Now compute the rank by comparing against everyone else with a single pass.
@@ -50,8 +64,22 @@ const getUserRank = async (userId) => {
           {
             $group: {
               _id: '$userId',
-              totalPoints: { $sum: '$challenge.points' },
+              challengePoints: { $sum: '$challenge.points' },
               solvedCount: { $sum: 1 },
+            },
+          },
+          {
+            $lookup: {
+              from: 'users',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'user',
+            },
+          },
+          { $unwind: '$user' },
+          {
+            $addFields: {
+              totalPoints: { $ifNull: ['$user.points', 0] },
             },
           },
           { $sort: { totalPoints: -1, solvedCount: -1 } },
