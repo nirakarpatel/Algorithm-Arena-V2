@@ -260,6 +260,9 @@ const getUserProfile = async (req, res, next) => {
           acceptedCount: {
             $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] },
           },
+          pendingCount: {
+            $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] },
+          },
           totalPoints: {
             $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, '$challenge.points', 0] },
           },
@@ -369,6 +372,7 @@ const getUserProfile = async (req, res, next) => {
       points: user.points,
       solvedProblems: user.solvedProblems,
       acceptedCount: stats?.acceptedCount || 0,
+      pendingCount: stats?.pendingCount || 0,
       totalPoints: stats?.totalPoints || 0,
       streak: currentStreak,
       rank,

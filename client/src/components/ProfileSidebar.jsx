@@ -14,10 +14,10 @@ import ClanHoverCard from "./ClanHoverCard";
 
 /* ── Rarity configs ─────────────────────────────────────── */
 const RARITY = {
-  COMMON: { glow: "0,0,0,0", border: "#334155", bg: "#1e293b", label: "#94a3b8" },
-  RARE: { glow: "59,130,246,0.5", border: "#3b82f6", bg: "#1e3a5f", label: "#60a5fa" },
-  EPIC: { glow: "168,85,247,0.55", border: "#a855f7", bg: "#3b1f6e", label: "#c084fc" },
-  LEGENDARY: { glow: "250,204,21,0.65", border: "#facc15", bg: "#422006", label: "#fde047" },
+  COMMON: { glow: "0,0,0,0", border: "#334155", lightBorder: "#475569", bg: "#1e293b", label: "#94a3b8" },
+  RARE: { glow: "59,130,246,0.5", border: "#3b82f6", lightBorder: "#2563eb", bg: "#1e3a5f", label: "#60a5fa" },
+  EPIC: { glow: "168,85,247,0.55", border: "#a855f7", lightBorder: "#7e22ce", bg: "#3b1f6e", label: "#c084fc" },
+  LEGENDARY: { glow: "250,204,21,0.65", border: "#facc15", lightBorder: "#a16207", bg: "#422006", label: "#fde047" },
 };
 
 const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
@@ -486,12 +486,22 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
           {/* Rarity legend */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            {Object.entries(RARITY).map(([key, val]) => (
-              <div key={key} className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: val.label }} />
-                <span className="px-1.5 py-0.5 rounded-full text-[9px] uppercase tracking-widest font-bold" style={{ background: `${val.bg}33`, color: val.label }}>{key}</span>
-              </div>
-            ))}
+            {Object.entries(RARITY).map(([key, val]) => {
+              const colors = {
+                COMMON: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50",
+                RARE: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30",
+                EPIC: "text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30",
+                LEGENDARY: "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30",
+              }[key];
+              return (
+                <div key={key} className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: val.border }} />
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-black ${colors}`}>
+                    {key}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <button
@@ -544,28 +554,28 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               className="relative w-full max-w-3xl max-h-[80vh] rounded-2xl border border-white/10 bg-white dark:bg-[#0f172a] text-black dark:text-white shadow-2xl flex flex-col overflow-hidden z-10"
             >
               {/* Header */}
-              <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white dark:bg-slate-900/85 text-black dark:text-white">
+              <div className="p-5 border-b border-black/10 dark:border-white/10 flex items-center justify-between bg-white dark:bg-slate-900/85 text-black dark:text-white">
                 <div className="flex items-center gap-2.5">
-                  <FiAward className="text-yellow-400 text-xl" />
+                  <FiAward className="text-yellow-500 dark:text-yellow-400 text-xl" />
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider text-black dark:text-white">All Achievements</h3>
-                    <p className="text-[10px] text-black dark:text-slate-400 font-mono">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                       {sortedBadges.filter(b => b.isUnlocked).length} achieved of {sortedBadges.length} total
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors"
                 >
                   <FiX size={18} />
                 </button>
               </div>
 
               {/* Filters & Sorting */}
-              <div className="px-5 py-3.5 bg-slate-900/50 border-b border-white/5 flex flex-wrap gap-4 items-center justify-between">
+              <div className="px-5 py-3.5 bg-white dark:bg-slate-900/50 border-b border-black/5 dark:border-white/5 flex flex-wrap gap-4 items-center justify-between">
                 {/* Status Tabs */}
-                <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                <div className="flex bg-slate-100 dark:bg-black/40 p-1 rounded-xl border border-black/5 dark:border-white/5">
                   {[
                     { id: "all", label: "All" },
                     { id: "achieved", label: "Achieved" },
@@ -576,7 +586,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                       onClick={() => setStatusFilter(tab.id)}
                       className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${statusFilter === tab.id
                         ? "bg-accent text-white shadow-md shadow-accent/20"
-                        : "text-slate-400 hover:text-white"
+                        : "text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
                         }`}
                     >
                       {tab.label}
@@ -586,11 +596,11 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
                 {/* Sort Dropdown */}
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Sort By</span>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Sort By</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-white outline-none cursor-pointer focus:border-accent/50 transition-colors"
+                    className="bg-white dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-black dark:text-white outline-none cursor-pointer focus:border-accent/50 transition-colors"
                   >
                     <option value="rarity-desc">Rarity: High to Low</option>
                     <option value="rarity-asc">Rarity: Low to High</option>
@@ -599,7 +609,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               </div>
 
               {/* Content Grid */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0 bg-slate-950/20">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0 bg-slate-50 dark:bg-slate-950/20">
                 {modalBadges.length === 0 ? (
                   <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
                     <span className="text-3xl">🔒</span>
@@ -637,10 +647,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
                           {/* Locked Watermark */}
                           {!isUnlocked && (
-                            <div className="absolute inset-0 flex items-center justify-end pr-2 pointer-events-none select-none z-0 overflow-hidden opacity-[0.15]">
+                            <div className="absolute inset-0 flex items-center justify-end pr-2 pointer-events-none select-none z-0 overflow-hidden opacity-[0.25] dark:opacity-[0.15]">
                               <span
-                                className="text-5xl font-black uppercase tracking-widest -rotate-6"
-                                style={{ color: r.border, textShadow: `0 0 15px ${r.border}` }}
+                                className="text-5xl font-black uppercase tracking-widest -rotate-6 text-[var(--rarity-light)] dark:text-[var(--rarity-dark)] [text-shadow:0_0_15px_var(--rarity-light)] dark:[text-shadow:0_0_15px_var(--rarity-dark)]"
+                                style={{ '--rarity-dark': r.border, '--rarity-light': r.lightBorder || r.border }}
                               >
                                 LOCKED
                               </span>
@@ -686,7 +696,8 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                                 {badge.name}
                               </h4>
                               <span
-                                className="px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-wider leading-none shrink-0 pointer-events-none shadow-sm" style={{ background: r.bg, color: r.label, border: `1px solid ${r.border}44` }}
+                                className={`px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-wider leading-none shrink-0 pointer-events-none shadow-sm ${isUnlocked ? "" : "opacity-50 grayscale"}`}
+                                style={{ background: r.bg, color: r.label, border: `1px solid ${r.border}44` }}
                               >
                                 {badge.rarity}
                               </span>
@@ -712,10 +723,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               </div>
 
               {/* Bottom Footer Action */}
-              <div className="p-4 border-t border-white/10 bg-slate-900/85 flex justify-end">
+              <div className="p-4 border-t border-black/10 dark:border-white/10 bg-white dark:bg-slate-900/85 flex justify-end">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white/5 hover:bg-white/10 text-white transition-colors"
+                  className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-black dark:bg-white/5 hover:bg-black/80 dark:hover:bg-white/10 text-white transition-colors"
                 >
                   Close
                 </button>

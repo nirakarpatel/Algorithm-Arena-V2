@@ -96,6 +96,21 @@ const MembersTab = () => {
     }
   });
 
+  const removeChiefMutation = useMutation({
+    mutationFn: async (clanId) => {
+      return api.delete(`/api/clans/${clanId}/chief`);
+    },
+    onSuccess: () => {
+      toast.success("Clan Chief removed successfully");
+      queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-clans-list'] });
+      setMenuOpen(null);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to remove chief");
+    }
+  });
+
   const banUserMutation = useMutation({
     mutationFn: async (userId) => {
       return api.put(`/api/users/${userId}/ban`);
@@ -141,7 +156,7 @@ const MembersTab = () => {
 
   // Filter users
   const filteredUsers = (usersQuery.data || []).filter(u => {
-    if (u.role === 'admin' || u.role === 'superAdmin') return false;
+    if (u.role === 'superAdmin') return false;
     
     const s = search.toLowerCase();
     const matchSearch = (u.username || '').toLowerCase().includes(s) || 
@@ -172,27 +187,27 @@ const MembersTab = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col lg:flex-row justify-between gap-4">
-        <h2 className="text-section-title font-bold flex items-center gap-2"><FiUsers className="text-green-400" /> Member Directory</h2>
+        <h2 className="text-section-title text-black dark:text-white font-bold flex items-center gap-2"><FiUsers className="text-green-600 dark:text-green-400" /> Member Directory</h2>
         
         <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-tertiary" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name or Reg No..."
-            className="w-full bg-black/20 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+            className="w-full bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-black dark:text-white focus:outline-none focus:border-blue-500/50 transition-colors"
           />
         </div>
 
         <div className="flex gap-2">
           <div className="relative">
-            <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
+            <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-tertiary" />
             <select
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg pl-9 pr-8 py-2 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50"
+              className="bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg pl-9 pr-8 py-2 text-sm text-black dark:text-white appearance-none focus:outline-none focus:border-blue-500/50"
             >
               <option value="">All Levels</option>
               <option value="Beginner">Beginner</option>
@@ -202,11 +217,11 @@ const MembersTab = () => {
           </div>
 
           <div className="relative">
-            <FiUsers className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
+            <FiUsers className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-tertiary" />
             <select
               value={clanFilter}
               onChange={(e) => setClanFilter(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-lg pl-9 pr-8 py-2 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50"
+              className="bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg pl-9 pr-8 py-2 text-sm text-black dark:text-white appearance-none focus:outline-none focus:border-blue-500/50"
             >
               <option value="">All Clans</option>
               <option value="unassigned">Unassigned</option>
@@ -325,7 +340,12 @@ const MembersTab = () => {
                         <div className="w-8 h-8 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black transition-colors">
                           {(user.username?.[0] || user.email?.[0] || 'U').toUpperCase()}
                         </div>
-                        <span className="transition-colors">{user.username || user.email || 'Onboarding Pending'}</span>
+                        <span className="transition-colors text-black dark:text-white">{user.username || user.email || 'Onboarding Pending'}</span>
+                        {user.role === 'clan-chief' && (
+                          <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
+                            Chief
+                          </span>
+                        )}
                       </div>
                     </MemberHoverCard>
                   </td>
@@ -425,11 +445,27 @@ const MembersTab = () => {
                     )}
                     {menuUser.role === 'clan-chief' && (
                       <button
+                        onClick={() => {
+                          const clanId = menuUser.clan?._id || menuUser.clan;
+                          if (clanId) {
+                            removeChiefMutation.mutate(clanId);
+                          } else {
+                            handleRoleChange(menuUser, 'user');
+                          }
+                        }}
+                        disabled={!canManageUsers || removeChiefMutation.isPending}
+                        className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <FiUserCheck className="text-green-400" /> Make Member
+                      </button>
+                    )}
+                    {menuUser.role === 'admin' && (
+                      <button
                         onClick={() => handleRoleChange(menuUser, 'user')}
                         disabled={!canManageUsers}
                         className="w-full text-left px-3 py-2 text-sm text-secondary hover:text-white hover:bg-white/5 rounded flex items-center gap-2 disabled:opacity-50"
                       >
-                        <FiUserCheck className="text-green-400" /> Make Member
+                        <FiUserCheck className="text-green-400" /> Revoke Admin & Make Member
                       </button>
                     )}
                     <div className="h-px bg-white/10 my-1 mx-2" />

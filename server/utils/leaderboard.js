@@ -9,77 +9,50 @@ const Submission = require('../src/features/submissions/Submission.model');
  * @returns {Promise<number|null>} 1-based rank, or null if no accepted submissions.
  */
 const getUserRank = async (userId) => {
-  // Optimized: compute rankings once, then return only the target user.
-  // Assumes MongoDB 5.0+ for $setWindowFields.
+  // Compute global rank dynamically to match getLeaderboard
+  const mongoose = require('mongoose');
+  
+  // Ensure userId is ObjectId
+  const targetUserId = new mongoose.Types.ObjectId(userId);
+
   const result = await Submission.aggregate([
-    // Only accepted submissions participate in the leaderboard
-    { $match: { status: 'Accepted', userId } },
+    { $match: { status: 'Accepted' } },
+    // Group by userId and challengeId to count each challenge only once per user
+    {
+      $group: {
+        _id: { userId: '$userId', challengeId: '$challengeId' }
+      }
+    },
     {
       $lookup: {
         from: 'challenges',
-        localField: 'challengeId',
+        localField: '_id.challengeId',
         foreignField: '_id',
         as: 'challenge',
       },
     },
     { $unwind: '$challenge' },
-    // Group only the current user to compute their points/solvedCount
+    // Group by userId to sum up total distinct points and solved count
     {
       $group: {
-        _id: '$userId',
-        totalPoints: { $sum: '$challenge.points' },
+        _id: '$_id.userId',
         solvedCount: { $sum: 1 },
+        totalPoints: { $sum: '$challenge.points' },
       },
     },
-    // Now compute the rank by comparing against everyone else with a single pass.
-    // We do this by running the full aggregation in a $facet.
+    { $sort: { totalPoints: -1, solvedCount: -1 } },
     {
-      $facet: {
-        self: [{ $limit: 1 }],
-        all: [
-          { $match: { status: 'Accepted' } },
-          {
-            $lookup: {
-              from: 'challenges',
-              localField: 'challengeId',
-              foreignField: '_id',
-              as: 'challenge',
-            },
-          },
-          { $unwind: '$challenge' },
-          {
-            $group: {
-              _id: '$userId',
-              totalPoints: { $sum: '$challenge.points' },
-              solvedCount: { $sum: 1 },
-            },
-          },
-          { $sort: { totalPoints: -1, solvedCount: -1 } },
-          {
-            $setWindowFields: {
-              sortBy: { totalPoints: -1 },
-              output: { rank: { $denseRank: {} } },
-            },
-          },
-          { $project: { _id: 1, rank: 1, totalPoints: 1, solvedCount: 1 } },
-        ],
+      $setWindowFields: {
+        sortBy: { totalPoints: -1 },
+        output: { rank: { $denseRank: {} } },
       },
     },
-    // Extract the self user stats
-    {
-      $project: {
-        self: { $arrayElemAt: ['$self', 0] },
-        all: 1,
-      },
-    },
-    // Match the precomputed rank row for the exact userId
-    { $unwind: '$all' },
+    // Finally, filter to get the rank of the requested user
     {
       $match: {
-        $expr: { $eq: ['$all._id', '$self._id'] },
-      },
-    },
-    { $project: { rank: '$all.rank' } },
+        _id: targetUserId
+      }
+    }
   ]);
 
   return result.length ? result[0].rank : null;
