@@ -296,20 +296,23 @@ const Missions = () => {
   const statusFilteredChallenges = useMemo(() => {
     if (filters.status === 'Accepted') {
       return challenges.filter((ch) => {
+        const chId = ch._id?.toString();
         const titleKey = ch.title?.trim().toLowerCase();
-        return subsMap[ch._id] === 'Accepted' || (titleKey && subsMap[titleKey] === 'Accepted');
+        return subsMap[chId] === 'Accepted' || (titleKey && subsMap[titleKey] === 'Accepted');
       });
     }
     if (filters.status === 'Pending') {
       return challenges.filter((ch) => {
+        const chId = ch._id?.toString();
         const titleKey = ch.title?.trim().toLowerCase();
-        return subsMap[ch._id] === 'Pending' || (titleKey && subsMap[titleKey] === 'Pending');
+        return subsMap[chId] === 'Pending' || (titleKey && subsMap[titleKey] === 'Pending');
       });
     }
     if (filters.status === 'Rejected') {
       return challenges.filter((ch) => {
+        const chId = ch._id?.toString();
         const titleKey = ch.title?.trim().toLowerCase();
-        return subsMap[ch._id] === 'Rejected' || (titleKey && subsMap[titleKey] === 'Rejected');
+        return subsMap[chId] === 'Rejected' || (titleKey && subsMap[titleKey] === 'Rejected');
       });
     }
     // Default: Hide already solved and pending challenges from the dashboard
@@ -503,7 +506,7 @@ const Missions = () => {
               const label =
                 st === 'Accepted' ? 'Solved' :
                 st === 'Pending' ? 'Pending Review' :
-                st === 'Rejected' ? 'Rejected' : 'All';
+                st === 'Rejected' ? 'Rejected' : 'Remaining';
               return (
                 <button
                   key={st}

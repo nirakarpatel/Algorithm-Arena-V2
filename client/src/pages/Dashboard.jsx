@@ -344,9 +344,9 @@ const Dashboard = () => {
 
   const recentSubs = useMemo(() => combinedSubs.slice(0, 6), [combinedSubs]);
 
-  const solved = summary?.solved ?? profile?.acceptedCount ?? 0;
+  const solved = summary?.solved ?? profile?.stats?.acceptedCount ?? profile?.acceptedCount ?? 0;
   const total = summary?.totalChallenges ?? 0;
-  const pending = summary?.pending ?? profile?.pendingCount ?? 0;
+  const pending = summary?.pending ?? profile?.stats?.pendingCount ?? profile?.pendingCount ?? 0;
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
   const activeSets = useMemo(

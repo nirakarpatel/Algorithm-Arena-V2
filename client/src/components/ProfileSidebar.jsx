@@ -104,17 +104,17 @@ const DiffBar = ({ label, solved, total, color, delay }) => {
    ══════════════════════════════════════════════════════════ */
 const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const initials = (user?.username || "?")[0].toUpperCase();
-  const solved = summary?.solved ?? profile?.acceptedCount ?? 0;
+  const solved = summary?.solved ?? profile?.stats?.acceptedCount ?? profile?.acceptedCount ?? 0;
   const total = summary?.totalChallenges ?? 
     (profile?.difficultyBreakdown ? 
       (profile.difficultyBreakdown.easy.total + 
        profile.difficultyBreakdown.medium.total + 
        profile.difficultyBreakdown.hard.total) 
       : 0);
-  const pending = summary?.pending ?? profile?.pendingCount ?? 0;
+  const pending = summary?.pending ?? profile?.stats?.pendingCount ?? profile?.pendingCount ?? 0;
   const streak = profile?.streak ?? 0;
   const maxStreak = profile?.maxStreak ?? 0;
-  const xp = profile?.totalPoints ?? 0;
+  const xp = profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0;
   const rank = profile?.rank ?? "—";
   const roleName = user?.role === "admin" ? "Admin"
     : user?.role === "clan-chief" ? "Clan Chief"

@@ -17,7 +17,6 @@ const getUserRank = async (userId) => {
 
   const result = await Submission.aggregate([
     { $match: { status: 'Accepted' } },
-    // Group by userId and challengeId to count each challenge only once per user
     {
       $group: {
         _id: { userId: '$userId', challengeId: '$challengeId' }
@@ -32,7 +31,6 @@ const getUserRank = async (userId) => {
       },
     },
     { $unwind: '$challenge' },
-    // Group by userId to sum up total distinct points and solved count
     {
       $group: {
         _id: '$_id.userId',
@@ -40,22 +38,26 @@ const getUserRank = async (userId) => {
         totalPoints: { $sum: '$challenge.points' },
       },
     },
-    { $sort: { totalPoints: -1, solvedCount: -1 } },
-    {
-      $setWindowFields: {
-        sortBy: { totalPoints: -1 },
-        output: { rank: { $denseRank: {} } },
-      },
-    },
-    // Finally, filter to get the rank of the requested user
-    {
-      $match: {
-        _id: targetUserId
-      }
-    }
+    { $sort: { totalPoints: -1, solvedCount: -1 } }
   ]);
 
-  return result.length ? result[0].rank : null;
+  // Apply custom tie-breaker logic in memory
+  let userRank = null;
+  result.forEach((u, i) => {
+    const strictRank = i + 1;
+    let displayRank = strictRank;
+    
+    if (strictRank > 3) {
+      const firstPersonIndex = result.findIndex(x => x.totalPoints === u.totalPoints);
+      displayRank = Math.max(4, firstPersonIndex + 1);
+    }
+    
+    if (u._id.equals(targetUserId)) {
+      userRank = displayRank;
+    }
+  });
+
+  return userRank;
 };
 
 module.exports = { getUserRank };

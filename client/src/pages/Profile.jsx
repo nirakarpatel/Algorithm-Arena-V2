@@ -101,7 +101,7 @@ const Profile = () => {
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
   const hard = profile?.difficultyBreakdown?.hard ?? { solved: 0, total: 0 };
 
-  const solved = profile?.acceptedCount ?? 0;
+  const solved = profile?.stats?.acceptedCount ?? profile?.acceptedCount ?? 0;
   const total = (easy.total + medium.total + hard.total) || 1;
   const solvedPct = Math.round((solved / total) * 100);
 
@@ -115,7 +115,7 @@ const Profile = () => {
           <div className="absolute top-0 right-0 p-4 text-right z-10">
             <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
-              <span className="text-xs font-black text-primary">{profile.totalPoints || 0} XP</span>
+              <span className="text-xs font-black text-primary">{profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0} XP</span>
             </div>
           </div>
           <div className="relative z-10">

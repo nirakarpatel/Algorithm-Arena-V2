@@ -176,118 +176,103 @@ const getLeaderboard = async (req, res, next) => {
     const { window = 'all', page = 1, limit = 20 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    const match = { status: 'Accepted' };
-    if (window !== 'all') {
-      const days = window === '7d' ? 7 : 30;
-      match.submittedAt = { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) };
-    } else {
+    let result = [];
+
+    if (window === 'all') {
       const User = require('../users/User.model');
       const users = await User.find({ role: { $ne: 'superAdmin' } })
         .sort({ points: -1, solvedProblems: -1 })
         .select('username profilePicture points solvedProblems')
-        .skip(skip)
-        .limit(Number(limit))
         .lean();
       
-      const total = await User.countDocuments({ role: { $ne: 'superAdmin' } });
-
-      const data = users.map((u, i) => ({
+      result = users.map((u) => ({
         _id: u._id,
         username: u.username,
         profilePicture: u.profilePicture,
         solvedCount: u.solvedProblems || 0,
         totalPoints: u.points || 0,
-        rank: skip + i + 1,
       }));
+    } else {
+      const match = { status: 'Accepted' };
+      if (window === '30d') {
+        const now = new Date();
+        match.submittedAt = { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) };
+      } else if (window === '7d') {
+        match.submittedAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+      }
 
-      return sendSuccess(res, {
-        data,
-        meta: {
-          total,
-          page: Number(page),
-          limit: Number(limit),
-          totalPages: Math.ceil(total / Number(limit)),
+      result = await Submission.aggregate([
+        { $match: match },
+        {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
         },
-      });
+        {
+          $lookup: {
+            from: 'challenges',
+            localField: '_id.challengeId',
+            foreignField: '_id',
+            as: 'challenge',
+          },
+        },
+        { $unwind: '$challenge' },
+        {
+          $group: {
+            _id: '$_id.userId',
+            solvedCount: { $sum: 1 },
+            challengePoints: { $sum: '$challenge.points' },
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'user',
+          },
+        },
+        { $unwind: '$user' },
+        {
+          $addFields: {
+            totalPoints: '$challengePoints',
+          },
+        },
+        { $sort: { totalPoints: -1, solvedCount: -1 } },
+        {
+          $project: {
+            _id: 1,
+            username: '$user.username',
+            profilePicture: '$user.profilePicture',
+            solvedCount: 1,
+            totalPoints: 1,
+          },
+        }
+      ]);
     }
 
-    // All pagination and ranking happen inside MongoDB — nothing is loaded into Node RAM.
-    // $setWindowFields computes dense rank at the DB level (requires MongoDB 5.0+).
-    // $facet returns total count + the current page in a single round-trip.
-    const [result] = await Submission.aggregate([
-      { $match: match },
-      // 1. Group by userId and challengeId to count each challenge only once per user
-      {
-        $group: {
-          _id: { userId: '$userId', challengeId: '$challengeId' }
-        }
-      },
-      // 2. Lookup the challenge details
-      {
-        $lookup: {
-          from: 'challenges',
-          localField: '_id.challengeId',
-          foreignField: '_id',
-          as: 'challenge',
-        },
-      },
-      { $unwind: '$challenge' },
-      // 3. Group by userId to sum up total distinct points and solved count
-      {
-        $group: {
-          _id: '$_id.userId',
-          solvedCount: { $sum: 1 },
-          challengePoints: { $sum: '$challenge.points' },
-        },
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: '$user' },
-      {
-        $addFields: {
-          totalPoints: window === 'all' ? { $ifNull: ['$user.points', 0] } : '$challengePoints',
-        },
-      },
-      { $sort: { totalPoints: -1, solvedCount: -1 } },
-      {
-        $project: {
-          _id: 1,
-          username: '$user.username',
-          profilePicture: '$user.profilePicture',
-          solvedCount: 1,
-          totalPoints: 1,
-        },
-      },
-      {
-        $setWindowFields: {
-          sortBy: { totalPoints: -1 },
-          output: { rank: { $denseRank: {} } },
-        },
-      },
-      {
-        $facet: {
-          metadata: [{ $count: 'total' }],
-          data: [{ $skip: skip }, { $limit: Number(limit) }],
-        },
-      },
-    ]);
+    // Apply custom tie-breaker logic in memory
+    result.forEach((u, i) => {
+      const strictRank = i + 1;
+      let displayRank = strictRank;
+      
+      if (strictRank > 3) {
+        // Find the index of the first person with the exact same points
+        const firstPersonIndex = result.findIndex(x => x.totalPoints === u.totalPoints);
+        displayRank = Math.max(4, firstPersonIndex + 1);
+      }
+      u.rank = displayRank;
+    });
 
-    const total = result?.metadata[0]?.total ?? 0;
-    const data = result?.data ?? [];
+    const total = result.length;
+    const data = result.slice(skip, skip + Number(limit));
 
     return sendSuccess(res, {
       data,
       meta: {
-        window,
+        total,
         page: Number(page),
         limit: Number(limit),
-        total,
         totalPages: Math.ceil(total / Number(limit)) || 1,
       },
     });

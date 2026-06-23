@@ -41,68 +41,55 @@ const getProfileStats = async (req, res, next) => {
   try {
     const userId = new mongoose.Types.ObjectId(req.user.id);
 
+    // Separate counts for non-unique metrics
+    const totalSubmissions = await Submission.countDocuments({ userId });
+    const rejectedCount = await Submission.countDocuments({ userId, status: 'Rejected' });
+
+    // Calculate unique challenge stats
     const [stats] = await Submission.aggregate([
       { $match: { userId } },
       {
+        $group: {
+          _id: '$challengeId',
+          statuses: { $push: '$status' },
+        }
+      },
+      {
         $lookup: {
           from: 'challenges',
-          localField: 'challengeId',
+          localField: '_id',
           foreignField: '_id',
           as: 'challenge',
         },
       },
+      { $unwind: '$challenge' },
       {
-        $addFields: {
-          challenge: { $arrayElemAt: ['$challenge', 0] },
-        },
+        $project: {
+          difficulty: '$challenge.difficulty',
+          isAccepted: { $in: ['Accepted', '$statuses'] },
+          isPending: { $in: ['Pending', '$statuses'] },
+        }
       },
       {
         $group: {
-          _id: '$userId',
-          totalSubmissions: { $sum: 1 },
+          _id: null,
           acceptedCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] },
-          },
-          rejectedCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'Rejected'] }, 1, 0] },
+            $sum: { $cond: ['$isAccepted', 1, 0] },
           },
           pendingCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] },
-          },
-          totalPoints: {
-            $sum: {
-              $cond: [{ $eq: ['$status', 'Accepted'] }, '$challenge.points', 0],
-            },
+            $sum: { $cond: ['$isPending', 1, 0] },
           },
           easySolved: {
-            $sum: {
-              $cond: [
-                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Easy'] }] },
-                1,
-                0,
-              ],
-            },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Easy'] }] }, 1, 0] },
           },
           mediumSolved: {
-            $sum: {
-              $cond: [
-                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Medium'] }] },
-                1,
-                0,
-              ],
-            },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Medium'] }] }, 1, 0] },
           },
           hardSolved: {
-            $sum: {
-              $cond: [
-                { $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Hard'] }] },
-                1,
-                0,
-              ],
-            },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Hard'] }] }, 1, 0] },
           },
-        },
-      },
+        }
+      }
     ]);
 
     // Total counts for each difficulty (used for percentages)
@@ -143,7 +130,7 @@ const getProfileStats = async (req, res, next) => {
       heatmapMap[item._id] = item.count;
     });
 
-    const user = await User.findById(req.user.id).select('createdAt');
+    const user = await User.findById(req.user.id).select('createdAt points solvedProblems');
     const joinDate = user?.createdAt || new Date();
     
     // Normalize to UTC midnight for consistency with $dateToString
@@ -199,11 +186,16 @@ const getProfileStats = async (req, res, next) => {
 
     return sendSuccess(res, {
       data: {
-        totalSubmissions: stats?.totalSubmissions || 0,
-        acceptedCount: stats?.acceptedCount || 0,
-        rejectedCount: stats?.rejectedCount || 0,
-        pendingCount: stats?.pendingCount || 0,
-        totalPoints: stats?.totalPoints || 0,
+        stats: {
+          totalSubmissions: totalSubmissions || 0,
+          acceptedCount: user.solvedProblems || 0,
+          rejectedCount: rejectedCount || 0,
+          pendingCount: stats?.pendingCount || 0,
+          totalPoints: user.points || 0,
+          easySolved: stats?.easySolved || 0,
+          mediumSolved: stats?.mediumSolved || 0,
+          hardSolved: stats?.hardSolved || 0,
+        },
         difficultyBreakdown: {
           easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
           medium: { solved: stats?.mediumSolved || 0, total: totalsMap.Medium },
@@ -242,41 +234,44 @@ const getUserProfile = async (req, res, next) => {
     const [stats] = await Submission.aggregate([
       { $match: { userId } },
       {
+        $group: {
+          _id: '$challengeId',
+          statuses: { $push: '$status' },
+        }
+      },
+      {
         $lookup: {
           from: 'challenges',
-          localField: 'challengeId',
+          localField: '_id',
           foreignField: '_id',
           as: 'challenge',
         },
       },
+      { $unwind: '$challenge' },
       {
-        $addFields: {
-          challenge: { $arrayElemAt: ['$challenge', 0] },
-        },
+        $project: {
+          difficulty: '$challenge.difficulty',
+          isAccepted: { $in: ['Accepted', '$statuses'] },
+          isPending: { $in: ['Pending', '$statuses'] },
+        }
       },
       {
         $group: {
-          _id: '$userId',
-          acceptedCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] },
-          },
+          _id: null,
           pendingCount: {
-            $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] },
-          },
-          totalPoints: {
-            $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, '$challenge.points', 0] },
+            $sum: { $cond: ['$isPending', 1, 0] },
           },
           easySolved: {
-            $sum: { $cond: [{ $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Easy'] }] }, 1, 0] },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Easy'] }] }, 1, 0] },
           },
           mediumSolved: {
-            $sum: { $cond: [{ $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Medium'] }] }, 1, 0] },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Medium'] }] }, 1, 0] },
           },
           hardSolved: {
-            $sum: { $cond: [{ $and: [{ $eq: ['$status', 'Accepted'] }, { $eq: ['$challenge.difficulty', 'Hard'] }] }, 1, 0] },
+            $sum: { $cond: [{ $and: ['$isAccepted', { $eq: ['$difficulty', 'Hard'] }] }, 1, 0] },
           },
-        },
-      },
+        }
+      }
     ]);
 
     // Get total counts for difficulty breakdown
@@ -369,11 +364,11 @@ const getUserProfile = async (req, res, next) => {
       twitter: user.twitter,
       linkedin: user.linkedin,
       website: user.website,
-      points: user.points,
-      solvedProblems: user.solvedProblems,
-      acceptedCount: stats?.acceptedCount || 0,
+      points: user.points || 0,
+      solvedProblems: user.solvedProblems || 0,
+      acceptedCount: user.solvedProblems || 0,
       pendingCount: stats?.pendingCount || 0,
-      totalPoints: stats?.totalPoints || 0,
+      totalPoints: user.points || 0,
       streak: currentStreak,
       rank,
       difficultyBreakdown: {
