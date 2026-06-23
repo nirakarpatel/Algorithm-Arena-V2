@@ -157,7 +157,7 @@ const Podium = ({ items, leaderType, loading }) => {
 const Leaderboard = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({ window: "all", page: 1, limit: 20 });
+  const [filters, setFilters] = useState({ window: "7d", page: 1, limit: 20 });
   const [search, setSearch] = useState("");
   const [leaderType, setLeaderType] = useState("individual");
 

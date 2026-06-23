@@ -180,6 +180,35 @@ const getLeaderboard = async (req, res, next) => {
     if (window !== 'all') {
       const days = window === '7d' ? 7 : 30;
       match.submittedAt = { $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) };
+    } else {
+      const User = require('../users/User.model');
+      const users = await User.find({ role: { $ne: 'superAdmin' } })
+        .sort({ points: -1, solvedProblems: -1 })
+        .select('username profilePicture points solvedProblems')
+        .skip(skip)
+        .limit(Number(limit))
+        .lean();
+      
+      const total = await User.countDocuments({ role: { $ne: 'superAdmin' } });
+
+      const data = users.map((u, i) => ({
+        _id: u._id,
+        username: u.username,
+        profilePicture: u.profilePicture,
+        solvedCount: u.solvedProblems || 0,
+        totalPoints: u.points || 0,
+        rank: skip + i + 1,
+      }));
+
+      return sendSuccess(res, {
+        data,
+        meta: {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          totalPages: Math.ceil(total / Number(limit)),
+        },
+      });
     }
 
     // All pagination and ranking happen inside MongoDB — nothing is loaded into Node RAM.

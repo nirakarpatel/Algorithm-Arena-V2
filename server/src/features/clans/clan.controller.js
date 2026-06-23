@@ -125,34 +125,9 @@ const getMyClan = async (req, res, next) => {
     // Dynamically calculate totalPoints based on members' accepted submissions
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const stats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
-        {
-          $group: {
-            _id: { userId: '$userId', challengeId: '$challengeId' }
-          }
-        },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: '_id.challengeId',
-            foreignField: '_id',
-            as: 'challenge',
-          },
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: '$_id.userId',
-            totalPoints: { $sum: '$challenge.points' },
-          },
-        },
-      ]);
-      const pointsByUser = {};
       let totalClanPoints = 0;
-      stats.forEach(s => {
-        pointsByUser[s._id.toString()] = s.totalPoints;
-        totalClanPoints += s.totalPoints;
+      clan.members.forEach(m => {
+        totalClanPoints += m.points || 0;
       });
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const weeklyStats = await Submission.aggregate([
@@ -176,7 +151,7 @@ const getMyClan = async (req, res, next) => {
 
       clan.members = clan.members.map(m => ({
         ...m,
-        points: pointsByUser[m._id.toString()] || 0,
+        points: m.points || 0,
         weeklySolved: weeklyByUser[m._id.toString()] || 0
       }));
       clan.totalPoints = totalClanPoints;
@@ -206,43 +181,14 @@ const getClans = async (req, res, next) => {
     // aggregation to get per-clan points totals — eliminates N+1 queries.
     const allMemberIds = clansDocs.flatMap((c) => c.members.map((m) => m._id));
 
-    const pointsRows = allMemberIds.length > 0
-      ? await Submission.aggregate([
-          { $match: { userId: { $in: allMemberIds }, status: 'Accepted' } },
-          {
-            $group: {
-              _id: { userId: '$userId', challengeId: '$challengeId' }
-            }
-          },
-          {
-            $lookup: {
-              from: 'challenges',
-              localField: '_id.challengeId',
-              foreignField: '_id',
-              as: 'challenge',
-            },
-          },
-          { $unwind: '$challenge' },
-          {
-            $group: {
-              _id: '$_id.userId',
-              totalPoints: { $sum: '$challenge.points' },
-            },
-          },
-        ])
-      : [];
-
-    // Build a userId -> points lookup map
-    const pointsByUser = {};
-    pointsRows.forEach((r) => { pointsByUser[r._id.toString()] = r.totalPoints; });
+    
 
     const clans = clansDocs.map((clanDoc) => {
       const clan = clanDoc.toObject();
       let totalClanPoints = 0;
       clan.members = clan.members.map(m => {
-        const p = pointsByUser[m._id.toString()] || 0;
-        totalClanPoints += p;
-        return { ...m, points: p };
+        totalClanPoints += m.points || 0;
+        return { ...m, points: m.points || 0 };
       });
       clan.totalPoints = totalClanPoints;
       return clan;
@@ -273,34 +219,9 @@ const getClan = async (req, res, next) => {
 
     const memberIds = clan.members.map(m => m._id);
     if (memberIds.length > 0) {
-      const stats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted' } },
-        {
-          $group: {
-            _id: { userId: '$userId', challengeId: '$challengeId' }
-          }
-        },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: '_id.challengeId',
-            foreignField: '_id',
-            as: 'challenge',
-          },
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: '$_id.userId',
-            totalPoints: { $sum: '$challenge.points' },
-          },
-        },
-      ]);
-      const pointsByUser = {};
       let totalClanPoints = 0;
-      stats.forEach(s => {
-        pointsByUser[s._id.toString()] = s.totalPoints;
-        totalClanPoints += s.totalPoints;
+      clan.members.forEach(m => {
+        totalClanPoints += m.points || 0;
       });
       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const weeklyStats = await Submission.aggregate([
@@ -324,7 +245,7 @@ const getClan = async (req, res, next) => {
 
       clan.members = clan.members.map(m => ({
         ...m,
-        points: pointsByUser[m._id.toString()] || 0,
+        points: m.points || 0,
         weeklySolved: weeklyByUser[m._id.toString()] || 0
       }));
       clan.totalPoints = totalClanPoints;
@@ -344,6 +265,43 @@ const getClanLeaderboard = async (req, res, next) => {
     const { window = 'all' } = req.query;
     const clanFilter = getClanStatusFilter(req.query.status);
 
+    if (window === 'all') {
+      // For Overall, fetch clans and populate members with their current true points and solved counts
+      const clans = await Clan.find(clanFilter)
+        .populate('chief', 'username')
+        .populate('members', 'points solvedProblems')
+        .lean();
+
+      if (clans.length === 0) {
+        return sendSuccess(res, { data: [] });
+      }
+
+      const enriched = clans.map((clan) => {
+        let solvedCount = 0;
+        let totalPoints = 0;
+        const members = clan.members || [];
+        
+        members.forEach(m => {
+          solvedCount += m.solvedProblems || 0;
+          totalPoints += m.points || 0;
+        });
+
+        return {
+          ...clan,
+          members: members.map(m => m._id), // keep payload small
+          memberCount: members.length,
+          solvedCount,
+          totalPoints,
+        };
+      });
+
+      enriched.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount || String(a._id).localeCompare(String(b._id)));
+      enriched.forEach((c, i) => { c.rank = i + 1; });
+
+      return sendSuccess(res, { data: enriched });
+    }
+
+    // For Weekly (7d) or Monthly (30d)
     let dateMatch = {};
     if (window === '7d') {
       dateMatch = { submittedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } };
