@@ -27,6 +27,8 @@ const envSchema = z
     CORS_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
     FIREBASE_SERVICE_ACCOUNT_KEY: z.string().optional(),
     SUPER_ADMIN_EMAIL: z.string().email().optional(),
+    DISCORD_WEBHOOK_URL: z.string().url().optional(),
+    DISCORD_WEBHOOK_INTERVAL_MS: z.coerce.number().int().positive().default(86400000),
   })
   .superRefine((data, ctx) => {
     if (!data.JWT_ACCESS_SECRET && !data.JWT_SECRET) {

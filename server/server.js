@@ -181,6 +181,8 @@ const repairUserIndexes = async () => {
   }
 };
 
+const { startDiscordLeaderboardService } = require('./src/services/discordLeaderboard.service');
+
 const startServer = async () => {
   try {
     await connectDB();
@@ -196,6 +198,9 @@ const startServer = async () => {
 
     // Initialize Socket.io
     initSocket(server);
+
+    // Start Discord leaderboard service
+    startDiscordLeaderboardService();
 
     server.listen(env.PORT, () => {
       logger.info('Server started with Real-time support', { port: env.PORT, env: env.NODE_ENV });
