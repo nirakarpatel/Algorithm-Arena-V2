@@ -11,12 +11,12 @@ const Terms = () => {
   return (
     <div className="min-h-screen flex flex-col relative bg-app text-primary font-sans">
       {/* ── Navigation ── */}
-      <nav className="relative z-10 flex justify-between items-center px-6 py-5 w-full">
-        <Link to="/" className="group flex items-center">
-          <Logo variant="arena" showText={true} size="sm" />
+      <nav className="relative z-10 flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 w-full overflow-hidden">
+        <Link to="/" className="group flex items-center shrink-0 min-w-0 mr-1 sm:mr-4">
+          <Logo variant="arena" showText={true} size="sm" className="scale-90 origin-left sm:scale-100" />
         </Link>
 
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1 sm:gap-2 items-center shrink-0">
           {isAuthenticated ? (
             <Link
               to="/dashboard"
@@ -32,13 +32,13 @@ const Terms = () => {
             <>
               <Link
                 to="/login"
-                className="px-4 py-1.5 text-secondary hover:text-primary rounded-full font-semibold text-sm transition-all hover:bg-white/5"
+                className="px-2 sm:px-4 py-1.5 text-secondary hover:text-primary rounded-full font-semibold text-xs sm:text-sm transition-all hover:bg-white/5 whitespace-nowrap"
               >
                 Log in
               </Link>
               <Link
                 to="/register"
-                className="px-4 py-1.5 rounded-full text-white font-bold text-sm transition-all hover:-translate-y-0.5 active:scale-95"
+                className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-white font-bold text-xs sm:text-sm transition-all hover:-translate-y-0.5 active:scale-95 whitespace-nowrap"
                 style={{
                   background: `linear-gradient(135deg, rgba(var(--accent-rgb), 1) 0%, #a855f7 100%)`,
                   boxShadow: `0 4px 12px rgba(var(--accent-rgb), 0.25)`,

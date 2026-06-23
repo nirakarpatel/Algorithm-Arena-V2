@@ -171,11 +171,50 @@ const Settings = () => {
               <div className="space-y-2">
                 <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Branch / Course</label>
                 <select name="branch" className="field-select" value={formData.branch} onChange={handleChange}>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="">Select Branch</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="B.Tech CSE">B.Tech CSE</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="B.Tech ECE">B.Tech ECE</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="B.Tech EEE">B.Tech EEE</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="MCA">MCA</option>
+                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="">Select Branch/Domain</option>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Engineering & Technology">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech CSE">B.Tech CSE</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech CSIT">B.Tech CSIT</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech IT">B.Tech IT</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech ECE">B.Tech ECE</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech EE">B.Tech EE</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech EEE">B.Tech EEE</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech Mechanical">B.Tech Mechanical</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech Civil">B.Tech Civil</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="M.Tech">M.Tech</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Computer Applications">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BCA">BCA</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MCA">MCA</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Medical & Health Sciences">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MBBS">MBBS</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BDS (Dental)">BDS (Dental)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Pharm (Pharmacy)">B.Pharm (Pharmacy)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Nursing">B.Sc Nursing</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MD / MS">MD / MS</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Law">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BA LLB / BBA LLB">BA LLB / BBA LLB</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="LLB">LLB</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="LLM">LLM</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Management & Commerce">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BBA">BBA</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MBA">MBA</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Com">B.Com</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Agriculture & Sciences">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Agriculture">B.Sc Agriculture</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Biotech">B.Sc Biotech</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc (Hons)">B.Sc (Hons)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="M.Sc">M.Sc</option>
+                  </optgroup>
+                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Other Domains">
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BHMCT (Hotel Management)">BHMCT (Hotel Management)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BA (Hons)">BA (Hons)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="Other">Other</option>
+                  </optgroup>
                 </select>
               </div>
 

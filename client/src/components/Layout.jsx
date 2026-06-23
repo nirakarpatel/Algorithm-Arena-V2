@@ -5,10 +5,12 @@ import Navbar from "./Navbar";
 import Logo from "../components/Logo";
 import Footer from "../components/Footer";
 import { useIdleTimeout } from "../hooks/useIdleTimeout";
+import { useAuth } from "../context/useAuth";
 import toast from "react-hot-toast";
 
 const Layout = ({ onLogout }) => {
   const location = useLocation();
+  const { user } = useAuth();
   const MotionContainer = motion.div;
 
   // Log out after 20 minutes of true inactivity (no mouse moves, typing, etc.)
@@ -34,7 +36,7 @@ const Layout = ({ onLogout }) => {
       </div>
 
       {/* 2. Top Navigation */}
-      <Navbar onLogout={onLogout} />
+      {user?.usernameSet !== false && <Navbar onLogout={onLogout} />}
 
       {/* 3. Main Content Area */}
       {(() => {
