@@ -26,7 +26,7 @@ const claimUsernameSchema = {
       .min(6, 'Registration number must be at least 6 characters')
       .max(20, 'Registration number must be at most 20 characters')
       .regex(/^[a-zA-Z0-9]+$/, 'Registration number must be alphanumeric'),
-    branch: z.enum(['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA']),
+    branch: z.string().trim().min(1, 'Branch is required').max(100, 'Branch must be at most 100 characters'),
     year: z.enum(['First Year', 'Second Year', 'Third Year', 'Fourth Year']),
     section: z
       .string()
@@ -46,7 +46,7 @@ const url = z.string().trim().url().max(512).optional().or(z.literal(''));
 const updateMeSchema = {
   body: z.object({
     bio:            z.string().trim().max(500).optional(),
-    branch:         z.enum(['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA']).optional().or(z.literal('')),
+    branch:         z.string().trim().max(100).optional().or(z.literal('')),
     year:           z.enum(['First Year', 'Second Year', 'Third Year', 'Fourth Year']).optional().or(z.literal('')),
     section:        z
       .string()

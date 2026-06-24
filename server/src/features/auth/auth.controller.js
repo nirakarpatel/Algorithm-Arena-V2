@@ -23,6 +23,7 @@ const toAuthPayload = (user, accessToken, { isChief = false, dailyXpAwarded = fa
     username: user.username || null,
     email: user.email,
     role: user.role,
+    customTitle: user.customTitle || null,
     status: user.status,
     warningMessage: user.warningMessage || null,
     points: user.points,

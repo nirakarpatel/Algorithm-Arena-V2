@@ -116,9 +116,9 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const maxStreak = profile?.maxStreak ?? 0;
   const xp = profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0;
   const rank = profile?.rank ?? "—";
-  const roleName = user?.role === "admin" ? "Admin"
+  const roleName = user?.customTitle || (user?.role === "admin" ? "Admin"
     : user?.role === "clan-chief" ? "Clan Chief"
-      : "Member";
+      : "Member");
 
   const { user: authUser } = useAuth();
   const isOwnProfile = authUser?.username === user?.username;
@@ -267,12 +267,16 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
 
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border"
-                  style={{
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                    user?.customTitle
+                      ? "border-cyan-600/30 bg-cyan-600/10 text-cyan-700 dark:border-cyan-400/50 dark:bg-cyan-400/15 dark:text-cyan-400 dark:shadow-[0_0_10px_rgba(34,211,238,0.2)]"
+                      : ""
+                  }`}
+                  style={!user?.customTitle ? {
                     borderColor: "rgba(var(--accent-rgb),0.4)",
                     background: "rgba(var(--accent-rgb),0.1)",
                     color: "rgb(var(--accent-rgb))",
-                  }}
+                  } : undefined}
                 >
                   <FiShield size={7} /> {roleName}
                 </span>

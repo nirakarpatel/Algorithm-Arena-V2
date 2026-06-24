@@ -48,6 +48,11 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'moderator', 'admin', 'clan-chief', 'superAdmin'],
     default: 'user',
   },
+  customTitle: {
+    type: String,
+    default: '',
+    maxlength: 30,
+  },
   clan: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Clan',
@@ -104,7 +109,7 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
   bio: { type: String, default: '' },
-  branch: { type: String, default: '', enum: ['B.Tech CSE', 'B.Tech ECE', 'B.Tech EEE', 'MCA', ''] },
+  branch: { type: String, default: '' },
   year: { type: String, default: '', enum: ['First Year', 'Second Year', 'Third Year', 'Fourth Year', ''] },
   section: { type: String, default: '' },
   lastConfirmedAt: {

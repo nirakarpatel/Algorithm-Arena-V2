@@ -356,6 +356,7 @@ const getUserProfile = async (req, res, next) => {
       _id: user._id,
       username: user.username,
       role: user.role,
+      customTitle: user.customTitle || null,
       clan: user.clan,
       profilePicture: user.profilePicture,
       bio: user.bio,
