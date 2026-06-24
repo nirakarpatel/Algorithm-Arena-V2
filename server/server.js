@@ -7,7 +7,6 @@ const { logger } = require('./utils/logger');
 
 const http = require('http');
 const { initSocket } = require('./config/socket');
-const { initializeDefaultUsers } = require('./initDb');
 
 const app = createApp();
 const server = http.createServer(app);
@@ -186,9 +185,6 @@ const { startDiscordLeaderboardService } = require('./src/services/discordLeader
 const startServer = async () => {
   try {
     await connectDB();
-
-    // Seed default users if database is empty
-    await initializeDefaultUsers();
 
     // Production index repair is disabled to avoid startup DB locks/index rebuild spikes.
     // Run one-time migrations/scripts instead (see TODO).
