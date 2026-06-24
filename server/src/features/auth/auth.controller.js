@@ -195,7 +195,14 @@ const googleAuth = async (req, res, next) => {
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
     const isFirstLoginToday = !lastLogin || lastLogin < today;
 
-    if (isFirstLoginToday) {
+    const XpLog = require('../users/XpLog.model');
+    const existingDailyLog = await XpLog.exists({
+      userId: user._id,
+      reason: 'Daily Login',
+      createdAt: { $gte: today }
+    });
+
+    if (isFirstLoginToday && !existingDailyLog) {
       user.points = (user.points || 0) + 50;
       dailyXpAwarded = true;
       await XpLog.create({
