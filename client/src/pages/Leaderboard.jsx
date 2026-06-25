@@ -69,7 +69,7 @@ const Podium = ({ items, leaderType, loading }) => {
     <div className="mt-12 mb-16 flex items-end justify-center gap-2 px-4 md:gap-8">
       {podiumSteps.map((item, index) => {
         if (!item) {
-          return <div key={index} className="invisible flex-1" />;
+          return <div key={index} className="invisible flex-1 max-w-[120px] md:max-w-[200px]" />;
         }
 
         const isFirst = index === 1;
@@ -326,12 +326,14 @@ const Leaderboard = () => {
       </div>
 
       <AnimatePresence mode="wait">
-        <Podium
-          key={leaderType}
-          items={topThree}
-          leaderType={leaderType}
-          loading={loading}
-        />
+        {!search.trim() && (
+          <Podium
+            key={leaderType}
+            items={topThree}
+            leaderType={leaderType}
+            loading={loading}
+          />
+        )}
       </AnimatePresence>
 
       {myRow && leaderType === "individual" && (
@@ -573,9 +575,9 @@ const Leaderboard = () => {
                         : "border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-white/[0.02]"
                     }`}
                   >
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-black text-secondary">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl font-black text-secondary shrink-0">
                           #{rank}
                         </span>
                         {leaderType === "individual" ? (
@@ -583,13 +585,13 @@ const Leaderboard = () => {
                             userId={item._id}
                             username={item.username}
                           >
-                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer">
+                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
                               {item.username || item.name}
                             </span>
                           </MemberHoverCard>
                         ) : (
                           <ClanHoverCard clanId={item._id}>
-                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer">
+                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
                               {item.name}
                             </span>
                           </ClanHoverCard>

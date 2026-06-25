@@ -205,7 +205,7 @@ const googleAuth = async (req, res, next) => {
       createdAt: { $gte: today }
     });
 
-    if (isFirstLoginToday && !existingDailyLog) {
+    if (isFirstLoginToday && !existingDailyLog && user.usernameSet) {
       user.points = (user.points || 0) + 50;
       dailyXpAwarded = true;
       await XpLog.create({
@@ -403,7 +403,7 @@ const googleLogin = async (req, res, next) => {
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
     const isFirstLoginToday = !lastLogin || lastLogin < today;
 
-    if (isFirstLoginToday) {
+    if (isFirstLoginToday && user.usernameSet) {
       user.points = (user.points || 0) + 50;
       dailyXpAwarded = true;
     }
@@ -550,14 +550,16 @@ const getMe = async (req, res, next) => {
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
 
     if (!lastLogin || lastLogin < today) {
-      user.points = (user.points || 0) + 50;
+      if (user.usernameSet) {
+        user.points = (user.points || 0) + 50;
+        dailyXpAwarded = true;
+      }
       user.lastLoginDate = now;
       await User.findByIdAndUpdate(user._id, {
         points: user.points,
         lastLoginDate: user.lastLoginDate,
         lastConfirmedAt: now
       });
-      dailyXpAwarded = true;
     }
 
     // Check if user is a chief of any clan

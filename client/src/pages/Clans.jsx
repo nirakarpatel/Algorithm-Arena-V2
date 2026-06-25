@@ -143,10 +143,10 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="flex items-center justify-between p-4 rounded-xl border border-black/20  dark:border-white/20 hover:border-accent/30 transition-all group"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 sm:gap-0 rounded-xl border border-black/20 dark:border-white/20 hover:border-accent/30 transition-all group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-glass-surface flex items-center justify-center font-bold text-accent overflow-hidden">
+                    <div className="flex items-center gap-3 w-full sm:w-auto overflow-hidden">
+                      <div className="w-10 h-10 shrink-0 rounded-full bg-glass-surface flex items-center justify-center font-bold text-accent overflow-hidden">
                         {member.profilePicture ? (
                           <img src={member.profilePicture} referrerPolicy="no-referrer" alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -154,9 +154,9 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                         )}
                       </div>
                       <div>
-                        <p className="font-bold text-primary flex items-center gap-2">
+                        <p className="font-bold text-primary flex items-center gap-2 truncate">
                           <MemberHoverCard userId={member._id} username={member.username}>
-                            {member.username || member.email || 'Onboarding Pending'}
+                            <span className="truncate">{member.username || member.email || 'Onboarding Pending'}</span>
                           </MemberHoverCard>
                           {member._id === userId && (
                             <span className="text-[9px] bg-accent px-1.5 py-0.5 rounded text-white italic font-black">YOU</span>
@@ -169,7 +169,7 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                       <span className="text-[10px] text-accent/80 font-bold flex items-center gap-1 bg-accent/10 px-2 py-1 rounded-lg">
                         <FiStar size={10} /> {(member.points || 0).toLocaleString()} XP
                       </span>

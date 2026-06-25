@@ -180,7 +180,10 @@ const getLeaderboard = async (req, res, next) => {
 
     if (window === 'all') {
       const User = require('../users/User.model');
-      const users = await User.find({ role: { $ne: 'superAdmin' } })
+      const users = await User.find({ 
+        role: { $nin: ['admin', 'superAdmin', 'clan-chief'] },
+        username: { $exists: true, $ne: null, $ne: '' }
+      })
         .sort({ points: -1, solvedProblems: -1 })
         .select('username profilePicture points solvedProblems')
         .lean();
@@ -194,51 +197,72 @@ const getLeaderboard = async (req, res, next) => {
       }));
     } else {
       const XpLog = require('../users/XpLog.model');
+      const Submission = require('../submissions/Submission.model');
+      const User = require('../users/User.model');
+      
       const match = {};
+      let subMatch = {};
       if (window === '30d') {
         const now = new Date();
         match.createdAt = { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) };
+        subMatch.submittedAt = { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) };
       } else if (window === '7d') {
         match.createdAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+        subMatch.submittedAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
       }
 
-      result = await XpLog.aggregate([
+      // Get total points from XpLog
+      const xpStats = await XpLog.aggregate([
         { $match: match },
         {
           $group: {
             _id: '$userId',
-            totalPoints: { $sum: '$amount' },
-            solvedCount: {
-              $sum: {
-                $cond: [
-                  { $eq: ['$reason', 'Challenge Accepted'] }, 1,
-                  { $cond: [{ $eq: ['$reason', 'Submission Reverted'] }, -1, 0] }
-                ]
-              }
-            }
+            totalPoints: { $sum: '$amount' }
+          }
+        }
+      ]);
+
+      const activeUserIds = xpStats.map(s => s._id);
+
+      // Get unique solved count from Submissions directly
+      const solvedStats = await Submission.aggregate([
+        { $match: { userId: { $in: activeUserIds }, status: 'Accepted', ...subMatch } },
+        {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
           }
         },
         {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'user',
-          },
-        },
-        { $unwind: '$user' },
-        { $match: { 'user.role': { $ne: 'superAdmin' } } },
-        { $sort: { totalPoints: -1, solvedCount: -1 } },
-        {
-          $project: {
-            _id: 1,
-            username: '$user.username',
-            profilePicture: '$user.profilePicture',
-            solvedCount: 1,
-            totalPoints: 1,
-          },
+          $group: {
+            _id: '$_id.userId',
+            solvedCount: { $sum: 1 }
+          }
         }
       ]);
+
+      const solvedMap = {};
+      solvedStats.forEach(s => {
+        solvedMap[s._id.toString()] = s.solvedCount;
+      });
+
+      const users = await User.find({
+        _id: { $in: activeUserIds },
+        role: { $nin: ['admin', 'superAdmin', 'clan-chief'] },
+        username: { $exists: true, $ne: null, $ne: '' }
+      }).select('username profilePicture').lean();
+
+      result = users.map(u => {
+        const xp = xpStats.find(x => x._id.toString() === u._id.toString());
+        return {
+          _id: u._id,
+          username: u.username,
+          profilePicture: u.profilePicture,
+          solvedCount: solvedMap[u._id.toString()] || 0,
+          totalPoints: xp ? xp.totalPoints : 0,
+        };
+      });
+
+      result.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount);
     }
 
     // Apply custom tie-breaker logic in memory
