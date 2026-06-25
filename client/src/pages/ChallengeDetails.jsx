@@ -150,23 +150,6 @@ const ChallengeDetails = () => {
   const [leftWidth, setLeftWidth] = useState(45);
   const containerRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [wasMaximized, setWasMaximized] = useState(false);
-
-  const handleOpenManual = () => {
-    if (isMaximized) {
-      setWasMaximized(true);
-      setIsMaximized(false);
-    }
-    setLeftTab("manual");
-  };
-
-  const handleCloseManual = () => {
-    setLeftTab("description");
-    if (wasMaximized) {
-      setIsMaximized(true);
-      setWasMaximized(false);
-    }
-  };
 
   // Bottom (test/result) panel sizing — lets the editor grow when the
   // test-case panel takes up too much vertical space.
@@ -557,9 +540,9 @@ const ChallengeDetails = () => {
         : "bg-red-500/15";
 
   return (
-    <div className="flex flex-col w-full challenge-details-theme min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)]">
+    <div className="flex flex-col w-full challenge-details-theme min-h-[calc(100vh-8rem)] lg:h-[calc(100vh-8rem)]">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-1 border-b border-black/10 dark:border-white/10 mb-1.5 shrink-0 px-3 pt-1.5">
+      <div className="flex items-center gap-3 pb-1.5 border-b border-black/10 dark:border-white/10 mb-2 shrink-0 px-4 sm:px-6 lg:px-8 pt-2.5">
         <Link
           to="/dashboard"
           className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-xs"
@@ -604,7 +587,7 @@ const ChallengeDetails = () => {
       {/* Main Split Layout */}
       <div
         ref={containerRef}
-        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-2 pb-2"
+        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-4 sm:px-6 lg:px-8 pb-4"
         style={{
           "--left-width": `${leftWidth}%`,
           "--right-width": `calc(${100 - leftWidth}% - 12px)`,
@@ -638,7 +621,7 @@ const ChallengeDetails = () => {
             {leftTab === "manual" && (
               <button
                 className="px-4 py-3 text-sm font-semibold relative text-primary flex items-center ml-auto"
-                onClick={handleCloseManual}
+                onClick={() => setLeftTab("description")}
                 title="Close Reference"
               >
                 <FiXCircle size={16} className="mr-1" /> Close
@@ -757,7 +740,7 @@ const ChallengeDetails = () => {
               </select>
               <button
                 title="Open Reference Manual"
-                onClick={handleOpenManual}
+                onClick={() => setLeftTab("manual")}
                 className="text-secondary hover:text-accent transition-colors ml-1 p-1 flex items-center justify-center"
               >
                 <FiInfo size={13} />
@@ -794,7 +777,6 @@ const ChallengeDetails = () => {
                   onClick={() => {
                     const nextMaximized = !isMaximized;
                     setIsMaximized(nextMaximized);
-                    setWasMaximized(false);
                     if (nextMaximized) {
                       setBottomCollapsed(true);
                     }

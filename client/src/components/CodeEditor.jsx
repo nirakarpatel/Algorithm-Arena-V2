@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from "react";
 import Editor from "@monaco-editor/react";
-import { useAuth } from "../context/useAuth";
 
 // ─── Theme registration ───────────────────────────────────────────────────────
 
@@ -88,138 +87,6 @@ function registerThemes(monaco) {
       "scrollbarSlider.background": "#00000015",
       "scrollbarSlider.hoverBackground": "#00000025",
       "scrollbarSlider.activeBackground": "#00000035",
-    },
-  });
-
-  monaco.editor.defineTheme("dracula", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "ff79c6" },
-      { token: "string", foreground: "f1fa8c" },
-      { token: "variable", foreground: "f8f8f2" },
-      { token: "function", foreground: "50fa7b" },
-      { token: "type", foreground: "8be9fd" },
-      { token: "comment", foreground: "6272a4", fontStyle: "italic" },
-      { token: "number", foreground: "bd93f9" },
-    ],
-    colors: {
-      "editor.background": "#282a36",
-      "editor.foreground": "#f8f8f2",
-      "editor.lineHighlightBackground": "#44475a44",
-      "editorLineNumber.foreground": "#6272a4",
-      "editorLineNumber.activeForeground": "#ff79c6",
-      "editor.selectionBackground": "#44475a88",
-    },
-  });
-
-  monaco.editor.defineTheme("one-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "c678dd" },
-      { token: "string", foreground: "98c379" },
-      { token: "variable", foreground: "abb2bf" },
-      { token: "function", foreground: "61afef" },
-      { token: "type", foreground: "e5c07b" },
-      { token: "comment", foreground: "5c6370", fontStyle: "italic" },
-      { token: "number", foreground: "d19a66" },
-    ],
-    colors: {
-      "editor.background": "#282c34",
-      "editor.foreground": "#abb2bf",
-      "editor.lineHighlightBackground": "#2c313c",
-      "editorLineNumber.foreground": "#4b5263",
-      "editorLineNumber.activeForeground": "#636d83",
-      "editor.selectionBackground": "#3e4451",
-    },
-  });
-
-  monaco.editor.defineTheme("monokai", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "f92672" },
-      { token: "string", foreground: "e6db74" },
-      { token: "variable", foreground: "f8f8f2" },
-      { token: "function", foreground: "a6e22e" },
-      { token: "type", foreground: "66d9ef" },
-      { token: "comment", foreground: "75715e", fontStyle: "italic" },
-      { token: "number", foreground: "ae81ff" },
-    ],
-    colors: {
-      "editor.background": "#272822",
-      "editor.foreground": "#f8f8f2",
-      "editor.lineHighlightBackground": "#3e3d32",
-      "editorLineNumber.foreground": "#90908a",
-      "editorLineNumber.activeForeground": "#f8f8f2",
-      "editor.selectionBackground": "#49483e",
-    },
-  });
-
-  monaco.editor.defineTheme("nord", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "81a1c1" },
-      { token: "string", foreground: "a3be8c" },
-      { token: "variable", foreground: "d8dee9" },
-      { token: "function", foreground: "88c0d0" },
-      { token: "type", foreground: "8fbcbb" },
-      { token: "comment", foreground: "4c566a", fontStyle: "italic" },
-      { token: "number", foreground: "b48ead" },
-    ],
-    colors: {
-      "editor.background": "#2e3440",
-      "editor.foreground": "#d8dee9",
-      "editor.lineHighlightBackground": "#3b4252",
-      "editorLineNumber.foreground": "#4c566a",
-      "editorLineNumber.activeForeground": "#d8dee9",
-      "editor.selectionBackground": "#434c5e",
-    },
-  });
-
-  monaco.editor.defineTheme("github-dark", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "ff7b72" },
-      { token: "string", foreground: "a5d6ff" },
-      { token: "variable", foreground: "c9d1d9" },
-      { token: "function", foreground: "d2a8ff" },
-      { token: "type", foreground: "ff7b72" },
-      { token: "comment", foreground: "8b949e", fontStyle: "italic" },
-      { token: "number", foreground: "79c0ff" },
-    ],
-    colors: {
-      "editor.background": "#0d1117",
-      "editor.foreground": "#c9d1d9",
-      "editor.lineHighlightBackground": "#161b22",
-      "editorLineNumber.foreground": "#8b949e",
-      "editorLineNumber.activeForeground": "#c9d1d9",
-      "editor.selectionBackground": "#1f6feb35",
-    },
-  });
-
-  monaco.editor.defineTheme("solarized-light", {
-    base: "vs",
-    inherit: true,
-    rules: [
-      { token: "keyword", foreground: "859900" },
-      { token: "string", foreground: "2aa198" },
-      { token: "variable", foreground: "268bd2" },
-      { token: "function", foreground: "268bd2" },
-      { token: "type", foreground: "b58900" },
-      { token: "comment", foreground: "93a1a1", fontStyle: "italic" },
-      { token: "number", foreground: "d33682" },
-    ],
-    colors: {
-      "editor.background": "#fdf6e3",
-      "editor.foreground": "#657b83",
-      "editor.lineHighlightBackground": "#eee8d5",
-      "editorLineNumber.foreground": "#93a1a1",
-      "editorLineNumber.activeForeground": "#586e75",
-      "editor.selectionBackground": "#eee8d5",
     },
   });
 }
@@ -411,22 +278,10 @@ const CodeEditor = ({
   isDark = true,
   readOnly = false,
   height = "100%",
-  theme,
 }) => {
-  const { user } = useAuth();
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const contentListenerRef = useRef(null);
-
-  const getTheme = () => {
-    if (isDark) {
-      const preferred = user?.editorThemeDark || "default";
-      return preferred === "default" ? "algo-arena-dark" : preferred;
-    } else {
-      const preferred = user?.editorThemeLight || "default";
-      return preferred === "default" ? "algo-arena-light" : preferred;
-    }
-  };
 
   const handleMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -487,7 +342,7 @@ const CodeEditor = ({
       height={height}
       language={language}
       value={value}
-      theme={theme || getTheme()}
+      theme={isDark ? "algo-arena-dark" : "algo-arena-light"}
       options={{ ...EDITOR_OPTIONS, readOnly }}
       onChange={readOnly ? undefined : onChange}
       onMount={handleMount}

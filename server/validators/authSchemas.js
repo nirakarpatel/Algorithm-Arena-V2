@@ -62,8 +62,6 @@ const updateMeSchema = {
     website:        url,
     profilePicture: z.string().trim().max(4 * 1024 * 1024).optional().or(z.literal('')),
     preferredLanguage: z.enum(['javascript', 'python', 'java', 'cpp', 'c']).optional().or(z.literal('')),
-    editorThemeDark: z.enum(['default', 'algo-arena-dark', 'vs-dark', 'hc-black', 'dracula', 'one-dark', 'monokai', 'nord', 'github-dark']).optional().or(z.literal('')),
-    editorThemeLight: z.enum(['default', 'algo-arena-light', 'vs', 'solarized-light']).optional().or(z.literal('')),
   }).strict(),
 };
 

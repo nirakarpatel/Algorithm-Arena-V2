@@ -43,8 +43,6 @@ const toAuthPayload = (user, accessToken, { isChief = false, dailyXpAwarded = fa
     linkedin: user.linkedin || '',
     website: user.website || '',
     preferredLanguage: user.preferredLanguage || 'javascript',
-    editorThemeDark: user.editorThemeDark || 'default',
-    editorThemeLight: user.editorThemeLight || 'default',
     createdAt: user.createdAt,
     isChief,
     dailyXpAwarded,
@@ -578,7 +576,7 @@ const getMe = async (req, res, next) => {
 
 const updateMe = async (req, res, next) => {
   try {
-    const { bio, branch, year, section, location, github, twitter, linkedin, website, profilePicture, preferredLanguage, editorThemeDark, editorThemeLight } = req.body;
+    const { bio, branch, year, section, location, github, twitter, linkedin, website, profilePicture, preferredLanguage } = req.body;
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
@@ -594,9 +592,7 @@ const updateMe = async (req, res, next) => {
           linkedin,
           website,
           profilePicture,
-          preferredLanguage,
-          editorThemeDark,
-          editorThemeLight
+          preferredLanguage
         }
       },
       { new: true, runValidators: true }
