@@ -112,11 +112,18 @@ const About = () => {
                 { name: "Nandish Sinha", image: "/team/nandish.jpg", linkedin: "https://www.linkedin.com/in/nandishsinha", roles: [{ name: "DevOps", color: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border border-yellow-500/30" }] }
               ].map((member) => (
                 <a key={member.name} href={member.linkedin} target="_blank" rel="noopener noreferrer" className="block outline-none">
-                  <Card className="p-4 flex flex-col items-center text-center border border-black/10 dark:border-white/10 hover:-translate-y-1 hover:border-blue-500/50 transition-all h-full">
+                  <Card className="p-4 flex flex-col items-center text-center border border-black/10 dark:border-white/10 hover:-translate-y-1 hover:border-blue-500/50 transition-all h-full justify-between">
                     <div className="w-14 h-14 rounded-full mb-3 mx-auto overflow-hidden bg-black/5 dark:bg-white/10 flex-shrink-0">
                       <img src={member.image || getAvatar(member.name)} alt={member.name} className="w-full h-full object-cover" style={member.imageStyle || {}} />
                     </div>
-                    <h4 className="font-mono text-sm mt-auto mb-1 whitespace-nowrap text-gray-800 dark:text-gray-100">{member.name}</h4>
+                    <h4 className="font-mono text-sm mb-2 whitespace-nowrap text-gray-800 dark:text-gray-100">{member.name}</h4>
+                    <div className="flex flex-wrap gap-1 justify-center mt-auto">
+                      {member.roles.map((role, idx) => (
+                        <span key={idx} className={`px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap shadow-sm ${role.color}`}>
+                          {role.name}
+                        </span>
+                      ))}
+                    </div>
                   </Card>
                 </a>
               ))}

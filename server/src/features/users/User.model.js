@@ -79,6 +79,16 @@ const userSchema = new mongoose.Schema({
     enum: ['javascript', 'python', 'java', 'cpp', 'c'],
     default: 'javascript',
   },
+  editorThemeDark: {
+    type: String,
+    enum: ['default', 'algo-arena-dark', 'vs-dark', 'hc-black', 'dracula', 'one-dark', 'monokai', 'nord', 'github-dark'],
+    default: 'default',
+  },
+  editorThemeLight: {
+    type: String,
+    enum: ['default', 'algo-arena-light', 'vs', 'solarized-light'],
+    default: 'default',
+  },
   points: {
     type: Number,
     default: 0,

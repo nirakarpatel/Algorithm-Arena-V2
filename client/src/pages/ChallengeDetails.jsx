@@ -28,6 +28,7 @@ import {
   FiChevronUp,
   FiMaximize2,
   FiMinimize2,
+  FiInfo,
 } from "react-icons/fi";
 
 // Monaco & Shared Assets
@@ -37,6 +38,7 @@ import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 // Local Project Imports
 import SkeletonCard from "../components/SkeletonCard";
 import { api } from "../lib/api";
+import { MANUAL_TOPICS } from "../constants/manualContent";
 
 import { useAuth } from "../context/useAuth";
 
@@ -141,10 +143,30 @@ const ChallengeDetails = () => {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [grading, setGrading] = useState(false);
 
+  // Manual state
+  const [manualTopic, setManualTopic] = useState(MANUAL_TOPICS[0].key);
+
   // Resizer state
   const [leftWidth, setLeftWidth] = useState(45);
   const containerRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [wasMaximized, setWasMaximized] = useState(false);
+
+  const handleOpenManual = () => {
+    if (isMaximized) {
+      setWasMaximized(true);
+      setIsMaximized(false);
+    }
+    setLeftTab("manual");
+  };
+
+  const handleCloseManual = () => {
+    setLeftTab("description");
+    if (wasMaximized) {
+      setIsMaximized(true);
+      setWasMaximized(false);
+    }
+  };
 
   // Bottom (test/result) panel sizing — lets the editor grow when the
   // test-case panel takes up too much vertical space.
@@ -535,9 +557,9 @@ const ChallengeDetails = () => {
         : "bg-red-500/15";
 
   return (
-    <div className="flex flex-col w-full challenge-details-theme min-h-[calc(100vh-8rem)] lg:h-[calc(100vh-8rem)]">
+    <div className="flex flex-col w-full challenge-details-theme min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)]">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-1.5 border-b border-black/10 dark:border-white/10 mb-2 shrink-0 px-4 sm:px-6 lg:px-8 pt-2.5">
+      <div className="flex items-center gap-3 pb-1 border-b border-black/10 dark:border-white/10 mb-1.5 shrink-0 px-3 pt-1.5">
         <Link
           to="/dashboard"
           className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-xs"
@@ -582,7 +604,7 @@ const ChallengeDetails = () => {
       {/* Main Split Layout */}
       <div
         ref={containerRef}
-        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-4 sm:px-6 lg:px-8 pb-4"
+        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-2 pb-2"
         style={{
           "--left-width": `${leftWidth}%`,
           "--right-width": `calc(${100 - leftWidth}% - 12px)`,
@@ -613,6 +635,16 @@ const ChallengeDetails = () => {
                 <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
               )}
             </button>
+            {leftTab === "manual" && (
+              <button
+                className="px-4 py-3 text-sm font-semibold relative text-primary flex items-center ml-auto"
+                onClick={handleCloseManual}
+                title="Close Reference"
+              >
+                <FiXCircle size={16} className="mr-1" /> Close
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
+              </button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-5">
             {leftTab === "description" ? (
@@ -643,6 +675,50 @@ const ChallengeDetails = () => {
                     </span>
                   </Link>
                 ))}
+              </div>
+            ) : leftTab === "manual" ? (
+              <div className="flex flex-col h-full space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {MANUAL_TOPICS.map(topic => (
+                    <button
+                      key={topic.key}
+                      onClick={() => setManualTopic(topic.key)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-full border transition-colors ${manualTopic === topic.key ? "bg-accent border-accent text-white" : "border-black/10 dark:border-white/10 text-secondary hover:text-primary hover:border-black/30 dark:hover:border-white/30"}`}
+                    >
+                      {topic.title}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 bg-black/5 dark:bg-black/40 rounded-xl border border-black/10 dark:border-white/5 flex flex-col min-h-0 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-black/10 dark:border-white/5 flex items-center justify-between shrink-0 bg-black/5 dark:bg-white/5">
+                    <span className="text-sm font-bold text-primary">
+                      {MANUAL_TOPICS.find(t => t.key === manualTopic)?.title} ({LANGUAGE_OPTIONS.find(o => o.key === language)?.label})
+                    </span>
+                    <button
+                       onClick={async () => {
+                         const snippet = MANUAL_TOPICS.find(t => t.key === manualTopic)?.snippets[language];
+                         if(snippet) {
+                            await navigator.clipboard.writeText(snippet);
+                            toast.success("Snippet copied");
+                         } else {
+                            toast.error("No snippet to copy");
+                         }
+                       }}
+                       className="p-1.5 text-secondary hover:text-primary transition-colors bg-white/5 rounded-md hover:bg-white/10"
+                       title="Copy to clipboard"
+                    >
+                      <FiClipboard size={14} />
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <CodeEditor
+                      value={MANUAL_TOPICS.find(t => t.key === manualTopic)?.snippets[language] || "// No implementation provided for this language."}
+                      language={LANGUAGE_MAP[language]?.monacoLang ?? language}
+                      isDark={isDark}
+                      readOnly={true}
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
@@ -679,6 +755,13 @@ const ChallengeDetails = () => {
                   </option>
                 ))}
               </select>
+              <button
+                title="Open Reference Manual"
+                onClick={handleOpenManual}
+                className="text-secondary hover:text-accent transition-colors ml-1 p-1 flex items-center justify-center"
+              >
+                <FiInfo size={13} />
+              </button>
             </div>
             <div className="flex items-center gap-3 text-secondary">
               <span className="text-[11px] hidden sm:inline">
@@ -711,6 +794,7 @@ const ChallengeDetails = () => {
                   onClick={() => {
                     const nextMaximized = !isMaximized;
                     setIsMaximized(nextMaximized);
+                    setWasMaximized(false);
                     if (nextMaximized) {
                       setBottomCollapsed(true);
                     }

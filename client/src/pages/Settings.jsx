@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiMapPin, FiGithub, FiTwitter, FiGlobe, FiSave, FiCpu, FiBookOpen, FiLayers, FiGrid, FiAward, FiCalendar, FiLink, FiZap, FiEdit2, FiLinkedin, FiCheck } from 'react-icons/fi';
+import { FiUser, FiMapPin, FiGithub, FiTwitter, FiGlobe, FiSave, FiCpu, FiBookOpen, FiLayers, FiGrid, FiAward, FiCalendar, FiLink, FiZap, FiEdit2, FiLinkedin, FiCheck, FiTerminal, FiSun, FiMoon } from 'react-icons/fi';
+import CodeEditor from '../components/CodeEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import { api } from '../lib/api';
@@ -9,6 +10,36 @@ import PageHeader from '../components/PageHeader';
 import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
 
+
+const PREVIEW_CODE = {
+  javascript: `// JavaScript Preview
+function greet(user) {
+  console.log(\`Welcome to the Arena, \${user}!\`);
+}
+greet("Developer");`,
+  python: `# Python Preview
+def greet(user):
+    print(f"Welcome to the Arena, {user}!")
+greet("Developer")`,
+  java: `// Java Preview
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Welcome to the Arena!");
+    }
+}`,
+  cpp: `// C++ Preview
+#include <iostream>
+int main() {
+    std::cout << "Welcome to the Arena!" << std::endl;
+    return 0;
+}`,
+  c: `// C Preview
+#include <stdio.h>
+int main() {
+    printf("Welcome to the Arena!\\n");
+    return 0;
+}`
+};
 
 const Settings = () => {
   const { user, updateUser } = useAuth();
@@ -27,7 +58,10 @@ const Settings = () => {
     website: '',
     profilePicture: '',
     preferredLanguage: 'javascript',
+    editorThemeDark: 'default',
+    editorThemeLight: 'default',
   });
+  const [isPreviewDark, setIsPreviewDark] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   // Sync form with user data when user loads
@@ -45,9 +79,11 @@ const Settings = () => {
         website: user.website || '',
         profilePicture: user.profilePicture || '',
         preferredLanguage: user.preferredLanguage || 'javascript',
+        editorThemeDark: user.editorThemeDark || 'default',
+        editorThemeLight: user.editorThemeLight || 'default',
       });
     }
-  }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website, user?.profilePicture, user?.preferredLanguage]);
+  }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website, user?.profilePicture, user?.preferredLanguage, user?.editorThemeDark, user?.editorThemeLight]);
 
   /**
    * Extract just the username when a user pastes a full profile URL.
@@ -249,16 +285,94 @@ const Settings = () => {
                 <input name="location" className="field-input" placeholder="e.g. Bhubaneswar, India" value={formData.location} onChange={handleChange} />
               </div>
 
-              <div className="space-y-2">
-                <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Preferred Code Language</label>
-                <select name="preferredLanguage" className="field-select" value={formData.preferredLanguage} onChange={handleChange}>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="javascript">JavaScript</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="python">Python</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="java">Java</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="cpp">C++</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="c">C</option>
-                </select>
-                <p className="text-[10px] text-tertiary">Default language pre-selected in the code editor</p>
+            </div>
+          </Card>
+
+          {/* Code Editor Settings */}
+          <Card className="p-8">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-glass-border">
+              <div className="p-2 rounded-lg bg-accent/10 text-accent"><FiTerminal size={20} /></div>
+              <div>
+                <h3 className="text-lg font-bold">Code Editor Settings</h3>
+                <p className="text-xs text-secondary">Configure your workspace defaults and preview them in real time</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+              {/* Form Settings Controls */}
+              <div className="xl:col-span-5 space-y-6">
+                <div className="space-y-2">
+                  <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Preferred Code Language</label>
+                  <select name="preferredLanguage" className="field-select" value={formData.preferredLanguage} onChange={handleChange}>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="javascript">JavaScript</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="python">Python</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="java">Java</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="cpp">C++</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="c">C</option>
+                  </select>
+                  <p className="text-[10px] text-tertiary">Pre-selected language in challenge editor</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="field-label flex items-center gap-2"><FiZap className="text-accent" size={14} /> Dark Mode Editor Theme</label>
+                  <select name="editorThemeDark" className="field-select" value={formData.editorThemeDark} onChange={handleChange}>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="default">System Theme (Algo Arena Dark)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="algo-arena-dark">Algo Arena Dark</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="dracula">Dracula</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="one-dark">One Dark Pro</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="monokai">Monokai</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="nord">Nord</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="github-dark">GitHub Dark</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="vs-dark">Monaco Dark</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="hc-black">High Contrast Black</option>
+                  </select>
+                  <p className="text-[10px] text-tertiary">Theme used when the app is in Dark Mode</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="field-label flex items-center gap-2"><FiZap className="text-accent" size={14} /> Light Mode Editor Theme</label>
+                  <select name="editorThemeLight" className="field-select" value={formData.editorThemeLight} onChange={handleChange}>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="default">System Theme (Algo Arena Light)</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="algo-arena-light">Algo Arena Light</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="solarized-light">Solarized Light</option>
+                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="vs">Monaco Light</option>
+                  </select>
+                  <p className="text-[10px] text-tertiary">Theme used when the app is in Light Mode</p>
+                </div>
+              </div>
+
+              {/* Real-time Code Editor Preview */}
+              <div className="xl:col-span-7 flex flex-col h-[280px] rounded-xl border border-glass-border overflow-hidden bg-black/10">
+                <div className="px-4 py-2 border-b border-glass-border flex items-center justify-between bg-white/[0.02] shrink-0">
+                  <span className="text-xs font-bold text-secondary flex items-center gap-1.5">
+                    <FiTerminal className="text-accent" size={12} />
+                    Live Editor Preview
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsPreviewDark(!isPreviewDark)}
+                      className="px-2 py-1 rounded bg-black/20 hover:bg-black/40 border border-glass-border text-[10px] font-bold text-primary flex items-center gap-1 transition-all"
+                    >
+                      {isPreviewDark ? <FiSun className="text-yellow-400" size={10} /> : <FiMoon className="text-blue-400" size={10} />}
+                      Show {isPreviewDark ? 'Light' : 'Dark'} Mode Theme
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 min-h-0 relative">
+                  <CodeEditor
+                    value={PREVIEW_CODE[formData.preferredLanguage] || PREVIEW_CODE.javascript}
+                    language={formData.preferredLanguage}
+                    isDark={isPreviewDark}
+                    readOnly={true}
+                    height="100%"
+                    theme={
+                      isPreviewDark
+                        ? (formData.editorThemeDark === 'default' ? 'algo-arena-dark' : formData.editorThemeDark)
+                        : (formData.editorThemeLight === 'default' ? 'algo-arena-light' : formData.editorThemeLight)
+                    }
+                  />
+                </div>
               </div>
             </div>
           </Card>
