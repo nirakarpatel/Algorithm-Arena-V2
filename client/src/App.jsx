@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -33,7 +33,12 @@ const Resources = lazy(() => import('./pages/Resources'));
 const PendingAssignment = lazy(() => import('./pages/PendingAssignment'));
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const handleLoginSuccess = () => {};
 

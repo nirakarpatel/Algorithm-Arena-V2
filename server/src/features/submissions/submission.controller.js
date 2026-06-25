@@ -193,36 +193,30 @@ const getLeaderboard = async (req, res, next) => {
         totalPoints: u.points || 0,
       }));
     } else {
-      const match = { status: 'Accepted' };
+      const XpLog = require('../users/XpLog.model');
+      const match = {};
       if (window === '30d') {
         const now = new Date();
-        match.submittedAt = { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) };
+        match.createdAt = { $gte: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) };
       } else if (window === '7d') {
-        match.submittedAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
+        match.createdAt = { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
       }
 
-      result = await Submission.aggregate([
+      result = await XpLog.aggregate([
         { $match: match },
         {
           $group: {
-            _id: { userId: '$userId', challengeId: '$challengeId' }
+            _id: '$userId',
+            totalPoints: { $sum: '$amount' },
+            solvedCount: {
+              $sum: {
+                $cond: [
+                  { $eq: ['$reason', 'Challenge Accepted'] }, 1,
+                  { $cond: [{ $eq: ['$reason', 'Submission Reverted'] }, -1, 0] }
+                ]
+              }
+            }
           }
-        },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: '_id.challengeId',
-            foreignField: '_id',
-            as: 'challenge',
-          },
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: '$_id.userId',
-            solvedCount: { $sum: 1 },
-            challengePoints: { $sum: '$challenge.points' },
-          },
         },
         {
           $lookup: {
@@ -233,11 +227,7 @@ const getLeaderboard = async (req, res, next) => {
           },
         },
         { $unwind: '$user' },
-        {
-          $addFields: {
-            totalPoints: '$challengePoints',
-          },
-        },
+        { $match: { 'user.role': { $ne: 'superAdmin' } } },
         { $sort: { totalPoints: -1, solvedCount: -1 } },
         {
           $project: {
@@ -415,6 +405,14 @@ const updateSubmissionStatus = async (req, res, next) => {
             userToUpdate.codingLevel = 'Beginner';
           }
           await userToUpdate.save();
+
+          const XpLog = require('../users/XpLog.model');
+          await XpLog.create({
+            userId: userToUpdate._id,
+            amount: pointsDiff,
+            reason: isNowAccepted ? 'Challenge Accepted' : 'Submission Reverted',
+            challengeId: submission.challengeId._id
+          });
         }
       }
     }

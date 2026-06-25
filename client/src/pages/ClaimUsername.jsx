@@ -134,7 +134,12 @@ const ClaimUsername = () => {
       toast.success(`Welcome, Pilot ${username}! 🚀`);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const message = err.userMessage || err?.response?.data?.message || 'Failed to complete onboarding';
+      let message = err.userMessage || err?.response?.data?.message || 'Failed to complete onboarding';
+      
+      if (err?.response?.data?.errors?.length > 0) {
+        message = err.response.data.errors.map(e => e.message).join(' • ');
+      }
+
       setError(message);
       toast.error(message);
       if (err?.response?.status === 409 && message.toLowerCase().includes('username')) {

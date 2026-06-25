@@ -11,20 +11,39 @@ import toast from "react-hot-toast";
 const Contact = () => {
   const { isAuthenticated } = useAuth();
 
-  // Helper to determine if the user is on an Apple device
-  const isAppleDevice = () => {
-    if (typeof window === 'undefined') return false;
-    const ua = window.navigator.userAgent;
-    return /Mac|iPhone|iPad|iPod/i.test(ua);
-  };
-
   const email = "gdsciter@gmail.com";
   const subject = "Algorithm Arena Contact";
-  const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-  const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}`;
-  
+  const gmailWebLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}`;
+  // Android intent to force open the native Gmail app
+  const androidGmailIntent = `intent://compose?to=${email}&subject=${encodeURIComponent(subject)}#Intent;package=com.google.android.gm;scheme=mailto;end;`;
+  // iOS/iPadOS URL scheme to force open the native Gmail app
+  const iosGmailLink = `googlegmail:///co?to=${email}&subject=${encodeURIComponent(subject)}`;
+
+  const getDeviceOS = () => {
+    if (typeof window === 'undefined') return 'Unknown';
+    const ua = window.navigator.userAgent;
+    // This accurately catches iPhones, older iPads, and modern iPadOS devices
+    if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'iOS';
+    if (/Mac OS X/.test(ua)) return 'Mac';
+    if (/Android/.test(ua)) return 'Android';
+    if (/Win/.test(ua)) return 'Windows';
+    if (/Linux/.test(ua)) return 'Linux';
+    return 'Other';
+  };
+
   const getMailLink = () => {
-    return isAppleDevice() ? mailtoLink : gmailLink;
+    const os = getDeviceOS();
+    
+    // Force open native Gmail App on Android
+    if (os === 'Android') {
+      return androidGmailIntent;
+    }
+    // Force open native Gmail App on iOS & iPadOS
+    if (os === 'iOS') {
+      return iosGmailLink;
+    }
+    // Redirect directly to Gmail Web for Desktop (Mac, Windows, Linux, etc.)
+    return gmailWebLink;
   };
 
   return (

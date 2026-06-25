@@ -26,7 +26,7 @@ const claimUsernameSchema = {
       .min(6, 'Registration number must be at least 6 characters')
       .max(20, 'Registration number must be at most 20 characters')
       .regex(/^[a-zA-Z0-9]+$/, 'Registration number must be alphanumeric'),
-    branch: z.string().trim().max(100),
+    branch: z.string().trim().min(1, 'Branch is required').max(100, 'Branch must be at most 100 characters'),
     year: z.enum(['First Year', 'Second Year', 'Third Year', 'Fourth Year']),
     section: z
       .string()

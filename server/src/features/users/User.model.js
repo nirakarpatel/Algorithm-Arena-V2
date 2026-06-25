@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: 60,
     validate: {
-      validator: (v) => !v || /^[a-zA-Z\s'\-\.]+$/.test(v),
+      validator: (v) => !v || /^[\p{L}\w\s'\-\.\(\),]+$/u.test(v),
       message: 'Name contains invalid characters',
     },
   },
@@ -47,6 +47,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'moderator', 'admin', 'clan-chief', 'superAdmin'],
     default: 'user',
+  },
+  customTitle: {
+    type: String,
+    default: '',
+    maxlength: 30,
   },
   clan: {
     type: mongoose.Schema.Types.ObjectId,
