@@ -137,6 +137,8 @@ const createApp = () => {
       if (req.method !== 'GET') return next();
       // Let /api/* fall through to 404 handler
       if (req.path.startsWith('/api')) return next();
+      // Do not rewrite static files with extensions or assets
+      if (req.path.includes('.') || req.path.includes('/assets/')) return next();
       res.sendFile(path.join(clientDistPath, 'index.html'));
     });
   }
