@@ -392,7 +392,7 @@ const Dashboard = () => {
       {/* ── Greeting ────────────────────────── */}
       <motion.div {...fd(0.04)}>
         <h2 className="text-2xl font-black text-primary mb-1 font-h2">
-          {greeting.heading.replace("{username}", user?.username || "Operative")}
+          {greeting.heading.replace("{username}", user?.name || user?.username || "Operative")}
         </h2>
         <p className="text-secondary text-sm">
           {greeting.subtext}

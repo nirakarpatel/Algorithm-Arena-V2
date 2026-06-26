@@ -6,6 +6,7 @@ const csv = require('csv-parser');
 const { Readable } = require('stream');
 const mammoth = require('mammoth');
 const { fetchLeetCodeDetails } = require('../../../services/leetcode.service');
+const { cleanupSubmissionsAndUserStats } = require('./challenge.service');
 
 const getChallenges = async (req, res, next) => {
   try {
@@ -267,36 +268,7 @@ const deleteChallenge = async (req, res, next) => {
     }
 
     // --- Cleanup logic for Submissions and User Stats ---
-    const Submission = require('../submissions/Submission.model');
-    const User = require('../users/User.model');
-    const challengePoints = challenge.points || 0;
-
-    // 1. Find all distinct users who have an ACCEPTED submission for this challenge
-    const acceptedSubmissions = await Submission.find({ challengeId: challenge._id, status: 'Accepted' }).select('userId');
-    const uniqueUserIds = [...new Set(acceptedSubmissions.map(s => s.userId.toString()))];
-
-    // 2. Decrement their solved count and points
-    if (uniqueUserIds.length > 0) {
-      for (const uId of uniqueUserIds) {
-        const user = await User.findById(uId);
-        if (user) {
-          user.points = Math.max(0, (user.points || 0) - challengePoints);
-          user.solvedProblems = Math.max(0, (user.solvedProblems || 0) - 1);
-          
-          if (user.solvedProblems >= 30) {
-            user.codingLevel = 'Advanced';
-          } else if (user.solvedProblems >= 10) {
-            user.codingLevel = 'Intermediate';
-          } else {
-            user.codingLevel = 'Beginner';
-          }
-          await user.save();
-        }
-      }
-    }
-
-    // 3. Delete all submissions tied to this challenge so it vanishes from profiles
-    await Submission.deleteMany({ challengeId: challenge._id });
+    await cleanupSubmissionsAndUserStats([challenge._id]);
     // ----------------------------------------------------
 
     await challenge.deleteOne();

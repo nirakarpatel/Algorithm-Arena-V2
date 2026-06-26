@@ -403,9 +403,21 @@ const googleLogin = async (req, res, next) => {
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
     const isFirstLoginToday = !lastLogin || lastLogin < today;
 
-    if (isFirstLoginToday && user.usernameSet) {
+    const XpLog = require('../users/XpLog.model');
+    const existingDailyLog = await XpLog.exists({
+      userId: user._id,
+      reason: 'Daily Login',
+      createdAt: { $gte: today }
+    });
+
+    if (isFirstLoginToday && !existingDailyLog && user.usernameSet) {
       user.points = (user.points || 0) + 50;
       dailyXpAwarded = true;
+      await XpLog.create({
+        userId: user._id,
+        amount: 50,
+        reason: 'Daily Login',
+      });
     }
 
     user.lastLoginDate = now;
@@ -548,11 +560,24 @@ const getMe = async (req, res, next) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
+    const isFirstLoginToday = !lastLogin || lastLogin < today;
 
-    if (!lastLogin || lastLogin < today) {
+    const XpLog = require('../users/XpLog.model');
+    const existingDailyLog = await XpLog.exists({
+      userId: user._id,
+      reason: 'Daily Login',
+      createdAt: { $gte: today }
+    });
+
+    if (isFirstLoginToday && !existingDailyLog) {
       if (user.usernameSet) {
         user.points = (user.points || 0) + 50;
         dailyXpAwarded = true;
+        await XpLog.create({
+          userId: user._id,
+          amount: 50,
+          reason: 'Daily Login',
+        });
       }
       user.lastLoginDate = now;
       await User.findByIdAndUpdate(user._id, {

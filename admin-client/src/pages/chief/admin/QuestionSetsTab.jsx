@@ -158,7 +158,7 @@ const QuestionSetsTab = () => {
                 </div>
                 <div>
                   <label className="field-label">Deadline</label>
-                  <input required type="date" className="field-input" value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})} />
+                  <input required type="date" min={new Date().toISOString().split('T')[0]} className="field-input" value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})} />
                 </div>
               </div>
             </BaseCard>

@@ -43,13 +43,19 @@ const getUserRank = async (userId) => {
 
   // Apply custom tie-breaker logic in memory
   let userRank = null;
+  let currentRank = 1;
   result.forEach((u, i) => {
-    const strictRank = i + 1;
-    let displayRank = strictRank;
-    
-    if (strictRank > 3) {
-      const firstPersonIndex = result.findIndex(x => x.totalPoints === u.totalPoints);
-      displayRank = Math.max(4, firstPersonIndex + 1);
+    let displayRank;
+    if (i < 3) {
+      displayRank = i + 1;
+      currentRank = i + 1;
+    } else {
+      const prev = result[i - 1];
+      if (u.totalPoints !== prev.totalPoints || u.solvedCount !== prev.solvedCount) {
+        currentRank++;
+      }
+      displayRank = Math.max(4, currentRank);
+      currentRank = displayRank;
     }
     
     if (u._id.equals(targetUserId)) {

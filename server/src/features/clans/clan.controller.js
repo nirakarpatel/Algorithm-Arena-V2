@@ -349,9 +349,8 @@ const getClanLeaderboard = async (req, res, next) => {
       : [];
 
     // Also get the cumulative points for these members directly from the User collection
-    const activeMemberIds = userStats.map(s => s._id);
     const User = require('../users/User.model');
-    const activeUsers = await User.find({ _id: { $in: activeMemberIds } }).select('points').lean();
+    const activeUsers = await User.find({ _id: { $in: allMemberIds } }).select('points').lean();
     const cumulativePointsMap = {};
     activeUsers.forEach(u => {
       cumulativePointsMap[u._id.toString()] = u.points || 0;
@@ -370,8 +369,8 @@ const getClanLeaderboard = async (req, res, next) => {
         const s = statsByUser[uid.toString()];
         if (s) {
           solvedCount += s.solvedCount;
-          totalPoints += cumulativePointsMap[uid.toString()] || 0;
         }
+        totalPoints += cumulativePointsMap[uid.toString()] || 0;
       });
       return {
         ...clan,

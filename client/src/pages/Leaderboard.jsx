@@ -217,7 +217,17 @@ const Leaderboard = () => {
     );
   }, [rows, search]);
 
-  const topThree = visibleRows.slice(0, 3);
+  const topThree = useMemo(() => {
+    if (search.trim()) {
+      return visibleRows.slice(0, 3);
+    }
+    
+    if (leaderType === "individual") {
+      return leaderboardQuery.data?.meta?.topThree || visibleRows.slice(0, 3);
+    }
+    
+    return visibleRows.slice(0, 3);
+  }, [leaderType, search, visibleRows, leaderboardQuery.data?.meta?.topThree]);
   const myRow =
     leaderType === "individual"
       ? rows.find((row) => row.username === user?.username)

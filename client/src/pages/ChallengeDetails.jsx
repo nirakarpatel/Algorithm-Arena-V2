@@ -568,7 +568,11 @@ const ChallengeDetails = () => {
           <span className="hidden sm:inline">Missions</span>
         </Link>
         <div className="w-px h-4 bg-black/10 dark:bg-white/10" />
-        <a href={challenge.link} target="_blank" rel="noopener noreferrer">
+        <a 
+          href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`} 
+          target="_blank" 
+          rel="noopener noreferrer"
+        >
           <h1 className="text-sm sm:text-base font-bold truncate flex flex-row items-center gap-1.5 hover:text-accent transition-colors">
             {challenge.title} <FiExternalLink size={12} />
           </h1>

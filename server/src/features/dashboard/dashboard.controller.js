@@ -181,6 +181,13 @@ const getProfileStats = async (req, res, next) => {
       .sort({ submittedAt: -1 })
       .limit(10);
 
+    // Get XP breakdown
+    const XpLog = mongoose.models.XpLog || mongoose.model('XpLog');
+    const xpLogs = await XpLog.find({ userId, reason: 'Daily Login' });
+    const loginXp = xpLogs.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const loginCount = xpLogs.length;
+    const challengeXp = (user.points || 0) - loginXp;
+
     // Compute unlocked badges dynamically
     const unlockedBadges = await getAllBadgesForUser(userId);
 
@@ -195,6 +202,9 @@ const getProfileStats = async (req, res, next) => {
           easySolved: stats?.easySolved || 0,
           mediumSolved: stats?.mediumSolved || 0,
           hardSolved: stats?.hardSolved || 0,
+          loginXp,
+          loginCount,
+          challengeXp,
         },
         difficultyBreakdown: {
           easy: { solved: stats?.easySolved || 0, total: totalsMap.Easy },
@@ -341,6 +351,13 @@ const getUserProfile = async (req, res, next) => {
       .sort({ submittedAt: -1 })
       .limit(10);
 
+    // Get XP breakdown
+    const XpLog = mongoose.models.XpLog || mongoose.model('XpLog');
+    const xpLogs = await XpLog.find({ userId, reason: 'Daily Login' });
+    const loginXp = xpLogs.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+    const loginCount = xpLogs.length;
+    const challengeXp = (user.points || 0) - loginXp;
+
     // Global rank using shared utility (DB-level, no full array in RAM)
     const rank = await getUserRank(userId);
 
@@ -370,6 +387,9 @@ const getUserProfile = async (req, res, next) => {
       acceptedCount: user.solvedProblems || 0,
       pendingCount: stats?.pendingCount || 0,
       totalPoints: user.points || 0,
+      loginXp,
+      loginCount,
+      challengeXp,
       streak: currentStreak,
       rank,
       difficultyBreakdown: {

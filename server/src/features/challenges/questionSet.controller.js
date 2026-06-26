@@ -4,6 +4,7 @@ const User = require('../users/User.model');
 const { sendSuccess } = require('../../../utils/response');
 const { logAudit } = require('../../../utils/audit');
 const { sendEmail } = require('../../../utils/emailService');
+const { cleanupSubmissionsAndUserStats } = require('./challenge.service');
 
 const getQuestionSets = async (req, res, next) => {
   try {
@@ -163,7 +164,9 @@ const updateQuestionSet = async (req, res, next) => {
 
       const toRemove = existing.filter((c) => !keepTitles.has(c.title.toLowerCase()));
       if (toRemove.length > 0) {
-        await Challenge.deleteMany({ _id: { $in: toRemove.map((c) => c._id) } });
+        const challengeIdsToRemove = toRemove.map((c) => c._id);
+        await cleanupSubmissionsAndUserStats(challengeIdsToRemove);
+        await Challenge.deleteMany({ _id: { $in: challengeIdsToRemove } });
       }
     }
 
@@ -189,7 +192,11 @@ const deleteQuestionSet = async (req, res, next) => {
       throw new Error('Question Set not found');
     }
 
-    await Challenge.deleteMany({ questionSetId: set._id });
+    const challenges = await Challenge.find({ questionSetId: set._id });
+    if (challenges.length > 0) {
+      await cleanupSubmissionsAndUserStats(challenges.map(c => c._id));
+      await Challenge.deleteMany({ questionSetId: set._id });
+    }
     await set.deleteOne();
 
     await logAudit({

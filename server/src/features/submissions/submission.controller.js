@@ -266,16 +266,19 @@ const getLeaderboard = async (req, res, next) => {
     }
 
     // Apply custom tie-breaker logic in memory
+    let currentRank = 1;
     result.forEach((u, i) => {
-      const strictRank = i + 1;
-      let displayRank = strictRank;
-      
-      if (strictRank > 3) {
-        // Find the index of the first person with the exact same points
-        const firstPersonIndex = result.findIndex(x => x.totalPoints === u.totalPoints);
-        displayRank = Math.max(4, firstPersonIndex + 1);
+      if (i < 3) {
+        u.rank = i + 1;
+        currentRank = i + 1;
+      } else {
+        const prev = result[i - 1];
+        if (u.totalPoints !== prev.totalPoints || u.solvedCount !== prev.solvedCount) {
+          currentRank++;
+        }
+        u.rank = Math.max(4, currentRank);
+        currentRank = u.rank;
       }
-      u.rank = displayRank;
     });
 
     const total = result.length;
@@ -288,6 +291,7 @@ const getLeaderboard = async (req, res, next) => {
         page: Number(page),
         limit: Number(limit),
         totalPages: Math.ceil(total / Number(limit)) || 1,
+        topThree: result.slice(0, 3),
       },
     });
   } catch (err) {

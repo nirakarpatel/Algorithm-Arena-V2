@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FiInstagram, FiLinkedin } from 'react-icons/fi';
-import { FaWhatsapp, FaDiscord } from 'react-icons/fa';
+import { FaWhatsapp } from 'react-icons/fa';
 import Logo from './Logo';
 
 const Footer = () => {
@@ -82,16 +82,7 @@ const Footer = () => {
               >
                 <FiLinkedin size={16} />
               </a>
-              <a 
-                href="https://discord.gg/csMG6yKzc" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                title="Discord"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary hover:text-accent hover:border-accent hover:bg-accent/5 transition-all duration-300"
-                style={{ borderColor: `rgba(var(--accent-rgb), 0.25)` }}
-              >
-                <FaDiscord size={16} />
-              </a>
+
             </div>
           </div>
         </div>
