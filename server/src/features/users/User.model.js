@@ -74,6 +74,10 @@ const userSchema = new mongoose.Schema({
     enum: ['Beginner', 'Intermediate', 'Advanced'],
     default: 'Beginner',
   },
+  codingLevelOverridden: {
+    type: Boolean,
+    default: false,
+  },
   preferredLanguage: {
     type: String,
     enum: ['javascript', 'python', 'java', 'cpp', 'c'],
@@ -129,8 +133,10 @@ const userSchema = new mongoose.Schema({
   location: { type: String, default: '' },
   github: { type: String, default: '' },
   twitter: { type: String, default: '' },
+  awardedBadgeIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Badge' }],
   linkedin: { type: String, default: '' },
   website: { type: String, default: '' },
+  featuredBadge: { type: mongoose.Schema.Types.ObjectId, ref: 'Badge', default: null },
 });
 
 // Partial unique indexes: only documents where the field is a string are

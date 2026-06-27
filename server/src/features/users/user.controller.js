@@ -90,7 +90,7 @@ const updateUserRole = async (req, res, next) => {
 // @access  Private/Chief/Admin
 const updateUserLevel = async (req, res, next) => {
   try {
-    const { level } = req.body;
+    const { level, clearOverride } = req.body;
     if (!['Beginner', 'Intermediate', 'Advanced'].includes(level)) {
       return res.status(400).json({ success: false, message: 'Invalid level' });
     }
@@ -104,6 +104,8 @@ const updateUserLevel = async (req, res, next) => {
     }
 
     user.codingLevel = level;
+    // Mark as manually overridden unless explicitly clearing the override
+    user.codingLevelOverridden = clearOverride ? false : true;
     await user.save();
 
     return sendSuccess(res, { data: user, message: 'User level updated' });

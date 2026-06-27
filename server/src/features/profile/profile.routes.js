@@ -10,5 +10,7 @@ router.get('/stats', protect, getProfileStats);
 router.get('/user/:userId', protect, getUserProfile);
 router.get('/username/:username', getUserProfile);
 
+router.put('/featured-badge', protect, require('../dashboard/dashboard.controller').updateFeaturedBadge);
+
 module.exports = router;
 
