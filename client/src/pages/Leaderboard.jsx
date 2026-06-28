@@ -19,6 +19,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/useAuth";
 import MemberHoverCard from "../components/MemberHoverCard";
 import ClanHoverCard from "../components/ClanHoverCard";
+import CachedImage from "../components/CachedImage";
 import {
   Select,
   SelectContent,
@@ -105,7 +106,7 @@ const Podium = ({ items, leaderType, loading }) => {
                 }`}
               >
                 {item.profilePicture ? (
-                  <img
+                  <CachedImage
                     src={item.profilePicture}
                     alt=""
                     className="h-full w-full object-cover"
@@ -529,7 +530,7 @@ const Leaderboard = () => {
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-glass-surface font-bold text-accent">
                               {item.profilePicture ? (
-                                <img
+                                <CachedImage
                                   src={item.profilePicture}
                                   alt=""
                                   className="h-full w-full object-cover"

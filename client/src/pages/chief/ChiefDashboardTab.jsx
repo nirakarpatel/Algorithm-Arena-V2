@@ -245,17 +245,30 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
               const progressPct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
               const canWarnMember = canIssueWarning(user, member, clan);
               
+              const displayName = member.name
+                ? `${member.name} (${member.username || 'No Username'})`
+                : (member.username || member.email || 'Onboarding Pending');
+
               return (
                 <div key={member._id} className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${isWarned ? 'bg-red-500/10 border-red-500/20' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-center gap-3 w-1/3">
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-glass-surface flex items-center justify-center font-black text-xs text-primary">
-                        {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
+                    <div className="relative shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-glass-surface flex items-center justify-center font-black text-xs text-primary overflow-hidden">
+                        {member.profilePicture ? (
+                          <img
+                            src={member.profilePicture}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          (member.username?.[0] || member.email?.[0] || 'U').toUpperCase()
+                        )}
                       </div>
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0f1115] ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-primary truncate max-w-[120px]">{member.username || member.email || 'Onboarding Pending'}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-primary truncate max-w-[180px]" title={displayName}>{displayName}</p>
                       <p className="text-[10px] uppercase font-bold text-tertiary">Active {timeText}</p>
                     </div>
                   </div>

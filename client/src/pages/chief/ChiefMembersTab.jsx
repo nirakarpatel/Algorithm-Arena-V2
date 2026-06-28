@@ -138,19 +138,37 @@ const ChiefMembersTab = ({ clan }) => {
                   className={`border-b border-white/[0.02] transition-colors ${isWarned ? 'bg-red-500/[0.05] hover:bg-red-500/10' : 'hover:bg-white/[0.02]'}`}
                 >
                   <td className="p-4 pl-6 font-bold text-sm text-primary flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-black text-blue-400">
-                        {(user.username?.[0] || user.email?.[0] || 'U').toUpperCase()}
-                      </div>
-                      <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0f1115] ${isActive ? 'bg-green-500 animate-pulse' : isWarned ? 'bg-red-500' : 'bg-gray-500'}`} />
-                    </div>
-                    <div>
-                      {/* MemberHoverCard replaces ProfilePopover — click opens full profile */}
-                      <MemberHoverCard userId={user._id} username={user.username}>
-                        <span className="cursor-pointer hover:text-blue-400 transition-colors block">{user.username || user.email || 'Onboarding Pending'}</span>
-                      </MemberHoverCard>
-                      <span className="text-[10px] text-tertiary uppercase">{user.email}</span>
-                    </div>
+                    {(() => {
+                      const displayName = user.name
+                        ? `${user.name} (${user.username || 'No Username'})`
+                        : (user.username || user.email || 'Onboarding Pending');
+                      return (
+                        <>
+                          <div className="relative shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-black text-blue-400 overflow-hidden">
+                              {user.profilePicture ? (
+                                <img
+                                  src={user.profilePicture}
+                                  alt=""
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                (user.username?.[0] || user.email?.[0] || 'U').toUpperCase()
+                              )}
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0f1115] ${isActive ? 'bg-green-500 animate-pulse' : isWarned ? 'bg-red-500' : 'bg-gray-500'}`} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            {/* MemberHoverCard replaces ProfilePopover — click opens full profile */}
+                            <MemberHoverCard userId={user._id} username={user.username}>
+                              <span className="cursor-pointer hover:text-blue-400 transition-colors block truncate max-w-[220px]" title={displayName}>{displayName}</span>
+                            </MemberHoverCard>
+                            <span className="text-[10px] text-tertiary uppercase block truncate max-w-[220px]">{user.email}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 text-sm text-secondary font-mono">{user.regNo || 'N/A'}</td>
                   <td className="p-4 text-sm">

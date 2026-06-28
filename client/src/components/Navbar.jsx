@@ -82,11 +82,11 @@ const Navbar = ({ onLogout }) => {
               })}
             </div>
 
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex flex-row items-center gap-2 md:gap-4">
               <div className="relative">
                  <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="hidden md:flex items-center gap-3 group focus:outline-none py-1 px-2 rounded-2xl hover:bg-white/5 transition-all"
+                  className="hidden md:flex flex-row items-center gap-3 group focus:outline-none py-1 px-2 rounded-2xl hover:bg-white/5 transition-all"
                  >
                   <div className="w-10 h-10 rounded-full p-0.5 transition-all group-hover:scale-105 shadow-lg shadow-accent/20 border border-black/20 dark:border-white/20">
                     {user?.profilePicture ? (
@@ -97,7 +97,7 @@ const Navbar = ({ onLogout }) => {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-col items-start text-left">
+                  <div className="flex flex-row items-center text-left gap-2">
                     <span className="text-xs font-bold text-primary group-hover:text-accent transition-colors">{user?.username || 'User'}</span>
                     <FiChevronDown className={clsx("text-secondary text-sm transition-transform duration-300", userDropdownOpen && "rotate-180")} />
                   </div>
