@@ -192,38 +192,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
     });
   }, [badges]);
 
-  const [showModal, setShowModal] = React.useState(false);
-  const [statusFilter, setStatusFilter] = React.useState("all");
-  const [sortBy, setSortBy] = React.useState("rarity-desc");
 
-  const modalBadges = React.useMemo(() => {
-    let filtered = [...sortedBadges];
-    if (statusFilter === "achieved") {
-      filtered = filtered.filter(b => b.isUnlocked);
-    } else if (statusFilter === "locked") {
-      filtered = filtered.filter(b => !b.isUnlocked);
-    }
-
-    return [...filtered].sort((a, b) => {
-      // If filtering "all", achieved badges always go first
-      if (statusFilter === "all") {
-        const statusA = a.isUnlocked ? 1 : 0;
-        const statusB = b.isUnlocked ? 1 : 0;
-        if (statusA !== statusB) {
-          return statusB - statusA;
-        }
-      }
-
-      // Rarity comparison
-      const prestigeA = PRESTIGE_ORDER[a.rarity] || 0;
-      const prestigeB = PRESTIGE_ORDER[b.rarity] || 0;
-      if (prestigeA !== prestigeB) {
-        return sortBy === "rarity-desc" ? prestigeB - prestigeA : prestigeA - prestigeB;
-      }
-
-      return a.name.localeCompare(b.name);
-    });
-  }, [sortedBadges, statusFilter, sortBy]);
 
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
@@ -431,12 +400,12 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary flex items-center gap-2">
               <FiAward size={12} className="text-yellow-400" /> Achievements
             </h3>
-            <button
-              onClick={() => setShowModal(true)}
+            <Link
+              to="/badges"
               className="text-[9px] font-black text-tertiary bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-2 py-0.5 hover:text-accent hover:border-accent/30 transition-colors"
             >
               {sortedBadges.filter(b => b.isUnlocked).length} / {sortedBadges.length}
-            </button>
+            </Link>
           </div>
 
           {/* Badge grid with Slider */}
@@ -544,12 +513,12 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             })}
           </div>
 
-          <button
-            onClick={() => setShowModal(true)}
+          <Link
+            to="/badges"
             className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-accent hover:text-accent/80 transition-colors w-full mt-2"
           >
             View all achievements <FiArrowRight size={11} />
-          </button>
+          </Link>
           {sortedBadges.length === 0 && (
             <p className="text-[11px] text-tertiary text-center py-2">Complete challenges to unlock achievements.</p>
           )}
@@ -572,209 +541,6 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           </div>
         </div>
       </motion.div>
-
-      <AnimatePresence>
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowModal(false)}
-              className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-            />
-
-            {/* Modal Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="relative w-full max-w-3xl max-h-[80vh] rounded-2xl border border-white/10 bg-white dark:bg-[#0f172a] text-black dark:text-white shadow-2xl flex flex-col overflow-hidden z-10"
-            >
-              {/* Header */}
-              <div className="p-5 border-b border-black/10 dark:border-white/10 flex items-center justify-between bg-white dark:bg-slate-900/85 text-black dark:text-white">
-                <div className="flex items-center gap-2.5">
-                  <FiAward className="text-yellow-500 dark:text-yellow-400 text-xl" />
-                  <div>
-                    <h3 className="font-black text-sm uppercase tracking-wider text-black dark:text-white">All Achievements</h3>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                      {sortedBadges.filter(b => b.isUnlocked).length} achieved of {sortedBadges.length} total
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors"
-                >
-                  <FiX size={18} />
-                </button>
-              </div>
-
-              {/* Filters & Sorting */}
-              <div className="px-5 py-3.5 bg-white dark:bg-slate-900/50 border-b border-black/5 dark:border-white/5 flex flex-wrap gap-4 items-center justify-between">
-                {/* Status Tabs */}
-                <div className="flex bg-slate-100 dark:bg-black/40 p-1 rounded-xl border border-black/5 dark:border-white/5">
-                  {[
-                    { id: "all", label: "All" },
-                    { id: "achieved", label: "Achieved" },
-                    { id: "locked", label: "Locked" },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setStatusFilter(tab.id)}
-                      className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${statusFilter === tab.id
-                        ? "bg-accent text-white shadow-md shadow-accent/20"
-                        : "text-slate-500 hover:text-black dark:text-slate-400 dark:hover:text-white"
-                        }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sort Dropdown */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Sort By</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white dark:bg-black/40 border border-black/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-black dark:text-white outline-none cursor-pointer focus:border-accent/50 transition-colors"
-                  >
-                    <option value="rarity-desc">Rarity: High to Low</option>
-                    <option value="rarity-asc">Rarity: Low to High</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Content Grid */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0 bg-slate-50 dark:bg-slate-950/20">
-                {modalBadges.length === 0 ? (
-                  <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
-                    <span className="text-3xl">🔒</span>
-                    <p className="text-sm font-bold">No badges matching this filter.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {modalBadges.map((badge, i) => {
-                      const r = RARITY[badge.rarity] || RARITY.COMMON; const isUnlocked = badge.isUnlocked;
-                      return (
-                        <div
-                          key={badge._id}
-                          className="relative rounded-xl p-3.5 flex gap-3.5 border transition-all duration-300 overflow-hidden min-h-[80px] items-center w-full pr-16 bg-white/5 dark:bg-black/5"
-                          style={{
-                            background: isUnlocked ? `${r.border}22` : `${r.border}0D`,
-                            borderColor: isUnlocked ? "#facc15" : `${r.border}44`,
-                            boxShadow: isUnlocked ? `0 0 15px rgba(${r.glow})` : "none",
-                          }}
-                        >
-                          {/* Wide Card Sweeping Shine */}
-                          {isUnlocked && (
-                            <motion.div
-                              className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent pointer-events-none -skew-x-12 z-0"
-                              initial={{ x: "-200%" }}
-                              animate={{ x: "250%" }}
-                              transition={{
-                                repeat: Infinity,
-                                repeatType: "loop",
-                                duration: 2.5,
-                                ease: "linear",
-                                delay: i * 0.15
-                              }}
-                            />
-                          )}
-
-                          {/* Locked Watermark */}
-                          {!isUnlocked && (
-                            <div className="absolute inset-0 flex items-center justify-end pr-2 pointer-events-none select-none z-0 overflow-hidden opacity-[0.25] dark:opacity-[0.15]">
-                              <span
-                                className="text-5xl font-black uppercase tracking-widest -rotate-6 text-[var(--rarity-light)] dark:text-[var(--rarity-dark)] [text-shadow:0_0_15px_var(--rarity-light)] dark:[text-shadow:0_0_15px_var(--rarity-dark)]"
-                                style={{ '--rarity-dark': r.border, '--rarity-light': r.lightBorder || r.border }}
-                              >
-                                LOCKED
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Left Icon box */}
-                          <div
-                            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 relative overflow-hidden z-10"
-                            style={{
-                              background: r.bg,
-                              border: isUnlocked ? "2px solid #facc15" : `1px solid ${r.border}44`,
-                              boxShadow: isUnlocked ? "0 0 15px rgba(250, 204, 21, 0.5)" : "none"
-                            }}
-                          >
-                            {badge.icon}
-                            {isUnlocked && (
-                              <>
-                                {/* Aura Ring Light */}
-                                <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: "inset 0 0 12px #facc15" }} />
-
-                                {/* Shining sweeping line */}
-                                <motion.div
-                                  className="absolute top-0 bottom-0 w-full bg-gradient-to-r from-transparent via-white/60 to-transparent pointer-events-none -skew-x-12"
-                                  initial={{ x: "-150%" }}
-                                  animate={{ x: "150%" }}
-                                  transition={{
-                                    repeat: Infinity,
-                                    repeatType: "loop",
-                                    duration: 2,
-                                    ease: "linear",
-                                    delay: i * 0.15
-                                  }}
-                                />
-                              </>
-                            )}
-                          </div>
-
-                          {/* Right Info Box */}
-                          <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
-                            <div className="flex items-center gap-2 mb-0.5 min-w-0">
-                              <h4 className="text-xs font-black tracking-tight text-black dark:text-white leading-none truncate">
-                                {badge.name}
-                              </h4>
-                              <span
-                                className={`px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-wider leading-none shrink-0 pointer-events-none shadow-sm ${isUnlocked ? "" : "opacity-50 grayscale"}`}
-                                style={{ background: r.bg, color: r.label, border: `1px solid ${r.border}44` }}
-                              >
-                                {badge.rarity}
-                              </span>
-                            </div>
-                            <p className="text-xs text-black dark:text-slate-400 line-clamp-2 leading-tight">
-                              {badge.description || "No description provided."}
-                            </p>
-                          </div>
-
-                          {/* Unlocked marker or status tag */}
-                          {isUnlocked && (
-                            <div className="absolute top-2 right-2 shrink-0 z-10">
-                              <span className="text-[9px] font-black uppercase tracking-widest text-yellow-600 dark:text-[#facc15] bg-yellow-500/10 dark:bg-[#facc15]/10 border border-yellow-500/20 dark:border-[#facc15]/20 px-1.5 py-0.5 rounded-full leading-none pointer-events-none">
-                                Achieved
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Footer Action */}
-              <div className="p-4 border-t border-black/10 dark:border-white/10 bg-white dark:bg-slate-900/85 flex justify-end">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-black dark:bg-white/5 hover:bg-black/80 dark:hover:bg-white/10 text-white transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </aside>
   );
