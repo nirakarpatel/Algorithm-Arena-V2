@@ -165,6 +165,10 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
     });
   };
 
+  const clanBadgeCount = React.useMemo(() => {
+    return (badges || []).filter(b => b.isChiefBadge && b.isUnlocked).length;
+  }, [badges]);
+
   const sortedBadges = React.useMemo(() => {
     const baseBadges = badges?.length
       ? badges
@@ -326,12 +330,13 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           {/* Divider */}
           <div className="h-px bg-black/[0.08] dark:bg-white/[0.08]" />
 
-          {/* Stats 2×2 grid */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <StatPill icon={FiTarget} value={`${solved}/${total}`} label="Solved" color="text-green-400" />
             <StatPill icon={FiStar} value={rank !== "—" ? `#${rank}` : "—"} label="Global Rank" color="text-yellow-400" />
             <StatPill icon={FiZap} value={`${streak}d`} label="Streak" color="text-accent" sublabel={maxStreak > 0 ? `best ${maxStreak}d` : undefined} />
             <StatPill icon={FiClock} value={pending} label="Pending" color="text-orange-400" />
+            <StatPill icon={FiAward} value={clanBadgeCount} label="Clan Badges" color="text-amber-500" />
           </div>
 
           {/* Divider */}

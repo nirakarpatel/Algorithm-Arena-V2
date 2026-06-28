@@ -425,14 +425,24 @@ const updateSubmissionStatus = async (req, res, next) => {
         if (userToUpdate) {
           userToUpdate.points = Math.max(0, (userToUpdate.points || 0) + pointsDiff);
           userToUpdate.solvedProblems = Math.max(0, (userToUpdate.solvedProblems || 0) + solvedDiff);
-          
-          if (userToUpdate.solvedProblems >= 30) {
-            userToUpdate.codingLevel = 'Advanced';
-          } else if (userToUpdate.solvedProblems >= 10) {
-            userToUpdate.codingLevel = 'Intermediate';
-          } else {
-            userToUpdate.codingLevel = 'Beginner';
+
+          // Auto-progress coding level unless chief has manually overridden it
+          if (!userToUpdate.codingLevelOverridden) {
+            if (userToUpdate.solvedProblems >= 75) {
+              userToUpdate.codingLevel = 'Advanced';
+            } else if (userToUpdate.solvedProblems >= 25) {
+              userToUpdate.codingLevel = 'Intermediate';
+            } else {
+              userToUpdate.codingLevel = 'Beginner';
+            }
           }
+
+          // Auto-clear warning when user gets an Accepted submission
+          if (isNowAccepted && userToUpdate.status === 'Warned') {
+            userToUpdate.status = 'Active';
+            userToUpdate.warningMessage = null;
+          }
+
           await userToUpdate.save();
 
           const XpLog = require('../users/XpLog.model');

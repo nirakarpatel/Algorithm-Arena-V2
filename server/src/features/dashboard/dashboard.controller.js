@@ -229,9 +229,9 @@ const getUserProfile = async (req, res, next) => {
   try {
     let user;
     if (req.params.userId) {
-      user = await User.findById(req.params.userId).populate('clan', 'name tag');
+      user = await User.findById(req.params.userId).populate('clan', 'name tag').populate('featuredBadge');
     } else if (req.params.username) {
-      user = await User.findOne({ username: req.params.username }).populate('clan', 'name tag');
+      user = await User.findOne({ username: req.params.username }).populate('clan', 'name tag').populate('featuredBadge');
     }
 
     if (!user) {
@@ -547,11 +547,30 @@ const getPendingTasks = async (req, res, next) => {
   }
 };
 
+const updateFeaturedBadge = async (req, res, next) => {
+  try {
+    const { badgeId } = req.body;
+    if (!badgeId) {
+      const user = await User.findByIdAndUpdate(req.user.id, { featuredBadge: null }, { new: true }).populate('featuredBadge');
+      return sendSuccess(res, { data: user });
+    }
+    const unlockedBadges = await getAllBadgesForUser(req.user.id);
+    const hasBadge = unlockedBadges.some(b => b._id.toString() === badgeId.toString());
+    if (!hasBadge) {
+      return res.status(403).json({ success: false, message: 'You have not unlocked this badge.' });
+    }
+    const user = await User.findByIdAndUpdate(req.user.id, { featuredBadge: badgeId }, { new: true }).populate('featuredBadge');
+    return sendSuccess(res, { data: user, message: 'Featured badge updated successfully!' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getDashboardSummary,
   getProfileStats,
   getUserProfile,
+  updateFeaturedBadge,
   getAdminDashboardSummary,
   getPendingTasks
 };
-

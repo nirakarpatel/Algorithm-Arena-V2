@@ -549,7 +549,7 @@ const logoutAll = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).populate('clan', 'name').lean();
+    const user = await User.findById(req.user.id).populate('clan', 'name').populate('featuredBadge').lean();
     if (!user) {
       res.status(404);
       throw new Error('User not found');
