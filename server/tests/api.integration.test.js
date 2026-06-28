@@ -196,20 +196,6 @@ test('challenge + submission flow enforces owner permissions', async () => {
   assert.equal(submissionRes.status, 201);
   const submissionId = submissionRes.body.data._id;
 
-  // Test userFeedback validation and storage
-  const submissionWithFeedbackRes = await request(app)
-    .post('/api/submissions')
-    .set('Authorization', `Bearer ${studentToken}`)
-    .send({
-      challengeId,
-      code: 'function solve(){ return [0,1]; }',
-      language: 'javascript',
-      userFeedback: 'I had some issues with environment timeouts.',
-    });
-
-  assert.equal(submissionWithFeedbackRes.status, 201);
-  assert.equal(submissionWithFeedbackRes.body.data.userFeedback, 'I had some issues with environment timeouts.');
-
   const ownSubmission = await request(app)
     .get(`/api/submissions/${submissionId}`)
     .set('Authorization', `Bearer ${studentToken}`);
@@ -605,3 +591,64 @@ test('clans archive first, restore cleanly, and only admin can permanently delet
   assert.equal(updatedChief.role, 'user');
   assert.equal(updatedMember.clan, null);
 });
+
+test('submission with userFeedback validation and storage', async () => {
+  // 1. Register admin
+  const adminRegister = await request(app).post('/api/auth/register').send({
+    username: 'feedback_admin',
+    email: 'feedback_admin@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(adminRegister.status, 201);
+
+  // Promote to admin
+  await User.findOneAndUpdate(
+    { email: 'feedback_admin@example.com' },
+    { role: 'admin' }
+  );
+
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'feedback_admin@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(adminLogin.status, 200);
+  const adminToken = adminLogin.body.data.token;
+
+  // 2. Register student
+  const studentRegister = await request(app).post('/api/auth/register').send({
+    username: 'feedback_student',
+    email: 'feedback.student@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(studentRegister.status, 201);
+  const studentToken = studentRegister.body.data.token;
+
+  // 3. Create challenge
+  const challengeRes = await request(app)
+    .post('/api/challenges')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      title: 'Feedback Challenge',
+      description: 'Test feedback',
+      difficulty: 'Medium',
+      points: 120,
+      category: 'Strings',
+    });
+  assert.equal(challengeRes.status, 201);
+  const localChallengeId = challengeRes.body.data._id;
+
+  // 4. Submit with feedback
+  const submissionWithFeedbackRes = await request(app)
+    .post('/api/submissions')
+    .set('Authorization', `Bearer ${studentToken}`)
+    .send({
+      challengeId: localChallengeId,
+      code: 'function solve(){ return "ok"; }',
+      language: 'javascript',
+      userFeedback: 'I had some issues with environment timeouts.',
+    });
+
+  assert.equal(submissionWithFeedbackRes.status, 201);
+  assert.equal(submissionWithFeedbackRes.body.data.userFeedback, 'I had some issues with environment timeouts.');
+});
+
