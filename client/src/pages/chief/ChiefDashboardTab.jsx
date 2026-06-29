@@ -120,7 +120,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
   const totalPossible = members.length * TARGET_PROBLEMS;
   const completionRate = totalPossible > 0 ? Math.round((totalSolved / totalPossible) * 100) : 0;
 
-  const circleRadius = 40;
+  const circleRadius = 76;
   const circleCircumference = 2 * Math.PI * circleRadius;
   const strokeDashoffset = circleCircumference - (completionRate / 100) * circleCircumference;
 
@@ -136,7 +136,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
           <FiShield /> Your chief role is not mapped to this clan, so clan actions are unavailable.
         </BaseCard>
       )}
-      
+
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard title="Total Members" value={members.length} subtitle="Active Roster" icon={FiUsers} colorClass="bg-blue-500/20 text-blue-400" />
@@ -146,51 +146,61 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        
+
         {/* Left Col: Ring & Quick Actions */}
         <div className="space-y-6">
           <BaseCard className="p-6 flex flex-col items-center justify-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl group-hover:bg-accent/20 transition-colors" />
-            <h2 className="text-sm font-bold text-secondary uppercase tracking-widest self-start mb-6 w-full">Clan Weekly Completion</h2>
-            
+            <h2 className="text-xs font-black text-secondary uppercase tracking-[0.2em] self-start mb-6 w-full">Clan Weekly Completion</h2>
+
             <div className="relative flex items-center justify-center w-48 h-48">
               <svg className="transform -rotate-90 w-48 h-48">
+                <defs>
+                  <linearGradient id="completionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="rgb(var(--accent-rgb))" />
+                    <stop offset="100%" stopColor="#22d3ee" />
+                  </linearGradient>
+                  <filter id="completionGlow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="5" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
                 <circle
                   cx="96" cy="96" r={circleRadius}
-                  stroke="currentColor" strokeWidth="8" fill="transparent"
-                  className="text-white/5"
+                  stroke="currentColor" strokeWidth="10" fill="transparent"
+                  className="text-black/10 dark:text-white/[0.04]"
                 />
                 <motion.circle
                   cx="96" cy="96" r={circleRadius}
-                  stroke="currentColor" strokeWidth="8" fill="transparent"
+                  stroke="url(#completionGradient)" strokeWidth="10" fill="transparent"
                   strokeDasharray={circleCircumference}
                   initial={{ strokeDashoffset: circleCircumference }}
                   animate={{ strokeDashoffset }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="text-accent shadow-[0_0_15px_rgba(168,85,247,0.5)]"
+                  filter="url(#completionGlow)"
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-accent to-cyan-400">
+                <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-accent to-cyan-400 font-h1">
                   {completionRate}%
                 </span>
-                <span className="text-[10px] text-tertiary uppercase font-bold tracking-widest mt-1">Average</span>
+                <span className="text-[9px] text-tertiary uppercase font-black tracking-widest mt-1">Average</span>
               </div>
             </div>
-            
-            <div className="w-full flex justify-between mt-6 text-sm border-t border-white/5 pt-4">
-              <div className="text-center">
-                <p className="text-green-400 font-bold">{activeCount}</p>
-                <p className="text-tertiary text-[10px] uppercase font-bold">Active</p>
+
+            <div className="w-full grid grid-cols-3 gap-2 mt-8 border-t border-black/[0.08] dark:border-white/5 pt-5">
+              <div className="flex flex-col items-center p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.01] border border-black/[0.06] dark:border-white/[0.03]">
+                <span className="text-base font-extrabold text-green-400">{activeCount}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-tertiary mt-1">Active</span>
               </div>
-              <div className="text-center border-l border-r border-white/5 px-4">
-                <p className="text-secondary font-bold">{members.length - activeCount - warnedCount}</p>
-                <p className="text-tertiary text-[10px] uppercase font-bold">Inactive</p>
+              <div className="flex flex-col items-center p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.01] border border-black/[0.06] dark:border-white/[0.03]">
+                <span className="text-base font-extrabold text-secondary">{members.length - activeCount - warnedCount}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-tertiary mt-1">Idle</span>
               </div>
-              <div className="text-center">
-                <p className="text-red-400 font-bold">{warnedCount}</p>
-                <p className="text-tertiary text-[10px] uppercase font-bold">Warned</p>
+              <div className="flex flex-col items-center p-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.01] border border-black/[0.06] dark:border-white/[0.03]">
+                <span className="text-base font-extrabold text-rose-400">{warnedCount}</span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-tertiary mt-1">Warned</span>
               </div>
             </div>
           </BaseCard>
@@ -235,7 +245,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
             </h2>
             <button className="text-xs text-accent hover:text-accent-light transition-colors font-bold uppercase tracking-widest">View All</button>
           </div>
-          
+
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
             {members.slice(0, 6).map((member) => {
               const { text: timeText, isOnline } = getRelativeTime(member.lastLoginDate || member.createdAt);
@@ -244,7 +254,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
               const total = TARGET_PROBLEMS;
               const progressPct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
               const canWarnMember = canIssueWarning(user, member, clan);
-              
+
               const displayName = member.name
                 ? `${member.name} (${member.username || 'No Username'})`
                 : (member.username || member.email || 'Onboarding Pending');
@@ -259,7 +269,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                             src={member.profilePicture}
                             alt=""
                             referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover select-none"
                           />
                         ) : (
                           (member.username?.[0] || member.email?.[0] || 'U').toUpperCase()
@@ -268,18 +278,18 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0f1115] ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-primary truncate max-w-[180px]" title={displayName}>{displayName}</p>
-                      <p className="text-[10px] uppercase font-bold text-tertiary">Active {timeText}</p>
+                      <p className="text-sm font-bold text-primary truncate max-w-[180px] select-none" title={displayName}>{displayName}</p>
+                      <p className="text-[10px] uppercase font-bold text-tertiary footer-page">Active {timeText}</p>
                     </div>
                   </div>
 
                   <div className="flex-1 px-4 hidden md:block">
-                    <div className="flex justify-between text-[10px] font-bold text-secondary mb-1">
+                    <div className="flex justify-between text-[10px] font-bold text-secondary mb-1 select-none">
                       <span>Set Progress</span>
                       <span>{solved}/{total}</span>
                     </div>
                     <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }} animate={{ width: `${progressPct}%` }}
                         className={`h-full ${progressPct === 100 ? 'bg-green-400' : 'bg-accent'}`}
                       />
@@ -291,7 +301,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                       <p className="text-xs font-black text-primary">{member.codingLevel || 'Beginner'}</p>
                       <p className="text-[10px] text-yellow-400 flex items-center justify-end gap-1"><FiAward/> {(member.points || 0)} XP</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => {
                         if (!canWarnMember) return;
                         setWarningModal({ open: true, user: member, message: '' });
@@ -366,7 +376,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                 />
                 <div className="flex justify-end gap-3 pt-4">
                   <button onClick={() => setWarningModal({ open: false, user: null, message: '' })} className="px-4 py-2 text-sm font-bold text-secondary hover:text-primary">Cancel</button>
-                  <button 
+                  <button
                     onClick={() => warnMutation.mutate({ userId: warningModal.user._id, message: warningModal.message })}
                     disabled={warnMutation.isPending}
                     className="btn-primary bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 border-0"

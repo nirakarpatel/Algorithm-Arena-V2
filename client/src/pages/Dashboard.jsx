@@ -213,7 +213,7 @@ const Dashboard = () => {
       if (!map[cidStr] || sub.status === "Accepted" || (sub.status === "Pending" && map[cidStr] !== "Accepted")) {
         map[cidStr] = sub.status;
       }
-      
+
       const titleKey = sub.challengeId?.title?.trim().toLowerCase();
       if (titleKey) {
         if (!map[titleKey] || sub.status === "Accepted" || (sub.status === "Pending" && map[titleKey] !== "Accepted")) {
@@ -242,10 +242,10 @@ const Dashboard = () => {
       const titleKey = ch.title?.trim().toLowerCase();
       const statusById = subsMap[chId];
       const statusByTitle = titleKey ? subsMap[titleKey] : null;
-      
+
       const isSolved = statusById === "Accepted" || statusByTitle === "Accepted";
       const isPending = statusById === "Pending" || statusByTitle === "Pending";
-      
+
       return !isSolved && !isPending;
     });
 
@@ -254,7 +254,7 @@ const Dashboard = () => {
       if (filters.sortBy === 'deadline') {
         const dlA = a.questionSetId?.deadline ? new Date(a.questionSetId.deadline).getTime() : Infinity;
         const dlB = b.questionSetId?.deadline ? new Date(b.questionSetId.deadline).getTime() : Infinity;
-        
+
         const isPastA = dlA < now;
         const isPastB = dlB < now;
 
@@ -350,14 +350,26 @@ const Dashboard = () => {
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
   const activeSets = useMemo(
-    () =>
-      (setsQ.data || [])
-        .filter((s) => new Date(s.deadline) > new Date())
-        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline)),
-    [setsQ.data],
+    () => {
+      const nowTime = new Date(now);
+      return (setsQ.data || [])
+        .filter((s) => new Date(s.deadline) > nowTime)
+        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    },
+    [setsQ.data, now],
   );
   const clampedIdx = Math.min(heroIdx, Math.max(activeSets.length - 1, 0));
   const activeSet = activeSets[clampedIdx];
+
+  const isNewSet = useMemo(() => {
+    if (!activeSet) return false;
+    const createdDate = activeSet.createdAt
+      ? new Date(activeSet.createdAt)
+      : activeSet.deadline
+        ? new Date(new Date(activeSet.deadline).getTime() - 7 * 24 * 60 * 60 * 1000)
+        : new Date(now);
+    return now - createdDate.getTime() < 7 * 24 * 60 * 60 * 1000;
+  }, [activeSet, now]);
 
   const goHero = (dir) => {
     setHeroDir(dir);
@@ -392,7 +404,10 @@ const Dashboard = () => {
       {/* ── Greeting ────────────────────────── */}
       <motion.div {...fd(0.04)}>
         <h2 className="text-2xl font-black text-primary mb-1 font-h2">
-          {greeting.heading.replace("{username}", user?.name || user?.username || "Operative")}
+          {greeting.heading.replace(
+            "{username}",
+            (user?.name || user?.username || "Operative").trim().split(/\s+/)[0]
+          )}
         </h2>
         <p className="text-secondary text-sm">
           {greeting.subtext}
@@ -403,9 +418,11 @@ const Dashboard = () => {
       <motion.div {...fd(0.08)} className="relative">
         {/* card shell */}
         <div
-          className="relative overflow-hidden rounded-2xl group transition-all duration-250 border border-black/[0.12] dark:border-white/[0.07]
-          shadow-[0_5px_10px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.05)]
-          dark:shadow-[0_5px_10px_rgba(var(--accent-rgb),0.1),inset_0_1px_0_rgba(255,255,255,0.05)]"
+          className={`relative overflow-hidden rounded-2xl group transition-all duration-300 border transition-shadow duration-500
+          ${isNewSet
+            ? 'dark:border-white/10 shadow-[0_0_25px_rgba(var(--accent-rgb),0.18)] dark:shadow-[0_0_30px_rgba(var(--accent-rgb),0.25)]'
+            : 'border-black/[0.12] dark:border-white/[0.07] shadow-[0_5px_10px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.05)] dark:shadow-[0_5px_10px_rgba(var(--accent-rgb),0.1),inset_0_1px_0_rgba(255,255,255,0.05)]'
+          }`}
         >
           {/* glow orbs — static behind slides */}
           <div className="absolute -top-20 -left-10 w-80 h-80 rounded-full blur-[120px] pointer-events-none opacity-20"
@@ -421,7 +438,7 @@ const Dashboard = () => {
                   <div className="flex-1 min-w-0 space-y-4">
                     {/* Tag skeleton */}
                     <div className="h-3 w-32 bg-black/10 dark:bg-white/10 rounded-full" />
-                    
+
                     {/* Title skeleton */}
                     <div className="space-y-2">
                       <div className="h-8 md:h-10 w-2/3 bg-black/15 dark:bg-white/15 rounded-xl" />
@@ -467,7 +484,7 @@ const Dashboard = () => {
                     <div className="flex-1 min-w-0">
                       {/* deadline badge */}
                       {activeSet && (
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
                           <span className="inline-block text-[10px] font-black uppercase tracking-[0.35em] text-accent">
                             {activeSets.length > 1
                               ? `Challenge ${clampedIdx + 1} of ${activeSets.length}`
@@ -476,6 +493,11 @@ const Dashboard = () => {
                           <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
                             <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
                           </span>
+                          {isNewSet && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse">
+                              New Set
+                            </span>
+                          )}
                         </div>
                       )}
                       {!activeSet && (
@@ -696,7 +718,7 @@ const Dashboard = () => {
                     ? "bg-yellow-500/15 border-yellow-500/40 text-yellow-400"
                     : v === "Hard"
                       ? "bg-red-500/15 border-red-500/40 text-red-400"
-                      : "bg-accent/15 border-accent/40 text-accent"
+                      : "bg-accent/15 dark:border-white/40 text-accent"
                 : "bg-white/[0.03] border-black/[0.12] dark:border-white/[0.07] text-tertiary hover:text-secondary hover:border-white/20";
               return (
                 <button
@@ -774,7 +796,7 @@ const Dashboard = () => {
                           {/* eslint-disable-next-line */}
                           {new Date() - new Date(ch.createdAt || Date.now()) <
                             7 * 24 * 60 * 60 * 1000 && (
-                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-0.5">
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/25 shadow-[0_0_8px_rgba(59,130,246,0.35)] animate-pulse flex-shrink-0 mt-0.5">
                               New
                             </span>
                           )}

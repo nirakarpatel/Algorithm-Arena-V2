@@ -55,7 +55,7 @@ const About = () => {
       </nav>
 
       {/* ── Main Content ── */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-6 py-16 flex flex-col justify-center">
+      <main className="footer-page flex-1 w-full max-w-4xl mx-auto px-6 py-16 flex flex-col justify-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

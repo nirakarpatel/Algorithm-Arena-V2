@@ -658,7 +658,7 @@ const Missions = () => {
                             <div className="flex items-start justify-between gap-3 mt-2">
                               <h2 className="text-xl font-bold group-hover:text-accent transition-colors line-clamp-2 flex-1 font-h2">{challenge.title}</h2>
                               {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-1">New</span>
+                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/25 shadow-[0_0_8px_rgba(59,130,246,0.35)] animate-pulse flex-shrink-0 mt-1">New</span>
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 mt-auto pt-4">
@@ -693,7 +693,7 @@ const Missions = () => {
                               <div className="flex items-start gap-3">
                                 <h2 className="text-lg font-bold group-hover:text-accent transition-colors line-clamp-1 flex-1 font-h2">{challenge.title}</h2>
                                 {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-0.5">New</span>
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/25 shadow-[0_0_8px_rgba(59,130,246,0.35)] animate-pulse flex-shrink-0 mt-0.5">New</span>
                                 )}
                               </div>
                               <div className="flex flex-wrap gap-2 mt-2">

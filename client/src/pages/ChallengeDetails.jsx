@@ -164,7 +164,10 @@ const ChallengeDetails = () => {
   const [mobileTab, setMobileTab] = useState("description"); // "description" or "editor"
 
   // Resizer state
-  const [leftWidth, setLeftWidth] = useState(45);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const saved = localStorage.getItem("challenge-left-width");
+    return saved ? parseFloat(saved) : 45;
+  });
   const containerRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [wasMaximized, setWasMaximized] = useState(false);
@@ -187,8 +190,22 @@ const ChallengeDetails = () => {
 
   // Bottom (test/result) panel sizing — lets the editor grow when the
   // test-case panel takes up too much vertical space.
-  const [bottomHeight, setBottomHeight] = useState(224); // matches old h-56
-  const [bottomCollapsed, setBottomCollapsed] = useState(false);
+  const [bottomHeight, setBottomHeight] = useState(() => {
+    const saved = localStorage.getItem("challenge-bottom-height");
+    return saved ? parseInt(saved, 10) : 224;
+  }); // matches old h-56
+  const [bottomCollapsed, setBottomCollapsed] = useState(() => {
+    const saved = localStorage.getItem("challenge-bottom-collapsed");
+    return saved === "true";
+  });
+
+  const updateBottomCollapsed = (val) => {
+    setBottomCollapsed((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      localStorage.setItem("challenge-bottom-collapsed", String(next));
+      return next;
+    });
+  };
 
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark",
@@ -492,7 +509,7 @@ const ChallengeDetails = () => {
   const handleRun = async () => {
     if (!codeSnippet.trim()) return toast.error("No code to run.");
     setRunning(true);
-    setBottomCollapsed(false);
+    updateBottomCollapsed(false);
     setBottomTab("output");
     setRunOutput(null);
 
@@ -542,7 +559,7 @@ const ChallengeDetails = () => {
     }
 
     setSubmitting(true);
-    setBottomCollapsed(false);
+    updateBottomCollapsed(false);
     setBottomTab("output");
     setRunOutput(null);
 
@@ -626,9 +643,9 @@ const ChallengeDetails = () => {
           <span className="hidden sm:inline">Missions</span>
         </Link>
         <div className="w-px h-4 bg-black/10 dark:bg-white/10" />
-        <a 
-          href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`} 
-          target="_blank" 
+        <a
+          href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`}
+          target="_blank"
           rel="noopener noreferrer"
         >
           <h1 className="text-sm sm:text-base font-bold truncate flex flex-row items-center gap-1.5 hover:text-accent transition-colors">
@@ -684,7 +701,7 @@ const ChallengeDetails = () => {
       {/* Main Split Layout */}
       <div
         ref={containerRef}
-        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-2 pb-2"
+        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-1 pb-1"
         style={{
           "--left-width": `${leftWidth}%`,
           "--right-width": `calc(${100 - leftWidth}% - 12px)`,
@@ -692,7 +709,7 @@ const ChallengeDetails = () => {
       >
         {/* LEFT PANEL */}
         <div
-          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden w-full lg:w-[var(--left-width)] lg:mb-0 mb-3 h-full ${isMaximized ? "hidden" : ""} ${mobileTab === 'editor' ? 'hidden lg:flex' : 'flex'}`}
+          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden w-full lg:w-[var(--left-width)] lg:mb-0 mb-3 h-full panel-slide-left ${isMaximized ? "hidden" : ""} ${mobileTab === 'editor' ? 'hidden lg:flex' : 'flex'}`}
         >
           <div className="flex border-b border-black/10 dark:border-white/10 shrink-0">
             <button
@@ -814,7 +831,7 @@ const ChallengeDetails = () => {
 
         {/* RIGHT PANEL - Editor + Console */}
         <div
-          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full ${isMaximized ? "lg:w-full" : "lg:w-[var(--right-width)]"} h-full ${mobileTab === 'description' ? 'hidden lg:flex' : 'flex'}`}
+          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full panel-slide-right ${isMaximized ? "lg:w-full" : "lg:w-[var(--right-width)]"} h-full ${mobileTab === 'description' ? 'hidden lg:flex' : 'flex'}`}
         >
           {/* Editor header: language select + utility buttons */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-black/10 dark:border-white/10 shrink-0">
@@ -875,7 +892,7 @@ const ChallengeDetails = () => {
                     setIsMaximized(nextMaximized);
                     setWasMaximized(false);
                     if (nextMaximized) {
-                      setBottomCollapsed(true);
+                      updateBottomCollapsed(true);
                     }
                   }}
                   className="hover:text-primary transition-colors p-1"
@@ -920,7 +937,7 @@ const ChallengeDetails = () => {
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-black/10 dark:border-white/10 shrink-0">
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setBottomCollapsed((c) => !c)}
+                  onClick={() => updateBottomCollapsed((c) => !c)}
                   className="flex items-center gap-1 text-xs font-semibold text-secondary hover:text-primary transition-colors px-2 py-1 rounded hover:bg-white/5"
                 >
                   {bottomCollapsed ? (
@@ -938,7 +955,7 @@ const ChallengeDetails = () => {
                     key={key}
                     onClick={() => {
                       setBottomTab(key);
-                      setBottomCollapsed(false);
+                      updateBottomCollapsed(false);
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                       !bottomCollapsed && bottomTab === key

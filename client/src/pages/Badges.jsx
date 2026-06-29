@@ -32,14 +32,14 @@ const ProgressBar = ({ progress, threshold }) => {
   const pct = threshold > 0 ? Math.min(100, Math.round((progress / threshold) * 100)) : 0;
   return (
     <div className="w-full space-y-1">
-      <div className="flex justify-between items-center text-[10px] font-mono text-white/50">
+      <div className="flex justify-between items-center text-[10px] font-mono text-secondary">
         <span>{progress} / {threshold}</span>
         <span>{pct}%</span>
       </div>
-      <div className="h-1 w-full rounded-full bg-white/10 overflow-hidden">
+      <div className="h-1 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #6366f1, #a855f7)' }}
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-primary), #a855f7)' }}
         />
       </div>
     </div>
@@ -60,8 +60,8 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
       transition={{ delay: index * 0.04, duration: 0.4, type: "spring", stiffness: 100 }}
       className={`relative flex flex-col items-center rounded-3xl border backdrop-blur-md transition-all duration-500 p-5 overflow-hidden group
         ${isUnlocked
-          ? 'bg-gradient-to-b from-white/[0.08] to-transparent border-white/10 hover:border-white/20 hover:-translate-y-1 hover:shadow-2xl'
-          : 'bg-black/40 border-white/5 opacity-70'
+          ? 'bg-gradient-to-b from-black/[0.02] to-transparent dark:from-white/[0.08] border-black/10 dark:border-white/10 hover:border-black/20 hover:dark:border-white/20 hover:-translate-y-1 hover:shadow-2xl'
+          : 'bg-black/5 dark:bg-black/40 border-black/5 dark:border-white/5 opacity-75 dark:opacity-70'
         }`}
     >
       {/* Dynamic background rarity glow */}
@@ -72,7 +72,7 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
 
       {/* Glossy top edge highlight */}
       {isUnlocked && (
-        <div className="absolute top-0 inset-x-4 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
+        <div className="absolute top-0 inset-x-4 h-px bg-gradient-to-r from-transparent via-black/10 dark:via-white/40 to-transparent opacity-50" />
       )}
       {/* Chief crown badge */}
       {isChief && (
@@ -93,12 +93,12 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
       {/* Content */}
       <div className="flex flex-col items-center w-full flex-1 z-10">
         <h3 className={`text-[14px] font-black text-center leading-tight mb-2 tracking-wide ${
-          isUnlocked ? 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70' : 'text-white/30'
+          isUnlocked ? 'text-primary' : 'text-tertiary'
         }`}>
           {badge.name}
         </h3>
-        
-        <p className="text-[10px] text-white/40 text-center leading-relaxed line-clamp-2 min-h-[2.6em] mb-3">
+
+        <p className="text-[10px] text-secondary text-center leading-relaxed line-clamp-2 min-h-[2.6em] mb-3">
           {badge.description}
         </p>
 
@@ -115,8 +115,16 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
         )}
 
         {/* Footer tags */}
-        <div className="mt-auto w-full flex items-center justify-between pt-3 border-t border-white/10">
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md border ${r.bg} ${r.text}`} style={{ color: r.label, boxShadow: isUnlocked ? `0 0 10px ${r.border}40` : 'none' }}>
+        <div className="mt-auto w-full flex items-center justify-between pt-3 border-t border-black/10 dark:border-white/10">
+          <span
+            className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md border"
+            style={{
+              color: r.label,
+              backgroundColor: r.bg,
+              borderColor: r.border,
+              boxShadow: isUnlocked ? `0 0 10px ${r.border}40` : 'none'
+            }}
+          >
             {badge.rarity}
           </span>
           {!isChief && (
@@ -126,21 +134,21 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
           )}
         </div>
       </div>
-      
+
       {/* Unlocked checkmark overlay styled like a gem */}
       {isUnlocked && (
         <div className="absolute top-3 left-3 z-10 flex gap-2">
           <div className="w-6 h-6 rounded-full bg-emerald-500 border border-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600">
             <FiCheck size={12} className="text-white drop-shadow-md" />
           </div>
-          
+
           <button
             onClick={() => onSetFeatured(badge._id)}
             title={isFeatured ? "Featured Badge" : "Set as Featured Badge"}
             className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-              isFeatured 
+              isFeatured
                 ? 'bg-amber-500 border border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] bg-gradient-to-br from-amber-400 to-amber-600'
-                : 'bg-black/40 border border-white/20 hover:bg-amber-500/30 hover:border-amber-500/50 text-white/50 hover:text-amber-400 opacity-0 group-hover:opacity-100'
+                : 'bg-black/10 dark:bg-black/40 border border-black/20 dark:border-white/20 hover:bg-amber-500/30 hover:border-amber-500/50 text-secondary hover:text-amber-400 opacity-0 group-hover:opacity-100'
             }`}
           >
             <FiStar size={12} className={isFeatured ? 'text-white drop-shadow-md fill-white' : 'fill-current'} />
@@ -176,26 +184,26 @@ const CategorySection = ({ category, badges, index, onSetFeatured, featuredBadge
       {/* Section header */}
       <div className="flex items-center gap-3 mb-4">
         <span className="text-xl">{CATEGORY_ICONS[category] || '🏅'}</span>
-        <h2 className="text-base font-bold text-white">{category}</h2>
+        <h2 className="text-base font-bold text-primary">{category}</h2>
         <div className="flex items-center gap-1.5 ml-1">
           <span className={`text-xs font-mono px-2 py-0.5 rounded-full border ${
             isComplete
               ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
-              : 'bg-white/5 text-white/40 border-white/10'
+              : 'bg-black/5 dark:bg-white/5 text-secondary border-black/10 dark:border-white/10'
           }`}>
             {unlocked} / {badges.length}
           </span>
           {isComplete && <FiCheck size={12} className="text-emerald-400" />}
         </div>
-        <div className="flex-1 h-px bg-white/5 ml-2" />
+        <div className="flex-1 h-px bg-black/10 dark:bg-white/10 ml-2" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         {badges.map((badge, i) => (
-          <BadgeCard 
-            key={badge._id} 
-            badge={badge} 
-            index={i} 
+          <BadgeCard
+            key={badge._id}
+            badge={badge}
+            index={i}
             onSetFeatured={onSetFeatured}
             isFeatured={featuredBadgeId === badge._id?.toString()}
           />
@@ -292,26 +300,26 @@ const Badges = () => {
 
       {/* Progress Overview Card */}
       {!isLoading && (
-        <div className="rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm p-5">
+        <div className="rounded-2xl border border-black/[0.08] dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.03] backdrop-blur-sm p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-black/[0.08] dark:border-white/20 flex items-center justify-center shrink-0">
                 <FiAward size={22} className="text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{totalUnlocked} <span className="text-white/30 text-base font-normal">/ {totalBadges}</span></p>
-                <p className="text-sm text-white/50">Badges unlocked</p>
+                <p className="text-2xl font-black text-primary">{totalUnlocked} <span className="text-tertiary text-base font-normal">/ {totalBadges}</span></p>
+                <p className="text-sm text-secondary">Badges unlocked</p>
               </div>
             </div>
             <div className="flex-1 max-w-xs space-y-1.5">
-              <div className="flex justify-between text-xs text-white/50">
+              <div className="flex justify-between text-xs text-secondary">
                 <span>Overall Progress</span>
-                <span className="font-mono font-bold text-white/70">{pct}%</span>
+                <span className="font-mono font-bold text-primary">{pct}%</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-white/8 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-1000"
-                  style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)' }}
+                  style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--accent-primary), #a855f7, #ec4899)' }}
                 />
               </div>
             </div>
@@ -331,7 +339,7 @@ const Badges = () => {
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 ${
                   activeCategory === cat
                     ? 'bg-accent text-white border-accent shadow-sm shadow-accent/30'
-                    : 'bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white/80'
+                    : 'bg-black/5 dark:bg-white/5 text-secondary border-black/10 dark:border-white/10 hover:bg-black/10 hover:dark:bg-white/10 hover:text-primary'
                 }`}
               >
                 {cat}
@@ -351,8 +359,8 @@ const Badges = () => {
                 onClick={() => setShowUnlocked(val)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 ${
                   showUnlocked === val
-                    ? 'bg-white/15 text-white border-white/25'
-                    : 'bg-white/5 text-white/40 border-white/8 hover:text-white/60'
+                    ? 'bg-black/15 dark:bg-white/15 text-primary border-black/25 dark:border-white/25'
+                    : 'bg-black/5 dark:bg-white/5 text-secondary border-black/10 dark:border-white/10 hover:text-primary'
                 }`}
               >
                 {label}
@@ -381,7 +389,7 @@ const Badges = () => {
               />
             ))}
             {Object.keys(filteredGroups).length === 0 && (
-              <div className="text-center py-20 text-white/30">
+              <div className="text-center py-20 text-tertiary">
                 <FiAward size={40} className="mx-auto mb-3 opacity-40" />
                 <p className="text-sm font-medium">No badges match this filter.</p>
               </div>

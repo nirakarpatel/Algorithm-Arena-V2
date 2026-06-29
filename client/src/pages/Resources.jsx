@@ -34,9 +34,9 @@ const Resources = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Intel Archives" 
-        subtitle="Access curriculum documents, algorithms, and study materials." 
+      <PageHeader
+        title="Intel Archives"
+        subtitle="Access curriculum documents, algorithms, and study materials."
         showBack={true}
         backUrl="/dashboard"
       />
@@ -48,7 +48,7 @@ const Resources = () => {
             onClick={() => setActiveFolder(folder === 'All' ? '' : folder)}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
               (activeFolder === folder || (folder === 'All' && !activeFolder))
-                ? 'bg-accent/20 text-accent border border-accent/30'
+                ? 'bg-accent/20 text-accent border border-white/30'
                 : 'bg-white/5 text-secondary border border-transparent hover:bg-white/10'
             }`}
           >
