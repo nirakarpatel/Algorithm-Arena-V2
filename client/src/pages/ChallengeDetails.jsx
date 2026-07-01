@@ -254,6 +254,7 @@ const ChallengeDetails = () => {
       if (newWidth < 20) newWidth = 20;
       if (newWidth > 80) newWidth = 80;
       setLeftWidth(newWidth);
+      localStorage.setItem("challenge-left-width", String(newWidth));
     };
     const handleMouseUp = () => {
       document.removeEventListener("mousemove", handleMouseMove);

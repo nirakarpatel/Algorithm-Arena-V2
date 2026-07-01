@@ -126,7 +126,10 @@ const ChallengeDetails = () => {
   const [grading, setGrading] = useState(false);
   
   // Resizer state
-  const [leftWidth, setLeftWidth] = useState(45);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const saved = localStorage.getItem("challenge-left-width");
+    return saved ? parseFloat(saved) : 45;
+  });
   const containerRef = useRef(null);
   
   const [isDark, setIsDark] = useState(
@@ -157,6 +160,7 @@ const ChallengeDetails = () => {
       if (newWidth < 20) newWidth = 20;
       if (newWidth > 80) newWidth = 80;
       setLeftWidth(newWidth);
+      localStorage.setItem("challenge-left-width", String(newWidth));
     };
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
