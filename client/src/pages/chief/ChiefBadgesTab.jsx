@@ -124,16 +124,20 @@ const ChiefBadgesTab = ({ clan }) => {
     queryKey: ['member-badges', clan?._id],
     queryFn: async () => {
       if (!clan?.members?.length) return {};
-      const results = await Promise.all(
-        clan.members.map(async m => {
-          try {
-            const res = await api.get(`/api/badges/user/${m._id}`);
-            const chiefAwarded = (res.data.data || []).filter(b => b.isChiefBadge && b.isUnlocked);
-            return [m._id, chiefAwarded];
-          } catch { return [m._id, []]; }
-        })
-      );
-      return Object.fromEntries(results);
+      try {
+        const userIds = clan.members.map(m => m._id);
+        const res = await api.post('/api/badges/batch', { userIds });
+        const badgeMap = res.data?.data || {};
+
+        const results = Object.entries(badgeMap).map(([userId, badges]) => {
+          const chiefAwarded = (badges || []).filter(b => b.isChiefBadge && b.isUnlocked);
+          return [userId, chiefAwarded];
+        });
+        return Object.fromEntries(results);
+      } catch (err) {
+        console.error('Failed to batch fetch badges', err);
+        return {};
+      }
     },
     enabled: !!clan?.members?.length,
   });

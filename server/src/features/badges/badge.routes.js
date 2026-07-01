@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { getBadges, getBadgesForUser, awardBadge, revokeBadge, getChiefBadges } = require('./badge.controller');
+const { getBadges, getBadgesForUser, awardBadge, revokeBadge, getChiefBadges, getBadgesForUsersBatch } = require('./badge.controller');
 const { protect } = require('../../../middleware/auth');
 
 // Get own badges
 router.get('/', protect, getBadges);
+
+// Get badges for multiple users in batch
+router.post('/batch', protect, getBadgesForUsersBatch);
 
 // Get chief badge pool
 router.get('/chief', protect, getChiefBadges);

@@ -99,3 +99,31 @@ exports.getChiefBadges = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get all badges for multiple users in batch
+// @route   POST /api/badges/batch
+// @access  Private
+exports.getBadgesForUsersBatch = async (req, res, next) => {
+  try {
+    const { userIds } = req.body;
+    if (!userIds || !Array.isArray(userIds)) {
+      return res.status(400).json({ success: false, message: 'userIds array is required.' });
+    }
+
+    const badgeDataMap = {};
+    await Promise.all(
+      userIds.map(async (userId) => {
+        try {
+          const data = await getAllBadgesForUser(userId);
+          badgeDataMap[userId] = data;
+        } catch {
+          badgeDataMap[userId] = [];
+        }
+      })
+    );
+
+    res.status(200).json({ success: true, data: badgeDataMap });
+  } catch (error) {
+    next(error);
+  }
+};
