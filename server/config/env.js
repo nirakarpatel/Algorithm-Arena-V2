@@ -52,6 +52,8 @@ const envSchema = z
       .int()
       .positive()
       .default(86400000),
+    JUDGE0_API_URL: z.string().url().default("https://ce.judge0.com"),
+    JUDGE0_API_KEY: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.JWT_ACCESS_SECRET && !data.JWT_SECRET) {

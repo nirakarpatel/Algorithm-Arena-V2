@@ -33,9 +33,6 @@ import { api } from "../lib/api";
 
 import { useAuth } from "../context/useAuth";
 
-// --- JUDGE0 CONFIG ---
-const JUDGE0_URL = import.meta.env.VITE_JUDGE0_API_URL || "https://ce.judge0.com";
-
 /**
  * Converts a single test-case arg value to its stdin representation.
  * Arrays → space-separated elements (standard competitive-programming format)
@@ -120,6 +117,8 @@ const ChallengeDetails = () => {
   const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
   const [runOutput, setRunOutput] = useState(null);
   const [running, setRunning] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const abortControllerRef = useRef(null);
 
   // Review mode state
   const [reviewComment, setReviewComment] = useState("");
@@ -171,6 +170,14 @@ const ChallengeDetails = () => {
       typeof val === "function" ? val(codeByLang[language] || "") : val;
     setCodeByLang((prev) => ({ ...prev, [language]: newVal }));
   };
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Logic: LocalStorage Persistence
   useEffect(() => {
@@ -299,13 +306,9 @@ const ChallengeDetails = () => {
   };
 
   // --- JUDGE0 RUN LOGIC ---
-  const handleRun = async () => {
-    if (!codeSnippet.trim()) return toast.error("No code to run.");
-
+  const runTestCases = async (signal) => {
     const testCases = challengeQuery.data?.testCases ?? [];
 
-    // Build the list of runs: one per stored test case, or fall back to
-    // the current manual stdin if no test cases are defined.
     const runs =
       testCases.length > 0
         ? testCases.map((tc) => ({
@@ -315,79 +318,72 @@ const ChallengeDetails = () => {
           }))
         : [{ label: "Run", stdinValue: stdin, expected: null }];
 
-    setRunning(true);
-    setRightTab("tests"); // Switch to tests tab to see results
-    setRunOutput(null);
-
     const langId = LANGUAGE_MAP[language]?.id ?? 63;
-    // Each case gets a unique nonce comment to force a fresh execution even
-    // if Judge0 caches by source-code hash.
     const commentChar = language === "python" ? "#" : "//";
     const freshSource = (idx) =>
       b64Encode(
         `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       );
 
-    try {
-      // ── 1. Batch submit: one independent submission per test case ────────────
-      const batchRes = await fetch(
-        `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            submissions: runs.map((run, idx) => ({
-              language_id: langId,
-              source_code: freshSource(idx),
-              stdin: b64Encode(run.stdinValue),
-            })),
-          }),
-        },
-      );
-      if (!batchRes.ok) {
-        const text = await batchRes.text();
-        throw new Error(`Judge0 batch submit error ${batchRes.status}: ${text}`);
-      }
-      const batchTokens = await batchRes.json();
-      const tokens = batchTokens.map((t) => t.token);
+    const batchRes = await api.post(
+      "/api/submissions/run/batch",
+      {
+        submissions: runs.map((run, idx) => ({
+          language_id: langId,
+          source_code: freshSource(idx),
+          stdin: b64Encode(run.stdinValue),
+        })),
+      },
+      { signal }
+    );
+    const batchTokens = batchRes.data;
+    const tokens = batchTokens.map((t) => t.token);
 
-      // ── 2. Poll until every submission is finished ───────────────────────────
-      const tokenList = tokens.join(",");
-      let results = tokens.map(() => null);
+    const tokenList = tokens.join(",");
+    let results = tokens.map(() => null);
 
-      for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        const pollRes = await fetch(
-          `${JUDGE0_URL}/submissions/batch?tokens=${tokenList}&base64_encoded=true`,
-        );
-        if (!pollRes.ok) continue;
-        const { submissions } = await pollRes.json();
-
-        submissions.forEach((sub, i) => {
-          const statusId = sub?.status?.id;
-          if (statusId !== 1 && statusId !== 2) {
-            results[i] = {
-              label: runs[i].label,
-              expected: runs[i].expected,
-              stdinValue: runs[i].stdinValue,
-              token: tokens[i],
-              stdout: b64Decode(sub.stdout),
-              stderr: b64Decode(sub.stderr),
-              compile_output: b64Decode(sub.compile_output),
-              status: sub.status,
-              time: sub.time,
-              memory: sub.memory,
-            };
-          }
+    for (let attempt = 0; attempt < 30; attempt++) {
+      if (signal?.aborted) return;
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(resolve, 1000);
+        signal?.addEventListener("abort", () => {
+          clearTimeout(timeout);
+          reject(new DOMException("Aborted", "AbortError"));
         });
+      });
+      if (signal?.aborted) return;
 
-        const ready = results.filter(Boolean);
-        if (ready.length > 0) setRunOutput({ cases: ready });
-        if (results.every(Boolean)) break;
-      }
+      const pollRes = await api.get(
+        `/api/submissions/run/batch?tokens=${tokenList}`,
+        { signal }
+      );
+      const submissions = pollRes.data?.submissions || [];
 
-      // Mark any that timed out
-      results = results.map((r, i) =>
+      submissions.forEach((sub, i) => {
+        const statusId = sub?.status?.id;
+        if (statusId !== 1 && statusId !== 2) {
+          results[i] = {
+            label: runs[i].label,
+            expected: runs[i].expected,
+            stdinValue: runs[i].stdinValue,
+            token: tokens[i],
+            stdout: b64Decode(sub.stdout),
+            stderr: b64Decode(sub.stderr),
+            compile_output: b64Decode(sub.compile_output),
+            status: sub.status,
+            time: sub.time,
+            memory: sub.memory,
+          };
+        }
+      });
+
+      const ready = results.filter(Boolean);
+      if (ready.length > 0) setRunOutput({ cases: ready });
+      if (results.every(Boolean)) break;
+    }
+
+    results = results.map(
+      (r, i) =>
         r ?? {
           label: runs[i].label,
           expected: runs[i].expected,
@@ -399,13 +395,39 @@ const ChallengeDetails = () => {
           time: null,
           memory: null,
         },
-      );
-      setRunOutput({ cases: results });
+    );
+    setRunOutput({ cases: results });
+    return results;
+  };
+
+  const handleRun = async () => {
+    if (!codeSnippet.trim()) return toast.error("No code to run.");
+    if (cooldown) return toast.error("Please wait a moment between code runs.");
+
+    setRunning(true);
+    setRightTab("tests"); // Switch to tests tab to see results
+    setRunOutput(null);
+
+    // Cancel any ongoing run request or polling loop
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      await runTestCases(controller.signal);
     } catch (err) {
-      toast.error(err.message || "Failed to execute code.");
-      setRunOutput({ error: err.message || "Execution engine unreachable." });
+      if (err.name === "AbortError" || err.message === "Aborted") {
+        console.log("Run execution aborted.");
+        return;
+      }
+      toast.error(err.response?.data?.message || err.message || "Failed to execute code.");
+      setRunOutput({ error: err.response?.data?.message || err.message || "Execution engine unreachable." });
     } finally {
       setRunning(false);
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 3000);
     }
   };
 
@@ -710,7 +732,7 @@ const ChallengeDetails = () => {
                 </div>
                 <button
                   onClick={handleRun}
-                  disabled={running}
+                  disabled={running || cooldown}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-500/15 text-green-400 text-xs font-bold hover:bg-green-500/25 transition-all disabled:opacity-60 border border-green-500/20"
                 >
                   {running ? (
@@ -1029,7 +1051,7 @@ const ChallengeDetails = () => {
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={handleRun}
-                  disabled={running}
+                  disabled={running || cooldown}
                   className="btn-secondary flex-1 py-2.5 flex items-center justify-center gap-2 text-xs"
                 >
                   <FiPlay size={13} /> {running ? "Running..." : "Run Code"}

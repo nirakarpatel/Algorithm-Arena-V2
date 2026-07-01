@@ -52,10 +52,6 @@ import FeedbackDialog from "../components/FeedbackDialog";
 
 import { useAuth } from "../context/useAuth";
 
-// --- JUDGE0 CONFIG ---
-const JUDGE0_URL =
-  import.meta.env.VITE_JUDGE0_API_URL || "https://ce.judge0.com";
-
 /**
  * Normalize output for comparison:
  * 1. Trim leading/trailing whitespace
@@ -163,6 +159,8 @@ const ChallengeDetails = () => {
   const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
   const [runOutput, setRunOutput] = useState(null);
   const [running, setRunning] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const abortControllerRef = useRef(null);
   const [showSubmitAnyway, setShowSubmitAnyway] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
@@ -237,6 +235,14 @@ const ChallengeDetails = () => {
       attributeFilter: ["class", "data-theme"],
     });
     return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const handleMouseDown = (e) => {
@@ -425,7 +431,7 @@ const ChallengeDetails = () => {
   };
 
   // --- JUDGE0 RUN LOGIC ---
-  const runTestCases = async () => {
+  const runTestCases = async (signal) => {
     const testCases = challengeQuery.data?.testCases ?? [];
 
     const runs =
@@ -444,39 +450,39 @@ const ChallengeDetails = () => {
         `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       );
 
-    const batchRes = await fetch(
-      `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
+    const batchRes = await api.post(
+      "/api/submissions/run/batch",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          submissions: runs.map((run, idx) => ({
-            language_id: langId,
-            source_code: freshSource(idx),
-            stdin: b64Encode(run.stdinValue),
-          })),
-        }),
+        submissions: runs.map((run, idx) => ({
+          language_id: langId,
+          source_code: freshSource(idx),
+          stdin: b64Encode(run.stdinValue),
+        })),
       },
+      { signal }
     );
-    if (!batchRes.ok) {
-      const text = await batchRes.text();
-      throw new Error(
-        `Judge0 batch submit error ${batchRes.status}: ${text}`,
-      );
-    }
-    const batchTokens = await batchRes.json();
+    const batchTokens = batchRes.data;
     const tokens = batchTokens.map((t) => t.token);
 
     const tokenList = tokens.join(",");
     let results = tokens.map(() => null);
 
     for (let attempt = 0; attempt < 30; attempt++) {
-      await new Promise((r) => setTimeout(r, 1000));
-      const pollRes = await fetch(
-        `${JUDGE0_URL}/submissions/batch?tokens=${tokenList}&base64_encoded=true`,
+      if (signal?.aborted) return;
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(resolve, 1000);
+        signal?.addEventListener("abort", () => {
+          clearTimeout(timeout);
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+      if (signal?.aborted) return;
+
+      const pollRes = await api.get(
+        `/api/submissions/run/batch?tokens=${tokenList}`,
+        { signal }
       );
-      if (!pollRes.ok) continue;
-      const { submissions } = await pollRes.json();
+      const submissions = pollRes.data?.submissions || [];
 
       submissions.forEach((sub, i) => {
         const statusId = sub?.status?.id;
@@ -521,18 +527,33 @@ const ChallengeDetails = () => {
 
   const handleRun = async () => {
     if (!codeSnippet.trim()) return toast.error("No code to run.");
+    if (cooldown) return toast.error("Please wait a moment between code runs.");
+
     setRunning(true);
     updateBottomCollapsed(false);
     setBottomTab("output");
     setRunOutput(null);
 
+    // Cancel any ongoing run request or polling loop
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      await runTestCases();
+      await runTestCases(controller.signal);
     } catch (err) {
-      toast.error(err.message || "Failed to execute code.");
-      setRunOutput({ error: err.message || "Execution engine unreachable." });
+      if (err.name === "AbortError" || err.message === "Aborted") {
+        console.log("Run execution aborted.");
+        return;
+      }
+      toast.error(err.response?.data?.message || err.message || "Failed to execute code.");
+      setRunOutput({ error: err.response?.data?.message || err.message || "Execution engine unreachable." });
     } finally {
       setRunning(false);
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 3000);
     }
   };
 
@@ -983,7 +1004,7 @@ const ChallengeDetails = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRun}
-                  disabled={running}
+                  disabled={running || cooldown}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 border border-black/10 dark:border-white/10 hover:bg-white/5 text-primary"
                 >
                   {running ? (

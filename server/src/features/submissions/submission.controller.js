@@ -3,6 +3,8 @@ const Challenge = require('../challenges/Challenge.model');
 const { sendSuccess } = require('../../../utils/response');
 const { logAudit } = require('../../../utils/audit');
 const { escapeHtml } = require('../../../utils/escapeHtml');
+const axios = require('axios');
+const { env } = require('../../../config/env');
 const {
   canActorManageUser,
   getActorMemberIdsInScope,
@@ -615,6 +617,68 @@ const getSubmissionsByUsername = async (req, res, next) => {
   }
 };
 
+const submitRunBatch = async (req, res, next) => {
+  try {
+    const { submissions } = req.body;
+    if (!submissions || !Array.isArray(submissions)) {
+      res.status(400);
+      throw new Error('Submissions array is required');
+    }
+
+    const targetUrl = `${env.JUDGE0_API_URL || 'https://ce.judge0.com'}/submissions/batch?base64_encoded=true`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (env.JUDGE0_API_KEY) {
+      if (env.JUDGE0_API_URL && env.JUDGE0_API_URL.includes('rapidapi')) {
+        headers['x-rapidapi-key'] = env.JUDGE0_API_KEY;
+        headers['x-rapidapi-host'] = new URL(env.JUDGE0_API_URL).hostname;
+      } else {
+        headers['X-Auth-Token'] = env.JUDGE0_API_KEY;
+      }
+    }
+
+    const response = await axios.post(targetUrl, { submissions }, { headers });
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return next(err);
+  }
+};
+
+const getRunBatchResults = async (req, res, next) => {
+  try {
+    const { tokens } = req.query;
+    if (!tokens) {
+      res.status(400);
+      throw new Error('Tokens query parameter is required');
+    }
+
+    const targetUrl = `${env.JUDGE0_API_URL || 'https://ce.judge0.com'}/submissions/batch?tokens=${tokens}&base64_encoded=true`;
+
+    const headers = {};
+    if (env.JUDGE0_API_KEY) {
+      if (env.JUDGE0_API_URL && env.JUDGE0_API_URL.includes('rapidapi')) {
+        headers['x-rapidapi-key'] = env.JUDGE0_API_KEY;
+        headers['x-rapidapi-host'] = new URL(env.JUDGE0_API_URL).hostname;
+      } else {
+        headers['X-Auth-Token'] = env.JUDGE0_API_KEY;
+      }
+    }
+
+    const response = await axios.get(targetUrl, { headers });
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return next(err);
+  }
+};
+
 module.exports = {
   submitCode,
   getSubmissions,
@@ -623,5 +687,7 @@ module.exports = {
   getSubmissionById,
   updateSubmissionStatus,
   getSubmissionsByUsername,
+  submitRunBatch,
+  getRunBatchResults,
 };
 
