@@ -40,7 +40,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/database'],
+          'firebase': ['firebase/app', 'firebase/auth',],
           'monaco-editor': ['@monaco-editor/react'],
           'ui-vendor': ['framer-motion', 'react-icons', 'clsx', 'tailwind-merge', 'react-hot-toast'],
           'three-vendor': ['three', 'postprocessing'],
