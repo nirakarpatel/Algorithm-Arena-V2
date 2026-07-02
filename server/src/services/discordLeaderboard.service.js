@@ -43,7 +43,7 @@ const fetchLeaderboardData = async () => {
     { $unwind: '$user' },
     { $match: {
       'user.role': { $nin: ['admin', 'superAdmin', 'clan-chief'] },
-      'user.username': { $exists: true, $ne: null, $ne: '' }
+      'user.username': { $exists: true, $nin: [null, ''] }
     } },
     {
       $project: {
@@ -148,7 +148,7 @@ const pushLeaderboardUpdate = async () => {
       { $unwind: '$user' },
       { $match: {
         'user.role': { $nin: ['admin', 'superAdmin', 'clan-chief'] },
-        'user.username': { $exists: true, $ne: null, $ne: '' }
+        'user.username': { $exists: true, $nin: [null, ''] }
       } },
       {
         $project: {

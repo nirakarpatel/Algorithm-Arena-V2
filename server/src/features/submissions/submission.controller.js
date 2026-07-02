@@ -3,6 +3,8 @@ const Challenge = require('../challenges/Challenge.model');
 const { sendSuccess } = require('../../../utils/response');
 const { logAudit } = require('../../../utils/audit');
 const { escapeHtml } = require('../../../utils/escapeHtml');
+const axios = require('axios');
+const { env } = require('../../../config/env');
 const {
   canActorManageUser,
   getActorMemberIdsInScope,
@@ -12,7 +14,7 @@ const VALID_STATUSES = ['Pending', 'Accepted', 'Rejected'];
 
 const submitCode = async (req, res, next) => {
   try {
-    const { challengeId, repositoryUrl, code, language } = req.body;
+    const { challengeId, repositoryUrl, code, language, userFeedback } = req.body;
 
     const challenge = await Challenge.findById(challengeId);
     if (!challenge) {
@@ -39,6 +41,7 @@ const submitCode = async (req, res, next) => {
       repositoryUrl: repositoryUrl || undefined,
       code: code || undefined,
       language: language || 'javascript',
+      userFeedback: userFeedback || undefined,
     });
 
     const { emitEvent } = require('../../../config/socket');
@@ -72,6 +75,8 @@ const getSubmissions = async (req, res, next) => {
       sortDir = 'desc',
     } = req.query;
 
+    const safeLimit = Math.min(Number(limit) || 10, 100);
+
     const scopeAccess = await getActorMemberIdsInScope(req.user);
     if (!scopeAccess.allowed) {
       return res.status(403).json({ success: false, message: scopeAccess.reason || 'Not authorized' });
@@ -88,7 +93,7 @@ const getSubmissions = async (req, res, next) => {
           data: [],
           meta: {
             page,
-            limit,
+            limit: safeLimit,
             total: 0,
             totalPages: 1,
           },
@@ -116,7 +121,7 @@ const getSubmissions = async (req, res, next) => {
       if (to) filter.submittedAt.$lte = new Date(to);
     }
 
-    const skip = (page - 1) * limit;
+    const skip = (Number(page) - 1) * safeLimit;
     const sort = { [sortBy]: sortDir === 'asc' ? 1 : -1 };
 
     const [total, submissions] = await Promise.all([
@@ -127,16 +132,16 @@ const getSubmissions = async (req, res, next) => {
         .populate('reviewedBy', 'username role')
         .sort(sort)
         .skip(skip)
-        .limit(limit),
+        .limit(safeLimit),
     ]);
 
     return sendSuccess(res, {
       data: submissions,
       meta: {
         page,
-        limit,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
+        totalPages: Math.ceil(total / safeLimit) || 1,
       },
     });
   } catch (err) {
@@ -154,9 +159,8 @@ const getMySubmissions = async (req, res, next) => {
       .populate('challengeId', 'title difficulty points')
       .sort({ submittedAt: -1 });
 
-    if (req.query.limit) {
-      query = query.limit(Number(req.query.limit));
-    }
+    const limit = req.query.limit ? Number(req.query.limit) : 100;
+    query = query.limit(limit);
 
     const submissions = await query;
 
@@ -176,25 +180,95 @@ const getLeaderboard = async (req, res, next) => {
     const { window = 'all', page = 1, limit = 20 } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    let result = [];
+    let data = [];
+    let total = 0;
+    let topThree = [];
 
     if (window === 'all') {
       const User = require('../users/User.model');
-      const users = await User.find({ 
+      
+      const filter = {
         role: { $nin: ['admin', 'superAdmin', 'clan-chief'] },
-        username: { $exists: true, $ne: null, $ne: '' }
-      })
+        username: { $exists: true, $nin: [null, ''] }
+      };
+
+      // Get total count of users matching the filter
+      total = await User.countDocuments(filter);
+
+      // Fetch only the users for the current page
+      const users = await User.find(filter)
         .sort({ points: -1, solvedProblems: -1 })
+        .skip(skip)
+        .limit(Number(limit))
         .select('username profilePicture points solvedProblems')
         .lean();
-      
-      result = users.map((u) => ({
-        _id: u._id,
-        username: u.username,
-        profilePicture: u.profilePicture,
-        solvedCount: u.solvedProblems || 0,
-        totalPoints: u.points || 0,
-      }));
+
+      // Fetch top 3 users to populate the podium
+      const topThreeUsers = await User.find(filter)
+        .sort({ points: -1, solvedProblems: -1 })
+        .limit(3)
+        .select('username profilePicture points solvedProblems')
+        .lean();
+
+      const topThreeMapped = [];
+      topThreeUsers.forEach((u, i) => {
+        let rank;
+        if (i === 0) {
+          rank = 1;
+        } else {
+          const prev = topThreeUsers[i - 1];
+          if (u.points === prev.points && u.solvedProblems === prev.solvedProblems) {
+            rank = topThreeMapped[i - 1].rank;
+          } else {
+            rank = i + 1;
+          }
+        }
+        topThreeMapped.push({
+          _id: u._id,
+          username: u.username,
+          profilePicture: u.profilePicture,
+          solvedCount: u.solvedProblems || 0,
+          totalPoints: u.points || 0,
+          rank,
+        });
+      });
+      topThree = topThreeMapped;
+
+      // Assign ranks for the current page's slice using standard competitive ranking
+      let rankOfFirst = 1;
+      if (skip > 0 && users.length > 0) {
+        const firstUser = users[0];
+        const countHigher = await User.countDocuments({
+          ...filter,
+          $or: [
+            { points: { $gt: firstUser.points } },
+            { points: firstUser.points, solvedProblems: { $gt: firstUser.solvedProblems } }
+          ]
+        });
+        rankOfFirst = countHigher + 1;
+      }
+
+      users.forEach((u, i) => {
+        let rank;
+        if (i === 0) {
+          rank = rankOfFirst;
+        } else {
+          const prev = users[i - 1];
+          if (u.points === prev.points && u.solvedProblems === prev.solvedProblems) {
+            rank = data[i - 1].rank;
+          } else {
+            rank = skip + i + 1;
+          }
+        }
+        data.push({
+          _id: u._id,
+          username: u.username,
+          profilePicture: u.profilePicture,
+          solvedCount: u.solvedProblems || 0,
+          totalPoints: u.points || 0,
+          rank,
+        });
+      });
     } else {
       const XpLog = require('../users/XpLog.model');
       const Submission = require('../submissions/Submission.model');
@@ -248,10 +322,10 @@ const getLeaderboard = async (req, res, next) => {
       const users = await User.find({
         _id: { $in: activeUserIds },
         role: { $nin: ['admin', 'superAdmin', 'clan-chief'] },
-        username: { $exists: true, $ne: null, $ne: '' }
+        username: { $exists: true, $nin: [null, ''] }
       }).select('username profilePicture').lean();
 
-      result = users.map(u => {
+      let result = users.map(u => {
         const xp = xpStats.find(x => x._id.toString() === u._id.toString());
         return {
           _id: u._id,
@@ -263,26 +337,27 @@ const getLeaderboard = async (req, res, next) => {
       });
 
       result.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount);
-    }
 
-    // Apply custom tie-breaker logic in memory
-    let currentRank = 1;
-    result.forEach((u, i) => {
-      if (i < 3) {
-        u.rank = i + 1;
-        currentRank = i + 1;
-      } else {
-        const prev = result[i - 1];
-        if (u.totalPoints !== prev.totalPoints || u.solvedCount !== prev.solvedCount) {
-          currentRank++;
+      // Apply custom tie-breaker logic in memory
+      let currentRank = 1;
+      result.forEach((u, i) => {
+        if (i < 3) {
+          u.rank = i + 1;
+          currentRank = i + 1;
+        } else {
+          const prev = result[i - 1];
+          if (u.totalPoints !== prev.totalPoints || u.solvedCount !== prev.solvedCount) {
+            currentRank++;
+          }
+          u.rank = Math.max(4, currentRank);
+          currentRank = u.rank;
         }
-        u.rank = Math.max(4, currentRank);
-        currentRank = u.rank;
-      }
-    });
+      });
 
-    const total = result.length;
-    const data = result.slice(skip, skip + Number(limit));
+      total = result.length;
+      data = result.slice(skip, skip + Number(limit));
+      topThree = result.slice(0, 3);
+    }
 
     return sendSuccess(res, {
       data,
@@ -291,7 +366,7 @@ const getLeaderboard = async (req, res, next) => {
         page: Number(page),
         limit: Number(limit),
         totalPages: Math.ceil(total / Number(limit)) || 1,
-        topThree: result.slice(0, 3),
+        topThree,
       },
     });
   } catch (err) {
@@ -424,14 +499,24 @@ const updateSubmissionStatus = async (req, res, next) => {
         if (userToUpdate) {
           userToUpdate.points = Math.max(0, (userToUpdate.points || 0) + pointsDiff);
           userToUpdate.solvedProblems = Math.max(0, (userToUpdate.solvedProblems || 0) + solvedDiff);
-          
-          if (userToUpdate.solvedProblems >= 30) {
-            userToUpdate.codingLevel = 'Advanced';
-          } else if (userToUpdate.solvedProblems >= 10) {
-            userToUpdate.codingLevel = 'Intermediate';
-          } else {
-            userToUpdate.codingLevel = 'Beginner';
+
+          // Auto-progress coding level unless chief has manually overridden it
+          if (!userToUpdate.codingLevelOverridden) {
+            if (userToUpdate.solvedProblems >= 75) {
+              userToUpdate.codingLevel = 'Advanced';
+            } else if (userToUpdate.solvedProblems >= 25) {
+              userToUpdate.codingLevel = 'Intermediate';
+            } else {
+              userToUpdate.codingLevel = 'Beginner';
+            }
           }
+
+          // Auto-clear warning when user gets an Accepted submission
+          if (isNowAccepted && userToUpdate.status === 'Warned') {
+            userToUpdate.status = 'Active';
+            userToUpdate.warningMessage = null;
+          }
+
           await userToUpdate.save();
 
           const XpLog = require('../users/XpLog.model');
@@ -532,6 +617,68 @@ const getSubmissionsByUsername = async (req, res, next) => {
   }
 };
 
+const submitRunBatch = async (req, res, next) => {
+  try {
+    const { submissions } = req.body;
+    if (!submissions || !Array.isArray(submissions)) {
+      res.status(400);
+      throw new Error('Submissions array is required');
+    }
+
+    const targetUrl = `${env.JUDGE0_API_URL || 'https://ce.judge0.com'}/submissions/batch?base64_encoded=true`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (env.JUDGE0_API_KEY) {
+      if (env.JUDGE0_API_URL && env.JUDGE0_API_URL.includes('rapidapi')) {
+        headers['x-rapidapi-key'] = env.JUDGE0_API_KEY;
+        headers['x-rapidapi-host'] = new URL(env.JUDGE0_API_URL).hostname;
+      } else {
+        headers['X-Auth-Token'] = env.JUDGE0_API_KEY;
+      }
+    }
+
+    const response = await axios.post(targetUrl, { submissions }, { headers });
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return next(err);
+  }
+};
+
+const getRunBatchResults = async (req, res, next) => {
+  try {
+    const { tokens } = req.query;
+    if (!tokens) {
+      res.status(400);
+      throw new Error('Tokens query parameter is required');
+    }
+
+    const targetUrl = `${env.JUDGE0_API_URL || 'https://ce.judge0.com'}/submissions/batch?tokens=${tokens}&base64_encoded=true`;
+
+    const headers = {};
+    if (env.JUDGE0_API_KEY) {
+      if (env.JUDGE0_API_URL && env.JUDGE0_API_URL.includes('rapidapi')) {
+        headers['x-rapidapi-key'] = env.JUDGE0_API_KEY;
+        headers['x-rapidapi-host'] = new URL(env.JUDGE0_API_URL).hostname;
+      } else {
+        headers['X-Auth-Token'] = env.JUDGE0_API_KEY;
+      }
+    }
+
+    const response = await axios.get(targetUrl, { headers });
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return next(err);
+  }
+};
+
 module.exports = {
   submitCode,
   getSubmissions,
@@ -540,5 +687,7 @@ module.exports = {
   getSubmissionById,
   updateSubmissionStatus,
   getSubmissionsByUsername,
+  submitRunBatch,
+  getRunBatchResults,
 };
 

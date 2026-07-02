@@ -8,12 +8,18 @@ const Submission = require('../src/features/submissions/Submission.model');
  * @param {mongoose.Types.ObjectId} userId
  * @returns {Promise<number|null>} 1-based rank, or null if no accepted submissions.
  */
+let cachedRanks = null;
+let cacheTimestamp = 0;
+
 const getUserRank = async (userId) => {
-  // Compute global rank dynamically to match getLeaderboard
   const mongoose = require('mongoose');
-  
-  // Ensure userId is ObjectId
-  const targetUserId = new mongoose.Types.ObjectId(userId);
+  const CACHE_TTL = process.env.NODE_ENV === 'test' ? 0 : 5 * 60 * 1000;
+  const now = Date.now();
+  const targetUserIdStr = userId.toString();
+
+  if (cachedRanks && (now - cacheTimestamp < CACHE_TTL)) {
+    return cachedRanks.get(targetUserIdStr) || null;
+  }
 
   const result = await Submission.aggregate([
     { $match: { status: 'Accepted' } },
@@ -41,8 +47,7 @@ const getUserRank = async (userId) => {
     { $sort: { totalPoints: -1, solvedCount: -1 } }
   ]);
 
-  // Apply custom tie-breaker logic in memory
-  let userRank = null;
+  const newRanks = new Map();
   let currentRank = 1;
   result.forEach((u, i) => {
     let displayRank;
@@ -57,13 +62,15 @@ const getUserRank = async (userId) => {
       displayRank = Math.max(4, currentRank);
       currentRank = displayRank;
     }
-    
-    if (u._id.equals(targetUserId)) {
-      userRank = displayRank;
-    }
+    newRanks.set(u._id.toString(), displayRank);
   });
 
-  return userRank;
+  if (CACHE_TTL > 0) {
+    cachedRanks = newRanks;
+    cacheTimestamp = now;
+  }
+
+  return newRanks.get(targetUserIdStr) || null;
 };
 
 module.exports = { getUserRank };

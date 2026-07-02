@@ -21,6 +21,8 @@ const getChallenges = async (req, res, next) => {
       sortDir = 'desc',
     } = req.query;
 
+    const safeLimit = Math.min(Number(limit) || 10, 100);
+
     const filter = {};
     const andConditions = [];
 
@@ -35,14 +37,7 @@ const getChallenges = async (req, res, next) => {
       });
     }
     if (search) {
-      andConditions.push({
-        $or: [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
-          { tags: { $in: [new RegExp(search, 'i')] } },
-          { category: { $regex: search, $options: 'i' } }
-        ]
-      });
+      andConditions.push({ $text: { $search: search } });
     }
 
     if (andConditions.length > 0) {
@@ -50,7 +45,7 @@ const getChallenges = async (req, res, next) => {
     }
 
     const sortOrder = sortDir === 'asc' ? 1 : -1;
-    const skip = (page - 1) * limit;
+    const skip = (Number(page) - 1) * safeLimit;
 
     let total;
     let challenges;
@@ -90,7 +85,7 @@ const getChallenges = async (req, res, next) => {
         },
         { $sort: { deadlineSort: 1, difficultyOrder: 1, createdAt: -1 } },
         { $skip: skip },
-        { $limit: Number(limit) }
+        { $limit: safeLimit }
       ]);
 
       const [totalCount, aggResults] = await Promise.all([countPromise, aggPromise]);
@@ -116,7 +111,7 @@ const getChallenges = async (req, res, next) => {
         },
         { $sort: { difficultyOrder: sortOrder, createdAt: -1 } },
         { $skip: skip },
-        { $limit: Number(limit) },
+        { $limit: safeLimit },
         {
           $lookup: {
             from: 'questionsets',
@@ -140,7 +135,7 @@ const getChallenges = async (req, res, next) => {
       const sort = { [sortBy]: sortOrder };
       const [totalCount, findResults] = await Promise.all([
         Challenge.countDocuments(filter),
-        Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(limit),
+        Challenge.find(filter).populate('questionSetId').sort(sort).skip(skip).limit(safeLimit),
       ]);
       total = totalCount;
       challenges = findResults;
@@ -171,9 +166,9 @@ const getChallenges = async (req, res, next) => {
       data: challenges,
       meta: {
         page,
-        limit,
+        limit: safeLimit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
+        totalPages: Math.ceil(total / safeLimit) || 1,
       },
     });
   } catch (err) {

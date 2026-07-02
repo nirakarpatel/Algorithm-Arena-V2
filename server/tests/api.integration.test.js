@@ -42,6 +42,12 @@ test.after(async () => {
 
 test.beforeEach(async () => {
   await clearDatabase();
+  try {
+    const { clearChiefClanCache } = require('../src/features/clans/clanScope.service.js');
+    clearChiefClanCache();
+  } catch (err) {
+    // Ignore
+  }
 });
 
 const registerUser = async ({ username, email, password = 'strong-password' }) => {
@@ -591,3 +597,452 @@ test('clans archive first, restore cleanly, and only admin can permanently delet
   assert.equal(updatedChief.role, 'user');
   assert.equal(updatedMember.clan, null);
 });
+
+test('submission with userFeedback validation and storage', async () => {
+  // 1. Register admin
+  const adminRegister = await request(app).post('/api/auth/register').send({
+    username: 'feedback_admin',
+    email: 'feedback_admin@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(adminRegister.status, 201);
+
+  // Promote to admin
+  await User.findOneAndUpdate(
+    { email: 'feedback_admin@example.com' },
+    { role: 'admin' }
+  );
+
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'feedback_admin@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(adminLogin.status, 200);
+  const adminToken = adminLogin.body.data.token;
+
+  // 2. Register student
+  const studentRegister = await request(app).post('/api/auth/register').send({
+    username: 'feedback_student',
+    email: 'feedback.student@example.com',
+    password: 'strong-password',
+  });
+  assert.equal(studentRegister.status, 201);
+  const studentToken = studentRegister.body.data.token;
+
+  // 3. Create challenge
+  const challengeRes = await request(app)
+    .post('/api/challenges')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      title: 'Feedback Challenge',
+      description: 'Test feedback',
+      difficulty: 'Medium',
+      points: 120,
+      category: 'Strings',
+    });
+  assert.equal(challengeRes.status, 201);
+  const localChallengeId = challengeRes.body.data._id;
+
+  // 4. Submit with feedback
+  const submissionWithFeedbackRes = await request(app)
+    .post('/api/submissions')
+    .set('Authorization', `Bearer ${studentToken}`)
+    .send({
+      challengeId: localChallengeId,
+      code: 'function solve(){ return "ok"; }',
+      language: 'javascript',
+      userFeedback: 'I had some issues with environment timeouts.',
+    });
+
+  assert.equal(submissionWithFeedbackRes.status, 201);
+  assert.equal(submissionWithFeedbackRes.body.data.userFeedback, 'I had some issues with environment timeouts.');
+});
+
+test('leaderboard window=all pagination, tie-breaking, and topThree calculation works correctly', async () => {
+  // Clear any existing users to prevent noise
+  await User.deleteMany({});
+
+  // Register 5 users
+  const userA = await registerUser({ username: 'user_a', email: 'user_a@example.com' });
+  const userB = await registerUser({ username: 'user_b', email: 'user_b@example.com' });
+  const userC = await registerUser({ username: 'user_c', email: 'user_c@example.com' });
+  const userD = await registerUser({ username: 'user_d', email: 'user_d@example.com' });
+  const userE = await registerUser({ username: 'user_e', email: 'user_e@example.com' });
+
+  // Manually update points/solvedCount in DB to construct a structured leaderboard
+  await User.findByIdAndUpdate(userA.id, { points: 500, solvedProblems: 10 });
+  await User.findByIdAndUpdate(userB.id, { points: 400, solvedProblems: 8 });
+  await User.findByIdAndUpdate(userC.id, { points: 400, solvedProblems: 8 }); // Tie with user_b
+  await User.findByIdAndUpdate(userD.id, { points: 300, solvedProblems: 5 });
+  await User.findByIdAndUpdate(userE.id, { points: 200, solvedProblems: 2 });
+
+  // Page 1, Limit 2
+  const page1 = await request(app)
+    .get('/api/submissions/leaderboard?window=all&page=1&limit=2')
+    .set('Authorization', `Bearer ${userA.token}`);
+
+  assert.equal(page1.status, 200);
+  assert.equal(page1.body.data.length, 2);
+  assert.equal(page1.body.data[0].username, 'user_a');
+  assert.equal(page1.body.data[0].rank, 1);
+  assert.equal(page1.body.data[1].username, 'user_b');
+  assert.equal(page1.body.data[1].rank, 2);
+  
+  assert.equal(page1.body.meta.total, 5);
+  assert.equal(page1.body.meta.page, 1);
+  assert.equal(page1.body.meta.limit, 2);
+  assert.equal(page1.body.meta.totalPages, 3);
+  assert.equal(page1.body.meta.topThree.length, 3);
+  assert.equal(page1.body.meta.topThree[0].username, 'user_a');
+  assert.equal(page1.body.meta.topThree[0].rank, 1);
+  assert.equal(page1.body.meta.topThree[1].username, 'user_b');
+  assert.equal(page1.body.meta.topThree[1].rank, 2);
+  assert.equal(page1.body.meta.topThree[2].username, 'user_c');
+  assert.equal(page1.body.meta.topThree[2].rank, 2);
+
+  // Page 2, Limit 2
+  const page2 = await request(app)
+    .get('/api/submissions/leaderboard?window=all&page=2&limit=2')
+    .set('Authorization', `Bearer ${userA.token}`);
+
+  assert.equal(page2.status, 200);
+  assert.equal(page2.body.data.length, 2);
+  assert.equal(page2.body.data[0].username, 'user_c');
+  assert.equal(page2.body.data[0].rank, 2); // User C has same points/solved as User B, so gets rank 2
+  assert.equal(page2.body.data[1].username, 'user_d');
+  assert.equal(page2.body.data[1].rank, 4); // User D has rank 4 since there are 3 users ahead of them
+
+  // Page 3, Limit 2
+  const page3 = await request(app)
+    .get('/api/submissions/leaderboard?window=all&page=3&limit=2')
+    .set('Authorization', `Bearer ${userA.token}`);
+
+  assert.equal(page3.status, 200);
+  assert.equal(page3.body.data.length, 1);
+  assert.equal(page3.body.data[0].username, 'user_e');
+  assert.equal(page3.body.data[0].rank, 5); // User E has rank 5 since there are 4 users ahead of them
+});
+
+test('getMySubmissions default limit defaults to 100', async () => {
+  const user = await registerUser({ username: 'submit_limit_user', email: 'submit_limit@example.com' });
+  const Challenge = require('../src/features/challenges/Challenge.model.js');
+  const challenge = await Challenge.create({
+    title: 'Limit Test Challenge',
+    description: 'Test limit',
+    difficulty: 'Medium',
+    points: 100,
+    category: 'Strings',
+  });
+
+  // Create 105 submissions
+  const submissionsData = Array.from({ length: 105 }, (_, i) => ({
+    userId: user.id,
+    challengeId: challenge._id,
+    code: `// submission ${i}`,
+    language: 'javascript',
+    status: 'Accepted',
+    submittedAt: new Date(Date.now() - i * 1000),
+  }));
+  await Submission.insertMany(submissionsData);
+
+  const res = await request(app)
+    .get('/api/submissions/my')
+    .set('Authorization', `Bearer ${user.token}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.length, 100); // Verify default hard server-side limit of 100 is applied
+});
+
+test('getChallenges uses text index search correctly', async () => {
+  const Challenge = require('../src/features/challenges/Challenge.model.js');
+  await Challenge.createIndexes(); // Force-compile indexes
+
+  await Challenge.create([
+    { title: 'Searchable Binary Tree Challenge', description: 'Find the path', category: 'Trees' },
+    { title: 'Another Unrelated Task', description: 'Binary search tree helper', category: 'Logic' },
+    { title: 'Something Else', description: 'Nothing related to trees', category: 'Logic' },
+  ]);
+
+  const user = await registerUser({ username: 'search_user', email: 'search@example.com' });
+
+  const res = await request(app)
+    .get('/api/challenges?search=Binary')
+    .set('Authorization', `Bearer ${user.token}`);
+
+  assert.equal(res.status, 200);
+  // Both first and second challenges match "Binary" text search
+  assert.equal(res.body.data.length, 2);
+  const titles = res.body.data.map(c => c.title);
+  assert.ok(titles.includes('Searchable Binary Tree Challenge'));
+  assert.ok(titles.includes('Another Unrelated Task'));
+});
+
+test('clan chief lookup is cached and behaves correctly on mutations', async () => {
+  const admin = await registerUser({ username: 'admin_test_chief', email: 'admin_chief@example.com' });
+  // Manually update role of admin to 'admin' so we can create/manage chief
+  await User.findByIdAndUpdate(admin.id, { role: 'admin' });
+
+  const chiefUser = await registerUser({ username: 'chief_user_cache', email: 'chief_cache@example.com' });
+  const memberUser = await registerUser({ username: 'member_user_cache', email: 'member_cache@example.com' });
+
+  // 1. Create a clan
+  const clanRes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ name: 'Cache Clan', tag: 'CACL' });
+  assert.equal(clanRes.status, 201);
+  const clanId = clanRes.body.data._id;
+
+  // 2. Add chiefUser as a member first (so they can be promoted to chief)
+  const addChiefMemberRes = await request(app)
+    .post(`/api/clans/${clanId}/members`)
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ userId: chiefUser.id });
+  assert.equal(addChiefMemberRes.status, 200);
+
+  // 3. Assign chief
+  const assignChiefRes = await request(app)
+    .put(`/api/clans/${clanId}/chief`)
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ userId: chiefUser.id });
+  assert.equal(assignChiefRes.status, 200);
+
+  // 4. Add member to clan
+  const addMemberRes = await request(app)
+    .post(`/api/clans/${clanId}/members`)
+    .set('Authorization', `Bearer ${admin.token}`)
+    .send({ userId: memberUser.id });
+  assert.equal(addMemberRes.status, 200);
+
+  // 5. Act as chief to populate cache
+  const { getActorMemberIdsInScope } = require('../src/features/clans/clanScope.service.js');
+  // Get updated chief user object with role 'clan-chief'
+  const chiefActor = await User.findById(chiefUser.id).lean();
+  
+  const members1 = await getActorMemberIdsInScope(chiefActor);
+  assert.ok(members1.memberIds.includes(memberUser.id));
+
+  // 6. Remove member from clan (which triggers mongoose middleware hook to evict cache)
+  const removeMemberRes = await request(app)
+    .delete(`/api/clans/${clanId}/members/${memberUser.id}`)
+    .set('Authorization', `Bearer ${admin.token}`);
+  assert.equal(removeMemberRes.status, 200);
+
+  // 7. Act as chief again - the cached clan must have been evicted, so it queries the db and gets updated members list
+  const members2 = await getActorMemberIdsInScope(chiefActor);
+  assert.ok(!members2.memberIds.includes(memberUser.id));
+});
+
+test('getChallenges and getSubmissions limit parameter clamping', async () => {
+  const user = await registerUser({ username: 'clamp_user', email: 'clamp@example.com' });
+  const Challenge = require('../src/features/challenges/Challenge.model.js');
+  
+  // Seed 105 challenges
+  const challengesData = Array.from({ length: 105 }, (_, i) => ({
+    title: `Clamp Challenge ${i}`,
+    description: `Desc ${i}`,
+    difficulty: 'Easy',
+    points: 100,
+    category: 'Logic',
+  }));
+  await Challenge.insertMany(challengesData);
+
+  // Request challenges with limit=50
+  const challengeRes = await request(app)
+    .get('/api/challenges?limit=50')
+    .set('Authorization', `Bearer ${user.token}`);
+
+  assert.equal(challengeRes.status, 200);
+  assert.equal(challengeRes.body.data.length, 50); // Respects limit=50
+  assert.equal(challengeRes.body.meta.limit, 50);
+
+  // Let's also test submissions limit clamping
+  const challenge = await Challenge.findOne();
+  const submissionsData = Array.from({ length: 105 }, (_, i) => ({
+    userId: user.id,
+    challengeId: challenge._id,
+    code: `// code ${i}`,
+    language: 'javascript',
+    status: 'Accepted',
+    submittedAt: new Date(Date.now() - i * 1000),
+  }));
+  await Submission.insertMany(submissionsData);
+
+  // Request submissions with limit=50 using admin credentials
+  const admin = await registerUser({ username: 'clamp_admin', email: 'clamp_admin@example.com' });
+  await User.findByIdAndUpdate(admin.id, { role: 'admin' });
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'clamp_admin@example.com',
+    password: 'strong-password',
+  });
+  const adminToken = adminLogin.body.data.token;
+
+  const submissionRes = await request(app)
+    .get('/api/submissions?limit=50')
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  assert.equal(submissionRes.status, 200);
+  assert.equal(submissionRes.body.data.length, 50); // Respects limit=50
+  assert.equal(submissionRes.body.meta.limit, 50);
+});
+
+test('getAdminDashboardSummary calculates live completions and avgCompletion', async () => {
+  const Challenge = require('../src/features/challenges/Challenge.model.js');
+
+  const admin = await registerUser({ username: 'admin_dashboard_test', email: 'admin_dashboard@example.com' });
+  await User.findByIdAndUpdate(admin.id, { role: 'admin' });
+
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'admin_dashboard@example.com',
+    password: 'strong-password',
+  });
+  const adminToken = adminLogin.body.data.token;
+
+  // Create two clans
+  const clanARes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Clan Alpha', tag: 'ALPH' });
+  assert.equal(clanARes.status, 201);
+  const clanAId = clanARes.body.data._id;
+
+  const clanBRes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Clan Beta', tag: 'BETA' });
+  assert.equal(clanBRes.status, 201);
+  const clanBId = clanBRes.body.data._id;
+
+  // Register two members
+  const memberA = await registerUser({ username: 'member_a_dash', email: 'membera_dash@example.com' });
+  const memberB = await registerUser({ username: 'member_b_dash', email: 'memberb_dash@example.com' });
+
+  // Add members to respective clans
+  await request(app)
+    .post(`/api/clans/${clanAId}/members`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ userId: memberA.id });
+
+  await request(app)
+    .post(`/api/clans/${clanBId}/members`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ userId: memberB.id });
+
+  // Create a challenge
+  const challenge = await Challenge.create({
+    title: 'Dashboard Challenge One',
+    description: 'Solve me',
+    difficulty: 'Easy',
+    points: 50,
+    category: 'Logic',
+  });
+
+  // Create an accepted submission for memberA (1 solve)
+  await Submission.create({
+    userId: memberA.id,
+    challengeId: challenge._id,
+    code: '// solved',
+    language: 'javascript',
+    status: 'Accepted',
+    submittedAt: new Date(),
+  });
+
+  // Clan Alpha has 1 member, 1 solve (weeklySolved = 1). TARGET_PROBLEMS = 5.
+  // Clan Alpha completion = Math.round((1 / 5) * 100) = 20%.
+  // Clan Beta has 1 member, 0 solves. Clan Beta completion = 0%.
+  // Average completion = Math.round((20 + 0) / 2) = 10%.
+
+  const res = await request(app)
+    .get('/api/dashboard/admin-summary')
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.success, true);
+  
+  const { avgCompletion, clanPerformance, activeClans } = res.body.data;
+  assert.equal(activeClans, 2);
+  assert.equal(avgCompletion, 10);
+
+  assert.equal(clanPerformance.length, 2);
+  const clanAlphaPerf = clanPerformance.find(c => c.name === 'Clan Alpha');
+  const clanBetaPerf = clanPerformance.find(c => c.name === 'Clan Beta');
+
+  assert.ok(clanAlphaPerf);
+  assert.equal(clanAlphaPerf.completion, 20);
+  
+  assert.ok(clanBetaPerf);
+  assert.equal(clanBetaPerf.completion, 0);
+});
+
+test('getClanLeaderboard window=all aggregates points and solved problems correctly using aggregation pipeline', async () => {
+  const admin = await registerUser({ username: 'admin_leaderboard_test', email: 'admin_leaderboard@example.com' });
+  await User.findByIdAndUpdate(admin.id, { role: 'admin' });
+
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'admin_leaderboard@example.com',
+    password: 'strong-password',
+  });
+  const adminToken = adminLogin.body.data.token;
+
+  // Create two clans
+  const clanARes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Clan Gamma', tag: 'GAM' });
+  const clanAId = clanARes.body.data._id;
+
+  const clanBRes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Clan Delta', tag: 'DELT' });
+  const clanBId = clanBRes.body.data._id;
+
+  // Create users with points and solvedProblems
+  const user1 = await registerUser({ username: 'leader_u1', email: 'leader_u1@example.com' });
+  const user2 = await registerUser({ username: 'leader_u2', email: 'leader_u2@example.com' });
+
+  // Update points/solvedProblems directly in DB
+  await User.findByIdAndUpdate(user1.id, { points: 150, solvedProblems: 10 });
+  await User.findByIdAndUpdate(user2.id, { points: 300, solvedProblems: 20 });
+
+  // Add user1 to Clan Gamma, user2 to Clan Delta
+  await request(app)
+    .post(`/api/clans/${clanAId}/members`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ userId: user1.id });
+
+  await request(app)
+    .post(`/api/clans/${clanBId}/members`)
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ userId: user2.id });
+
+  const res = await request(app)
+    .get('/api/clans/leaderboard?window=all')
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.success, true);
+  assert.ok(Array.isArray(res.body.data));
+
+  // Clan Delta (user2: 300 pts) should be ranked 1st
+  // Clan Gamma (user1: 150 pts) should be ranked 2nd
+  const leaderData = res.body.data;
+  const deltaRank = leaderData.find(c => c.name === 'Clan Delta');
+  const gammaRank = leaderData.find(c => c.name === 'Clan Gamma');
+
+  assert.ok(deltaRank);
+  assert.ok(gammaRank);
+
+  assert.equal(deltaRank.totalPoints, 300);
+  assert.equal(deltaRank.solvedCount, 20);
+  assert.equal(deltaRank.memberCount, 1);
+  assert.equal(deltaRank.rank, 1);
+
+  assert.equal(gammaRank.totalPoints, 150);
+  assert.equal(gammaRank.solvedCount, 10);
+  assert.equal(gammaRank.memberCount, 1);
+  assert.equal(gammaRank.rank, 2);
+});
+
+
+

@@ -245,6 +245,21 @@ const SubmissionDetails = () => {
             </div>
           )}
 
+          {/* User Feedback Card (Submit Anyway) */}
+          {submission.userFeedback && (
+            <div className="macos-glass rounded-xl overflow-hidden border border-accent/20">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-accent/10 bg-accent/5">
+                <FiMessageSquare className="text-accent" size={14} />
+                <span className="text-sm font-bold text-accent">User Feedback (Submitted Anyway)</span>
+              </div>
+              <div className="p-4">
+                <div className="p-3 rounded-xl bg-accent/5 border border-accent/10 text-sm text-primary leading-relaxed whitespace-pre-wrap">
+                  {submission.userFeedback}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Status State Cards */}
           {submission.status === 'Pending' && (
             <div className="macos-glass rounded-xl p-6 border border-yellow-500/20 text-center space-y-3">

@@ -13,6 +13,7 @@ const submissionCreateSchema = {
       repositoryUrl: z.string().trim().url().optional(),
       code: z.string().trim().min(1).max(50000).optional(),
       language: z.enum(['javascript', 'python', 'java', 'cpp']).default('javascript'),
+      userFeedback: z.string().trim().min(5).max(2000).optional(),
     })
     .refine((payload) => payload.repositoryUrl || payload.code, {
       message: 'Please provide code or a repository URL',

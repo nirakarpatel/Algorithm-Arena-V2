@@ -78,4 +78,23 @@ clanSchema.virtual('memberCount').get(function () {
 clanSchema.index({ name: 1 }, { unique: true, partialFilterExpression: { status: 'active' } });
 clanSchema.index({ tag: 1 }, { unique: true, partialFilterExpression: { status: 'active' } });
 
+// Clear chief-to-clan cache on any updates to Clan documents
+const clearCacheHook = function() {
+  try {
+    const { clearChiefClanCache } = require('./clanScope.service');
+    clearChiefClanCache();
+  } catch (err) {
+    // Ignore require cycle during initial bootstrap or errors
+  }
+};
+
+clanSchema.post('save', clearCacheHook);
+clanSchema.post('insertMany', clearCacheHook);
+clanSchema.post('updateOne', clearCacheHook);
+clanSchema.post('updateMany', clearCacheHook);
+clanSchema.post('deleteOne', clearCacheHook);
+clanSchema.post('deleteMany', clearCacheHook);
+clanSchema.post('findOneAndDelete', clearCacheHook);
+clanSchema.post('findOneAndUpdate', clearCacheHook);
+
 module.exports = mongoose.model('Clan', clanSchema);

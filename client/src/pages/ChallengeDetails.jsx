@@ -6,6 +6,13 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import toast from "react-hot-toast";
 import DOMPurify from "dompurify";
 import {
@@ -29,6 +36,8 @@ import {
   FiMaximize2,
   FiMinimize2,
   FiInfo,
+  FiAlertTriangle,
+  FiX,
 } from "react-icons/fi";
 
 // Monaco & Shared Assets
@@ -39,18 +48,29 @@ import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 import SkeletonCard from "../components/SkeletonCard";
 import { api } from "../lib/api";
 import { MANUAL_TOPICS } from "../constants/manualContent";
+import FeedbackDialog from "../components/FeedbackDialog";
 
 import { useAuth } from "../context/useAuth";
 
-// --- JUDGE0 CONFIG ---
-const JUDGE0_URL =
-  import.meta.env.VITE_JUDGE0_API_URL || "https://ce.judge0.com";
+/**
+ * Normalize output for comparison:
+ * 1. Trim leading/trailing whitespace
+ * 2. Collapse all internal whitespace
+ * 3. Normalize cross-language literals (Python's True/False/None → true/false/null)
+ */
+const LANG_LITERALS = { True: "true", False: "false", None: "null" };
+const normalizeOutput = (s) =>
+  (s ?? "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/\b(True|False|None)\b/g, (m) => LANG_LITERALS[m]);
 
 /**
  * Converts a single test-case arg value to its stdin representation.
- * Arrays → space-separated elements (standard competitive-programming format)
- * so that Java's Scanner.nextInt() / nextLine() can consume them without
- * an InputMismatchException.  Nested arrays produce one line per row.
+ * Arrays → length on first line, then space-separated elements.
+ * Nested arrays → row count, then each inner array as "length elements..."
+ * This matches the standard competitive-programming format expected by
+ * Java's Scanner and C++ cin.
  */
 const formatArgForStdin = (a) => {
   if (a == null) return "";
@@ -58,14 +78,16 @@ const formatArgForStdin = (a) => {
   if (typeof a === "number" || typeof a === "boolean") return String(a);
   if (Array.isArray(a)) {
     if (a.length > 0 && Array.isArray(a[0])) {
-      // 2-D array: each inner array on its own line, space-separated
-      return a
-        .map((inner) =>
-          Array.isArray(inner) ? inner.join(" ") : String(inner),
-        )
-        .join("\n");
+      // 2-D array: row count, then each inner row as "length el1 el2..."
+      const rows = a.map((inner) =>
+        Array.isArray(inner)
+          ? `${inner.length}\n${inner.join(" ")}`
+          : String(inner),
+      );
+      return `${a.length}\n${rows.join("\n")}`;
     }
-    return a.join(" ");
+    // 1-D array: length on first line, elements on second
+    return `${a.length}\n${a.join(" ")}`;
   }
   return JSON.stringify(a);
 };
@@ -137,6 +159,11 @@ const ChallengeDetails = () => {
   const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
   const [runOutput, setRunOutput] = useState(null);
   const [running, setRunning] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const abortControllerRef = useRef(null);
+  const [showSubmitAnyway, setShowSubmitAnyway] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
 
   // Review mode state
   const [reviewComment, setReviewComment] = useState("");
@@ -144,10 +171,14 @@ const ChallengeDetails = () => {
   const [grading, setGrading] = useState(false);
 
   // Manual state
-  const [manualTopic, setManualTopic] = useState(MANUAL_TOPICS[0].key);
+  const [manualTopic, setManualTopic] = useState("io");
+  const [mobileTab, setMobileTab] = useState("description"); // "description" or "editor"
 
   // Resizer state
-  const [leftWidth, setLeftWidth] = useState(45);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    const saved = localStorage.getItem("challenge-left-width");
+    return saved ? parseFloat(saved) : 45;
+  });
   const containerRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [wasMaximized, setWasMaximized] = useState(false);
@@ -170,8 +201,22 @@ const ChallengeDetails = () => {
 
   // Bottom (test/result) panel sizing — lets the editor grow when the
   // test-case panel takes up too much vertical space.
-  const [bottomHeight, setBottomHeight] = useState(224); // matches old h-56
-  const [bottomCollapsed, setBottomCollapsed] = useState(false);
+  const [bottomHeight, setBottomHeight] = useState(() => {
+    const saved = localStorage.getItem("challenge-bottom-height");
+    return saved ? parseInt(saved, 10) : 224;
+  }); // matches old h-56
+  const [bottomCollapsed, setBottomCollapsed] = useState(() => {
+    const saved = localStorage.getItem("challenge-bottom-collapsed");
+    return saved === "true";
+  });
+
+  const updateBottomCollapsed = (val) => {
+    setBottomCollapsed((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      localStorage.setItem("challenge-bottom-collapsed", String(next));
+      return next;
+    });
+  };
 
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark",
@@ -192,6 +237,14 @@ const ChallengeDetails = () => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const handleMouseDown = (e) => {
     e.preventDefault();
     const handleMouseMove = (e) => {
@@ -201,6 +254,7 @@ const ChallengeDetails = () => {
       if (newWidth < 20) newWidth = 20;
       if (newWidth > 80) newWidth = 80;
       setLeftWidth(newWidth);
+      localStorage.setItem("challenge-left-width", String(newWidth));
     };
     const handleMouseUp = () => {
       document.removeEventListener("mousemove", handleMouseMove);
@@ -313,6 +367,10 @@ const ChallengeDetails = () => {
   const codeSnippet =
     codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
 
+  useEffect(() => {
+    setShowSubmitAnyway(false);
+  }, [codeSnippet, language, repoUrl]);
+
   // Pre-load submitted code into editor when in review mode
   useEffect(() => {
     if (!isReviewMode || !reviewQuery.data) return;
@@ -374,13 +432,9 @@ const ChallengeDetails = () => {
   };
 
   // --- JUDGE0 RUN LOGIC ---
-  const handleRun = async () => {
-    if (!codeSnippet.trim()) return toast.error("No code to run.");
-
+  const runTestCases = async (signal) => {
     const testCases = challengeQuery.data?.testCases ?? [];
 
-    // Build the list of runs: one per stored test case, or fall back to
-    // the current manual stdin if no test cases are defined.
     const runs =
       testCases.length > 0
         ? testCases.map((tc) => ({
@@ -390,107 +444,121 @@ const ChallengeDetails = () => {
           }))
         : [{ label: "Run", stdinValue: stdin, expected: null }];
 
-    setRunning(true);
-    setBottomCollapsed(false); // always expand the console
-    setBottomTab("output"); // jump straight to Test Result tab
-    setRunOutput(null);
-
     const langId = LANGUAGE_MAP[language]?.id ?? 63;
-    // Each case gets a unique nonce comment to force a fresh execution even
-    // if Judge0 caches by source-code hash.
     const commentChar = language === "python" ? "#" : "//";
     const freshSource = (idx) =>
       b64Encode(
         `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       );
 
-    try {
-      // ── 1. Batch submit: one independent submission per test case ────────────
-      const batchRes = await fetch(
-        `${JUDGE0_URL}/submissions/batch?base64_encoded=true`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            submissions: runs.map((run, idx) => ({
-              language_id: langId,
-              source_code: freshSource(idx),
-              stdin: b64Encode(run.stdinValue),
-            })),
-          }),
-        },
-      );
-      if (!batchRes.ok) {
-        const text = await batchRes.text();
-        throw new Error(
-          `Judge0 batch submit error ${batchRes.status}: ${text}`,
-        );
-      }
-      const batchTokens = await batchRes.json();
-      const tokens = batchTokens.map((t) => t.token);
+    const batchRes = await api.post(
+      "/api/submissions/run/batch",
+      {
+        submissions: runs.map((run, idx) => ({
+          language_id: langId,
+          source_code: freshSource(idx),
+          stdin: b64Encode(run.stdinValue),
+        })),
+      },
+      { signal }
+    );
+    const batchTokens = batchRes.data;
+    const tokens = batchTokens.map((t) => t.token);
 
-      // ── 2. Poll until every submission is finished ───────────────────────────
-      const tokenList = tokens.join(",");
-      let results = tokens.map(() => null);
+    const tokenList = tokens.join(",");
+    let results = tokens.map(() => null);
 
-      for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise((r) => setTimeout(r, 1000));
-        const pollRes = await fetch(
-          `${JUDGE0_URL}/submissions/batch?tokens=${tokenList}&base64_encoded=true`,
-        );
-        if (!pollRes.ok) continue;
-        const { submissions } = await pollRes.json();
-
-        submissions.forEach((sub, i) => {
-          const statusId = sub?.status?.id;
-          if (statusId !== 1 && statusId !== 2) {
-            results[i] = {
-              label: runs[i].label,
-              expected: runs[i].expected,
-              stdinValue: runs[i].stdinValue,
-              token: tokens[i],
-              stdout: b64Decode(sub.stdout),
-              stderr: b64Decode(sub.stderr),
-              compile_output: b64Decode(sub.compile_output),
-              status: sub.status,
-              time: sub.time,
-              memory: sub.memory,
-            };
-          }
+    for (let attempt = 0; attempt < 30; attempt++) {
+      if (signal?.aborted) return;
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(resolve, 1000);
+        signal?.addEventListener("abort", () => {
+          clearTimeout(timeout);
+          reject(new DOMException("Aborted", "AbortError"));
         });
+      });
+      if (signal?.aborted) return;
 
-        const ready = results.filter(Boolean);
-        if (ready.length > 0) setRunOutput({ cases: ready });
-        if (results.every(Boolean)) break;
-      }
+      const pollRes = await api.get(
+        `/api/submissions/run/batch?tokens=${tokenList}`,
+        { signal }
+      );
+      const submissions = pollRes.data?.submissions || [];
 
-      // Mark any that timed out
-      results = results.map(
-        (r, i) =>
-          r ?? {
+      submissions.forEach((sub, i) => {
+        const statusId = sub?.status?.id;
+        if (statusId !== 1 && statusId !== 2) {
+          results[i] = {
             label: runs[i].label,
             expected: runs[i].expected,
             stdinValue: runs[i].stdinValue,
-            stdout: "",
-            stderr: "Timed out waiting for Judge0 result.",
-            compile_output: "",
-            status: { description: "Timeout" },
-            time: null,
-            memory: null,
-          },
-      );
-      setRunOutput({ cases: results });
+            token: tokens[i],
+            stdout: b64Decode(sub.stdout),
+            stderr: b64Decode(sub.stderr),
+            compile_output: b64Decode(sub.compile_output),
+            status: sub.status,
+            time: sub.time,
+            memory: sub.memory,
+          };
+        }
+      });
+
+      const ready = results.filter(Boolean);
+      if (ready.length > 0) setRunOutput({ cases: ready });
+      if (results.every(Boolean)) break;
+    }
+
+    results = results.map(
+      (r, i) =>
+        r ?? {
+          label: runs[i].label,
+          expected: runs[i].expected,
+          stdinValue: runs[i].stdinValue,
+          stdout: "",
+          stderr: "Timed out waiting for Judge0 result.",
+          compile_output: "",
+          status: { description: "Timeout" },
+          time: null,
+          memory: null,
+        },
+    );
+    setRunOutput({ cases: results });
+    return results;
+  };
+
+  const handleRun = async () => {
+    if (!codeSnippet.trim()) return toast.error("No code to run.");
+    if (cooldown) return toast.error("Please wait a moment between code runs.");
+
+    setRunning(true);
+    updateBottomCollapsed(false);
+    setBottomTab("output");
+    setRunOutput(null);
+
+    // Cancel any ongoing run request or polling loop
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      await runTestCases(controller.signal);
     } catch (err) {
-      toast.error(err.message || "Failed to execute code.");
-      setRunOutput({ error: err.message || "Execution engine unreachable." });
+      if (err.name === "AbortError" || err.message === "Aborted") {
+        console.log("Run execution aborted.");
+        return;
+      }
+      toast.error(err.response?.data?.message || err.message || "Failed to execute code.");
+      setRunOutput({ error: err.response?.data?.message || err.message || "Execution engine unreachable." });
     } finally {
       setRunning(false);
+      setCooldown(true);
+      setTimeout(() => setCooldown(false), 3000);
     }
   };
 
-  const handleSubmit = async () => {
-    if (!repoUrl && !codeSnippet.trim())
-      return toast.error("Please provide code or a GitHub link.");
+  const submitToServer = async (userFeedbackVal) => {
     setSubmitting(true);
     try {
       await api.post("/api/submissions", {
@@ -498,16 +566,58 @@ const ChallengeDetails = () => {
         repositoryUrl: repoUrl.trim() || undefined,
         code: codeSnippet.trim() || undefined,
         language,
+        userFeedback: userFeedbackVal || undefined,
       });
       toast.success("Solution submitted.");
       setRepoUrl("");
       setCodeByLang({});
       localStorage.removeItem(draftKey);
+      setShowSubmitAnyway(false);
+      setShowFeedbackModal(false);
       queryClient.invalidateQueries({ queryKey: ["my-submissions", id] });
       queryClient.invalidateQueries({ queryKey: ["dash-summary"] });
       queryClient.invalidateQueries({ queryKey: ["dash-profile"] });
     } catch (err) {
-      toast.error(err.userMessage || "Submission failed.");
+      toast.error(err.response?.data?.message || err.userMessage || "Submission failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!repoUrl && !codeSnippet.trim())
+      return toast.error("Please provide code or a GitHub link.");
+
+    if (!codeSnippet.trim()) {
+      await submitToServer();
+      return;
+    }
+
+    setSubmitting(true);
+    updateBottomCollapsed(false);
+    setBottomTab("output");
+    setRunOutput(null);
+
+    try {
+      const results = await runTestCases();
+      const hasError = results.some((c) => c.compile_output || c.stderr);
+      const allPassed =
+        !hasError &&
+        results.every(
+          (c) =>
+            c.expected != null && normalizeOutput(c.stdout) === normalizeOutput(c.expected),
+        );
+
+      if (allPassed) {
+        toast.success("All test cases passed! Submitting solution...");
+        await submitToServer();
+      } else {
+        setShowSubmitAnyway(true);
+        toast.error("Some test cases failed. You can choose to Submit Anyway.");
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to run verification tests.");
+      setShowSubmitAnyway(true);
     } finally {
       setSubmitting(false);
     }
@@ -561,16 +671,16 @@ const ChallengeDetails = () => {
       {/* Header */}
       <div className="flex items-center gap-3 pb-1 border-b border-black/10 dark:border-white/10 mb-1.5 shrink-0 px-3 pt-1.5">
         <Link
-          to="/dashboard"
+          to={isReviewMode ? "/chief-panel?tab=review" : "/dashboard"}
           className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-xs"
         >
           <FiChevronLeft size={14} />
-          <span className="hidden sm:inline">Missions</span>
+          <span className="hidden sm:inline">{isReviewMode ? "Code Reviews" : "Missions"}</span>
         </Link>
         <div className="w-px h-4 bg-black/10 dark:bg-white/10" />
-        <a 
-          href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`} 
-          target="_blank" 
+        <a
+          href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`}
+          target="_blank"
           rel="noopener noreferrer"
         >
           <h1 className="text-sm sm:text-base font-bold truncate flex flex-row items-center gap-1.5 hover:text-accent transition-colors">
@@ -605,10 +715,28 @@ const ChallengeDetails = () => {
         </div>
       </div>
 
+      {/* Mobile Tab Switcher */}
+      <div className="flex lg:hidden mb-2 px-2 shrink-0">
+        <div className="flex w-full bg-black/10 dark:bg-white/10 rounded-lg p-1 gap-1">
+          <button
+            className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${mobileTab === 'description' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}
+            onClick={() => setMobileTab('description')}
+          >
+            Mission Details
+          </button>
+          <button
+            className={`flex-1 py-2.5 text-xs font-bold rounded-md transition-all ${mobileTab === 'editor' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}
+            onClick={() => setMobileTab('editor')}
+          >
+            Code Editor
+          </button>
+        </div>
+      </div>
+
       {/* Main Split Layout */}
       <div
         ref={containerRef}
-        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-2 pb-2"
+        className="flex flex-col lg:flex-row flex-1 min-h-0 w-full relative h-full px-1 pb-1"
         style={{
           "--left-width": `${leftWidth}%`,
           "--right-width": `calc(${100 - leftWidth}% - 12px)`,
@@ -616,7 +744,7 @@ const ChallengeDetails = () => {
       >
         {/* LEFT PANEL */}
         <div
-          className={`flex-1 lg:flex-none flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden w-full lg:w-[var(--left-width)] lg:mb-0 mb-3 h-full ${isMaximized ? "hidden" : ""}`}
+          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden w-full lg:w-[var(--left-width)] lg:mb-0 mb-3 h-full panel-slide-left ${isMaximized ? "hidden" : ""} ${mobileTab === 'editor' ? 'hidden lg:flex' : 'flex'}`}
         >
           <div className="flex border-b border-black/10 dark:border-white/10 shrink-0">
             <button
@@ -738,27 +866,26 @@ const ChallengeDetails = () => {
 
         {/* RIGHT PANEL - Editor + Console */}
         <div
-          className={`flex-1 lg:flex-none flex flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full ${isMaximized ? "lg:w-full" : "lg:w-[var(--right-width)]"} h-full`}
+          className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden border border-white/5 w-full panel-slide-right ${isMaximized ? "lg:w-full" : "lg:w-[var(--right-width)]"} h-full ${mobileTab === 'description' ? 'hidden lg:flex' : 'flex'}`}
         >
           {/* Editor header: language select + utility buttons */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-black/10 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-2">
               <FiCode size={13} className="text-accent" />
-              <select
-                className="bg-transparent border-none text-xs font-semibold text-primary focus:outline-none cursor-pointer"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <option
-                    key={opt.key}
-                    value={opt.key}
-                    className="bg-[#1a1a24] text-white"
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div className="w-[120px]">
+                <Select value={language} onValueChange={(val) => setLanguage(val)}>
+                  <SelectTrigger className="h-7 text-xs bg-transparent border-none focus:ring-0 px-2 py-0 font-semibold text-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LANGUAGE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.key} value={opt.key} className="text-xs">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <button
                 title="Open Reference Manual"
                 onClick={handleOpenManual}
@@ -800,7 +927,7 @@ const ChallengeDetails = () => {
                     setIsMaximized(nextMaximized);
                     setWasMaximized(false);
                     if (nextMaximized) {
-                      setBottomCollapsed(true);
+                      updateBottomCollapsed(true);
                     }
                   }}
                   className="hover:text-primary transition-colors p-1"
@@ -845,7 +972,7 @@ const ChallengeDetails = () => {
             <div className="flex items-center justify-between px-3 py-1.5 border-b border-black/10 dark:border-white/10 shrink-0">
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setBottomCollapsed((c) => !c)}
+                  onClick={() => updateBottomCollapsed((c) => !c)}
                   className="flex items-center gap-1 text-xs font-semibold text-secondary hover:text-primary transition-colors px-2 py-1 rounded hover:bg-white/5"
                 >
                   {bottomCollapsed ? (
@@ -863,7 +990,7 @@ const ChallengeDetails = () => {
                     key={key}
                     onClick={() => {
                       setBottomTab(key);
-                      setBottomCollapsed(false);
+                      updateBottomCollapsed(false);
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
                       !bottomCollapsed && bottomTab === key
@@ -878,7 +1005,7 @@ const ChallengeDetails = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRun}
-                  disabled={running}
+                  disabled={running || cooldown}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 border border-black/10 dark:border-white/10 hover:bg-white/5 text-primary"
                 >
                   {running ? (
@@ -889,20 +1016,33 @@ const ChallengeDetails = () => {
                   {running ? "Running…" : "Run"}
                 </button>
                 {!isReviewMode && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white text-xs font-bold transition-all disabled:opacity-60 ${
-                      isSolved ? "bg-amber-600 hover:bg-amber-500" : "bg-green-600 hover:bg-green-500"
-                    }`}
-                  >
-                    {submitting ? (
-                      <FiRefreshCw size={11} className="animate-spin" />
+                  <>
+                    {showSubmitAnyway ? (
+                      <button
+                        onClick={() => setShowFeedbackModal(true)}
+                        disabled={submitting}
+                        className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white text-xs font-bold transition-all disabled:opacity-60 bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20"
+                      >
+                        <FiAlertTriangle size={11} className="text-white animate-pulse" />
+                        Submit Anyway
+                      </button>
                     ) : (
-                      <FiSend size={11} />
+                      <button
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white text-xs font-bold transition-all disabled:opacity-60 ${
+                          isSolved ? "bg-amber-600 hover:bg-amber-500" : "bg-green-600 hover:bg-green-500"
+                        }`}
+                      >
+                        {submitting ? (
+                          <FiRefreshCw size={11} className="animate-spin" />
+                        ) : (
+                          <FiSend size={11} />
+                        )}
+                        {submitting ? "Submitting…" : isSolved ? "Re-submit (No XP)" : "Submit"}
+                      </button>
                     )}
-                    {submitting ? "Submitting…" : isSolved ? "Re-submit (No XP)" : "Submit"}
-                  </button>
+                  </>
                 )}
               </div>
             </div>
@@ -1026,11 +1166,11 @@ const ChallengeDetails = () => {
                           const passed =
                             !hasError &&
                             c.expected != null &&
-                            c.stdout?.trim() === c.expected.trim();
+                            normalizeOutput(c.stdout) === normalizeOutput(c.expected);
                           const failed =
                             !hasError &&
                             c.expected != null &&
-                            c.stdout?.trim() !== c.expected.trim();
+                            normalizeOutput(c.stdout) !== normalizeOutput(c.expected);
                           return (
                             <div
                               key={i}
@@ -1125,32 +1265,41 @@ const ChallengeDetails = () => {
           {isReviewMode ? (
             /* ---- REVIEW MODE PANEL ---- */
             <div className="px-4 py-4 border-t border-black/10 dark:border-white/10 shrink-0 space-y-4">
-              {/* Submitter info */}
-              {reviewQuery.data && (
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
-                  <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center text-accent font-bold text-xs">
-                    <FiUser size={14} />
+               {reviewQuery.data && (
+                <div className="flex flex-col gap-3 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center text-accent font-bold text-xs">
+                      <FiUser size={14} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">
+                        {reviewQuery.data.userId?.username || "Unknown"}
+                      </p>
+                      <p className="text-[10px] text-secondary">
+                        Submitted{" "}
+                        {new Date(reviewQuery.data.submittedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        reviewQuery.data.status === "Pending"
+                          ? "bg-yellow-500/15 text-yellow-500"
+                          : reviewQuery.data.status === "Accepted"
+                            ? "bg-green-500/15 text-green-500"
+                            : "bg-red-500/15 text-red-500"
+                      }`}
+                    >
+                      {reviewQuery.data.status}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">
-                      {reviewQuery.data.userId?.username || "Unknown"}
-                    </p>
-                    <p className="text-[10px] text-secondary">
-                      Submitted{" "}
-                      {new Date(reviewQuery.data.submittedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      reviewQuery.data.status === "Pending"
-                        ? "bg-yellow-500/15 text-yellow-500"
-                        : reviewQuery.data.status === "Accepted"
-                          ? "bg-green-500/15 text-green-500"
-                          : "bg-red-500/15 text-red-500"
-                    }`}
-                  >
-                    {reviewQuery.data.status}
-                  </span>
+                  {reviewQuery.data.userFeedback && (
+                    <div className="mt-2 pt-2 border-t border-black/10 dark:border-white/10">
+                      <p className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">User Feedback (Submitted Anyway)</p>
+                      <p className="text-xs text-primary bg-black/10 dark:bg-black/20 p-2.5 rounded-lg border border-black/10 dark:border-white/5 whitespace-pre-wrap">
+                        {reviewQuery.data.userFeedback}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1216,6 +1365,12 @@ const ChallengeDetails = () => {
           ) : null}
         </div>
       </div>
+      <FeedbackDialog
+        open={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        onSubmit={submitToServer}
+        isSubmitting={submitting}
+      />
     </div>
   );
 };

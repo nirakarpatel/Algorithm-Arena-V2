@@ -25,7 +25,8 @@ const ClanIdentityHoverCard = ({ clanId, position }) => {
       }
     },
     enabled: !!clanId,
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const clan = clanQ.data;
@@ -204,7 +205,8 @@ const ClanHoverCard = ({ clanId, children, className = "" }) => {
       }
     },
     enabled: showTooltip && !!clanId,
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const calculatePosition = useCallback(() => {

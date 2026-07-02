@@ -15,10 +15,37 @@ const withSession = (query, session) => {
   return query.session(session);
 };
 
+const chiefClanCache = new Map(); // userId -> { clan, expiresAt }
+const CACHE_TTL = 60 * 1000; // 1 minute
+
+const clearChiefClanCache = (userId) => {
+  if (userId) {
+    chiefClanCache.delete(userId);
+  } else {
+    chiefClanCache.clear();
+  }
+};
+
 const findChiefClan = async (userId, session = null) => {
   if (!userId) return null;
+
+  if (!session) {
+    const cached = chiefClanCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.clan;
+    }
+  }
+
   const query = Clan.findOne({ chief: userId }).select('_id chief members');
   const clan = await withSession(query, session).lean();
+
+  if (!session) {
+    chiefClanCache.set(userId, {
+      clan,
+      expiresAt: Date.now() + CACHE_TTL,
+    });
+  }
+
   return clan || null;
 };
 
@@ -134,4 +161,5 @@ module.exports = {
   canActorManageUser,
   getActorMemberIdsInScope,
   reconcileChiefRoleForUser,
+  clearChiefClanCache,
 };

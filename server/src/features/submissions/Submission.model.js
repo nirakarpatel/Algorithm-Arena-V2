@@ -20,6 +20,7 @@ const submissionSchema = new mongoose.Schema({
     default: 'Pending' 
   },
   feedback: { type: String }, // Chief feedback
+  userFeedback: { type: String }, // User feedback when submitted anyway
   reviewedBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User' 

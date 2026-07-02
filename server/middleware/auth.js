@@ -6,6 +6,9 @@ const {
   canAccessChiefScopedAction,
 } = require('../src/features/auth/authorization.policy');
 
+const userCache = new Map();
+const CACHE_TTL = process.env.NODE_ENV === 'test' ? 0 : 30 * 1000;
+
 // Guard: Protect routes for logged-in users
 exports.protect = async (req, res, next) => {
   let token = null;
@@ -20,10 +23,22 @@ exports.protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    const cacheKey = decoded.id;
+    const now = Date.now();
 
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+    const cached = userCache.get(cacheKey);
+    let user;
+
+    if (cached && (now - cached.timestamp < CACHE_TTL)) {
+      user = cached.user;
+    } else {
+      user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+      }
+      if (CACHE_TTL > 0) {
+        userCache.set(cacheKey, { user, timestamp: now });
+      }
     }
 
     req.user = user;
@@ -32,6 +47,11 @@ exports.protect = async (req, res, next) => {
     if (!user.lastLoginDate || Date.now() - user.lastLoginDate.getTime() > 5 * 60 * 1000) {
       user.lastLoginDate = new Date();
       User.updateOne({ _id: user._id }, { lastLoginDate: user.lastLoginDate }).catch(() => {});
+      
+      // Update cache entry timestamp if present to avoid DB query triggers on active user
+      if (CACHE_TTL > 0 && userCache.has(cacheKey)) {
+        userCache.set(cacheKey, { user, timestamp: Date.now() });
+      }
     }
 
     return next();

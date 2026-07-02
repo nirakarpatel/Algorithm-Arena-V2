@@ -28,6 +28,7 @@ const ClanChiefPanel = lazy(() => import('./pages/ClanChiefPanel'));
 const Missions = lazy(() => import('./pages/Missions'));
 const PendingTasks = lazy(() => import('./pages/PendingTasks'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Badges = lazy(() => import('./pages/Badges'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Resources = lazy(() => import('./pages/Resources'));
 const PendingAssignment = lazy(() => import('./pages/PendingAssignment'));
@@ -75,12 +76,14 @@ function App() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/clans" element={<Clans />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/badges" element={<Navigate to="/badges" replace />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="/challenge/:id" element={<ChallengeDetails />} />
             <Route path="/submission/:id" element={<SubmissionDetails />} />
             <Route path="/missions" element={<Missions />} />
             <Route path="/pending-tasks" element={<PendingTasks />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/badges" element={<Badges />} />
 
             <Route path="/chief-panel" element={<ClanChiefRoute><ClanChiefPanel /></ClanChiefRoute>} />
             

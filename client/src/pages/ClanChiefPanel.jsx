@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiActivity, FiShield, FiFileText, FiBell, FiAlertCircle } from 'react-icons/fi';
+import { FiUsers, FiActivity, FiShield, FiFileText, FiBell, FiAlertCircle, FiAward } from 'react-icons/fi';
 import { clsx } from 'clsx';
 import { api } from '../lib/api';
 
@@ -10,14 +11,19 @@ import PermissionLegend from '../components/PermissionLegend';
 import ChiefDashboardTab from './chief/ChiefDashboardTab';
 import ChiefMembersTab from './chief/ChiefMembersTab';
 import ChiefReviewTab from './chief/ChiefReviewTab';
+import ChiefBadgesTab from './chief/ChiefBadgesTab';
 
 const ClanChiefPanel = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchParams] = useSearchParams();
+  const validTabs = ['dashboard', 'members', 'review', 'badges'];
+  const initialTab = validTabs.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'dashboard';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const tabs = [
-    { id: 'dashboard', label: 'Clan Overview', icon: FiActivity },
-    { id: 'members', label: 'Member Roster', icon: FiUsers },
-    { id: 'review', label: 'Review Submissions', icon: FiFileText },
+    { id: 'dashboard', label: 'Clan Overview',      icon: FiActivity },
+    { id: 'members',   label: 'Member Roster',       icon: FiUsers },
+    { id: 'review',    label: 'Review Submissions',  icon: FiFileText },
+    { id: 'badges',    label: 'Award Badges',        icon: FiAward },
   ];
 
   const chiefQuery = useQuery({
@@ -112,8 +118,9 @@ const ClanChiefPanel = () => {
           ) : (
             <>
               {activeTab === 'dashboard' && <ChiefDashboardTab clan={chiefQuery.data} onTabChange={setActiveTab} />}
-              {activeTab === 'members' && <ChiefMembersTab clan={chiefQuery.data} />}
-              {activeTab === 'review' && <ChiefReviewTab clan={chiefQuery.data} />}
+              {activeTab === 'members'   && <ChiefMembersTab clan={chiefQuery.data} />}
+              {activeTab === 'review'    && <ChiefReviewTab clan={chiefQuery.data} />}
+              {activeTab === 'badges'    && <ChiefBadgesTab clan={chiefQuery.data} />}
             </>
           )}
         </motion.div>

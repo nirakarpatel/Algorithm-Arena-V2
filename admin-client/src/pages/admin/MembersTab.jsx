@@ -474,7 +474,7 @@ const MembersTab = ({ initialClanFilter }) => {
                         <FiUserCheck className="text-green-400" /> Make Member
                       </button>
                     )}
-                    {menuUser.role === 'admin' && isSuperAdmin && (
+                    {menuUser.role === 'admin' && user?.role === 'superAdmin' && (
                       <button
                         onClick={() => handleRoleChange(menuUser, 'user')}
                         disabled={!canManageUsers}

@@ -19,6 +19,14 @@ import { api } from "../lib/api";
 import { useAuth } from "../context/useAuth";
 import MemberHoverCard from "../components/MemberHoverCard";
 import ClanHoverCard from "../components/ClanHoverCard";
+import CachedImage from "../components/CachedImage";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 const MotionDiv = motion.div;
 const MotionRow = motion.tr;
@@ -94,11 +102,11 @@ const Podium = ({ items, leaderType, loading }) => {
             <div className="mb-6 text-center">
               <div
                 className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 bg-glass-surface shadow-2xl md:h-20 md:w-20 ${
-                  isFirst ? "border-yellow-400/50 " : "border-white/10"
+                  isFirst ? "border-yellow-400/50 podium-gold-glow" : "border-white/10"
                 }`}
               >
                 {item.profilePicture ? (
-                  <img
+                  <CachedImage
                     src={item.profilePicture}
                     alt=""
                     className="h-full w-full object-cover"
@@ -143,7 +151,7 @@ const Podium = ({ items, leaderType, loading }) => {
               <FiAward
                 size={40}
                 className={`absolute -top-6 ${
-                  isFirst ? "text-yellow-400" : index === 0 ? "text-slate-300" : "text-orange-500"
+                  isFirst ? "text-yellow-400 podium-trophy-gold" : index === 0 ? "text-slate-300" : "text-orange-500"
                 }`}
               />
             </div>
@@ -152,6 +160,29 @@ const Podium = ({ items, leaderType, loading }) => {
       })}
     </div>
   );
+};
+
+const getRankStyles = (r, isMyRow) => {
+  if (r === 1) {
+    return "bg-gradient-to-r from-yellow-500/15 via-yellow-500/4 to-transparent border-l-4 border-l-yellow-500";
+  }
+  if (r === 2) {
+    return "bg-gradient-to-r from-slate-300/25 via-slate-300/6 to-transparent border-l-4 border-l-slate-300 shadow-[inset_1px_0_0_rgba(148,163,184,0.1)]";
+  }
+  if (r === 3) {
+    return "bg-gradient-to-r from-amber-700/20 via-amber-700/5 to-transparent border-l-4 border-l-amber-700";
+  }
+  if (isMyRow) {
+    return "border-l-4 border-l-accent bg-accent/5";
+  }
+  return "";
+};
+
+const getRankBadgeStyles = (r) => {
+  if (r === 1) return "bg-yellow-500/25 text-yellow-500 border border-yellow-500/35 shadow-[0_0_8px_rgba(234,179,8,0.2)]";
+  if (r === 2) return "bg-slate-300/25 text-slate-300 border border-slate-300/35 shadow-[0_0_8px_rgba(148,163,184,0.15)]";
+  if (r === 3) return "bg-amber-700/30 text-amber-500 border border-amber-700/35 shadow-[0_0_8px_rgba(180,83,9,0.15)]";
+  return "bg-glass-surface text-primary";
 };
 
 const Leaderboard = () => {
@@ -316,23 +347,28 @@ const Leaderboard = () => {
         </div>
 
         {/* 4. Results Limit Dropdown */}
-        <select
-          name="leaderboardLimit"
-          className="field-select px-3 text-xs w-full sm:w-auto h-11 py-0"
-          value={filters.limit}
-          onChange={(e) =>
-            setFilters((prev) => ({
-              ...prev,
-              page: 1,
-              limit: Number(e.target.value),
-            }))
-          }
-          disabled={leaderType === "clans"}
-        >
-          <option value={10}>10 / page</option>
-          <option value={20}>20 / page</option>
-          <option value={50}>50 / page</option>
-        </select>
+        <div className="w-full sm:w-auto h-11">
+          <Select
+            value={String(filters.limit)}
+            onValueChange={(val) =>
+              setFilters((prev) => ({
+                ...prev,
+                page: 1,
+                limit: Number(val),
+              }))
+            }
+            disabled={leaderType === "clans"}
+          >
+            <SelectTrigger className="w-full sm:w-[130px] h-full text-xs bg-black/10 dark:bg-white/5 border-none">
+              <SelectValue placeholder="Results per page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10 / page</SelectItem>
+              <SelectItem value="20">20 / page</SelectItem>
+              <SelectItem value="50">50 / page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -479,151 +515,186 @@ const Leaderboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRows.map((item, index) => {
-                    const isMe =
-                      leaderType === "individual" &&
-                      item.username === user?.username;
-                    const rank = item.rank || index + 1;
-                    return (
-                      <MotionRow
-                        key={item._id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.03 }}
-                        className={`border-b transition-colors hover:bg-white/[0.02] ${
-                          isMe ? "border-l-4 border-l-accent bg-accent/5" : ""
-                        }`}
-                        style={{
-                          borderBottomColor: isMe
-                            ? "rgba(var(--accent-rgb), 0.12)"
-                            : "rgba(128, 128, 128, 0.08)",
-                        }}
-                      >
-                        <td className="p-6">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-glass-surface text-sm font-bold text-primary">
-                            {rank}
-                          </div>
-                        </td>
-                        <td className="p-6">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-glass-surface font-bold text-accent">
-                              {item.profilePicture ? (
-                                <img
-                                  src={item.profilePicture}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : leaderType === "clans" && item.tag ? (
-                                <span className="text-xs font-black text-accent font-mono">
-                                  {item.tag.toUpperCase()}
-                                </span>
-                              ) : (
-                                (item.username ||
-                                  item.name ||
-                                  "?")[0].toUpperCase()
+                  {(() => {
+                    const startIndex = (filters.page === 1 && !search.trim()) ? 3 : 0;
+                    return visibleRows.slice(startIndex).map((item, mapIndex) => {
+                      const index = mapIndex + startIndex;
+                      const isMe =
+                        leaderType === "individual" &&
+                        item.username === user?.username;
+                      // When searching, always show the global rank from the server.
+                      // When paginating (no search), compute display rank from page offset.
+                      const isSearching = !!search.trim();
+                      const rank = isSearching
+                        ? item.rank
+                        : item.rank ||
+                          (filters.page - 1) * filters.limit + index + 1;
+                      const showSpacer = rank === 3 && index < visibleRows.length - 1;
+                      const rankStyles = getRankStyles(rank, isMe);
+                      return (
+                      <React.Fragment key={item._id}>
+                        <MotionRow
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className={`border-b transition-colors hover:bg-white/[0.02] ${rankStyles}`}
+                          style={{
+                            borderBottomColor: rank <= 3
+                              ? (rank === 1 ? "rgba(234, 179, 8, 0.25)" : rank === 2 ? "rgba(148, 163, 184, 0.25)" : "rgba(180, 83, 9, 0.25)")
+                              : isMe
+                              ? "rgba(var(--accent-rgb), 0.12)"
+                              : "rgba(128, 128, 128, 0.08)",
+                          }}
+                        >
+                          <td className="p-6">
+                            <div className={`flex flex-col items-center justify-center h-8 w-8 rounded-full text-sm font-bold ${getRankBadgeStyles(rank)}`}>
+                              <span>{rank}</span>
+                              {isSearching && (
+                                <span className="text-[8px] font-normal text-secondary leading-none">global</span>
                               )}
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2 font-bold text-primary">
-                                {leaderType === "individual" ? (
-                                  <MemberHoverCard
-                                    userId={item._id}
-                                    username={item.username}
-                                  >
-                                    <span className="hover:text-accent transition-colors cursor-pointer">
-                                      {item.username || item.name}
-                                    </span>
-                                  </MemberHoverCard>
-                                ) : (
-                                  <ClanHoverCard clanId={item._id}>
-                                    <span className="hover:text-accent transition-colors cursor-pointer">
-                                      {item.name}
-                                    </span>
-                                  </ClanHoverCard>
-                                )}
-                                {isMe && (
-                                  <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] italic text-white">
-                                    YOU
+                          </td>
+                          <td className="p-6">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-glass-surface font-bold text-accent">
+                                {item.profilePicture ? (
+                                  <CachedImage
+                                    src={item.profilePicture}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : leaderType === "clans" && item.tag ? (
+                                  <span className="text-xs font-black text-accent font-mono">
+                                    {item.tag.toUpperCase()}
                                   </span>
+                                ) : (
+                                  (item.username ||
+                                    item.name ||
+                                    "?")[0].toUpperCase()
                                 )}
                               </div>
-                              {leaderType === "clans" && item.tag && (
-                                <p className="text-xs text-secondary">
-                                  [{item.tag}]
-                                </p>
-                              )}
+                              <div>
+                                <div className="flex items-center gap-2 font-bold text-primary">
+                                  {leaderType === "individual" ? (
+                                    <MemberHoverCard
+                                      userId={item._id}
+                                      username={item.username}
+                                    >
+                                      <span className="hover:text-accent transition-colors cursor-pointer">
+                                        {item.username || item.name}
+                                      </span>
+                                    </MemberHoverCard>
+                                  ) : (
+                                    <ClanHoverCard clanId={item._id}>
+                                      <span className="hover:text-accent transition-colors cursor-pointer">
+                                        {item.name}
+                                      </span>
+                                    </ClanHoverCard>
+                                  )}
+                                  {isMe && (
+                                    <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] italic text-white">
+                                      YOU
+                                    </span>
+                                  )}
+                                </div>
+                                {leaderType === "clans" && item.tag && (
+                                  <p className="text-xs text-secondary">
+                                    [{item.tag}]
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-6 text-center text-secondary">
-                          {leaderType === "individual"
-                            ? item.solvedCount
-                            : item.memberCount}
-                        </td>
-                        <td className="p-6 text-right font-black text-accent">
-                          {item.totalPoints.toLocaleString()}
-                        </td>
-                      </MotionRow>
+                          </td>
+                          <td className="p-6 text-center text-secondary">
+                            {leaderType === "individual"
+                              ? item.solvedCount
+                              : item.memberCount}
+                          </td>
+                          <td className="p-6 text-right font-black text-accent">
+                            {item.totalPoints.toLocaleString()}
+                          </td>
+                        </MotionRow>
+                        {showSpacer && (
+                          <tr className="h-6 bg-transparent pointer-events-none">
+                            <td colSpan={4} className="p-0 border-none bg-transparent" />
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
-                  })}
+                  });
+                })()}
                 </tbody>
               </table>
             </div>
 
             <div className="space-y-3 p-4 md:hidden">
-              {visibleRows.map((item, index) => {
-                const rank = item.rank || index + 1;
-                const isMe =
-                  leaderType === "individual" &&
-                  item.username === user?.username;
+              {(() => {
+                const startIndex = (filters.page === 1 && !search.trim()) ? 3 : 0;
+                return visibleRows.slice(startIndex).map((item, mapIndex) => {
+                  const index = mapIndex + startIndex;
+                  const rank = item.rank || index + 1;
+                  const isMe =
+                    leaderType === "individual" &&
+                    item.username === user?.username;
+                  const showSpacer = rank === 3 && index < visibleRows.length - 1;
+                const rankStyles = getRankStyles(rank, isMe);
+                const cardBorderClass = rank === 1
+                  ? "border-yellow-500/35"
+                  : rank === 2
+                  ? "border-slate-300/35"
+                  : rank === 3
+                  ? "border-amber-700/35"
+                  : isMe
+                  ? "border-accent/40"
+                  : "border-black/[0.06] dark:border-white/[0.06]";
+                const rankBadgeClass = getRankBadgeStyles(rank);
                 return (
-                  <div
-                    key={item._id}
-                    className={`rounded-2xl border p-5 transition-all ${
-                      isMe
-                        ? "border-accent/40 bg-accent/5"
-                        : "border-black/[0.06] dark:border-white/[0.06] bg-white/40 dark:bg-white/[0.02]"
-                    }`}
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-2xl font-black text-secondary shrink-0">
-                          #{rank}
+                  <React.Fragment key={item._id}>
+                    <div
+                      className={`rounded-2xl border p-5 transition-all ${cardBorderClass} ${rankStyles ? rankStyles : "bg-white/40 dark:bg-white/[0.02]"}`}
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className={`flex items-center justify-center h-8 w-8 rounded-full text-sm font-bold shrink-0 ${rankBadgeClass}`}>
+                            #{rank}
+                          </span>
+                          {leaderType === "individual" ? (
+                            <MemberHoverCard
+                              userId={item._id}
+                              username={item.username}
+                            >
+                              <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
+                                {item.username || item.name}
+                              </span>
+                            </MemberHoverCard>
+                          ) : (
+                            <ClanHoverCard clanId={item._id}>
+                              <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
+                                {item.name}
+                              </span>
+                            </ClanHoverCard>
+                          )}
+                        </div>
+                        <span className="font-black text-accent">
+                          {item.totalPoints} pts
                         </span>
-                        {leaderType === "individual" ? (
-                          <MemberHoverCard
-                            userId={item._id}
-                            username={item.username}
-                          >
-                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
-                              {item.username || item.name}
-                            </span>
-                          </MemberHoverCard>
-                        ) : (
-                          <ClanHoverCard clanId={item._id}>
-                            <span className="text-lg font-bold hover:text-accent transition-colors cursor-pointer truncate block">
-                              {item.name}
-                            </span>
-                          </ClanHoverCard>
+                      </div>
+                      <div className="flex justify-between text-sm text-secondary">
+                        <span>
+                          {leaderType === "individual"
+                            ? `Solved: ${item.solvedCount}`
+                            : `${item.memberCount} members`}
+                        </span>
+                        {leaderType === "clans" && (
+                          <span>{item.solvedCount ?? 0} solved</span>
                         )}
                       </div>
-                      <span className="font-black text-accent">
-                        {item.totalPoints} pts
-                      </span>
                     </div>
-                    <div className="flex justify-between text-sm text-secondary">
-                      <span>
-                        {leaderType === "individual"
-                          ? `Solved: ${item.solvedCount}`
-                          : `${item.memberCount} members`}
-                      </span>
-                      {leaderType === "clans" && (
-                        <span>{item.solvedCount ?? 0} solved</span>
-                      )}
-                    </div>
-                  </div>
+                    {showSpacer && <div className="h-4 pointer-events-none bg-transparent" />}
+                  </React.Fragment>
                 );
-              })}
+              });
+            })()}
             </div>
           </MotionDiv>
         )}

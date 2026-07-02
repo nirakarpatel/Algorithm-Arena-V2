@@ -31,7 +31,8 @@ const IdentityHoverCard = ({ userId, username, position }) => {
       }
     },
     enabled: !!(userId || username),
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
 
@@ -205,7 +206,8 @@ const MemberHoverCard = ({ userId, username, children, className = "" }) => {
       }
     },
     enabled: showTooltip && !!(userId || username),
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const calculatePosition = useCallback(() => {

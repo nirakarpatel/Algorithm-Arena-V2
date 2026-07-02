@@ -28,4 +28,6 @@ const xpLogSchema = new mongoose.Schema({
   },
 });
 
+xpLogSchema.index({ userId: 1, reason: 1 });
+
 module.exports = mongoose.model('XpLog', xpLogSchema);

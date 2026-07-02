@@ -9,6 +9,13 @@ import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../context/useAuth';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 const buildChallengeQuery = ({
   page,
@@ -169,7 +176,7 @@ const Missions = () => {
   };
   const [filters, setFilters] = useState({
     page: 1,
-    limit: 50, // Increase limit when grouping to show all related items
+    limit: 6,
     search: "",
     difficulty: "",
     category: "",
@@ -193,7 +200,10 @@ const Missions = () => {
     queryKey,
     queryFn: async () => {
       try {
-        const qs = buildChallengeQuery(filters);
+        const effectiveFilters = filters.grouping !== 'none'
+          ? { ...filters, limit: 500 }
+          : filters;
+        const qs = buildChallengeQuery(effectiveFilters);
         const res = await api.get(`/api/challenges?${qs}`);
         const data = res.data.data || [];
 
@@ -443,37 +453,55 @@ const Missions = () => {
           onChange={(e) => handleFilterChange("category", e.target.value)}
         />
 
-        <select
-          className="field-select px-3 text-xs w-full sm:w-auto h-11 py-0"
-          value={filters.limit}
-          onChange={(e) => handleFilterChange("limit", Number(e.target.value))}
-        >
-          <option value={6}>6 / page</option>
-          <option value={12}>12 / page</option>
-          <option value={24}>24 / page</option>
-        </select>
+        <div className="w-full sm:w-auto h-11">
+          <Select
+            value={String(filters.limit)}
+            onValueChange={(val) => handleFilterChange("limit", Number(val))}
+          >
+            <SelectTrigger className="w-full sm:w-[130px] h-full text-xs bg-black/10 dark:bg-white/5 border-none">
+              <SelectValue placeholder="Items per page" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="6">6 / page</SelectItem>
+              <SelectItem value="12">12 / page</SelectItem>
+              <SelectItem value="24">24 / page</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <select
-          className="field-select px-3 text-xs w-full sm:w-auto h-11 py-0"
-          value={filters.sortBy}
-          onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-        >
-          <option value="deadline">Deadline</option>
-          <option value="difficulty">Difficulty</option>
-          <option value="createdAt">Newest</option>
-          <option value="points">XP Points</option>
-          <option value="title">Title</option>
-        </select>
+        <div className="w-full sm:w-auto h-11">
+          <Select
+            value={filters.sortBy}
+            onValueChange={(val) => handleFilterChange("sortBy", val)}
+          >
+            <SelectTrigger className="w-full sm:w-[140px] h-full text-xs bg-black/10 dark:bg-white/5 border-none">
+              <SelectValue placeholder="Sort By" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="deadline">Deadline</SelectItem>
+              <SelectItem value="difficulty">Difficulty</SelectItem>
+              <SelectItem value="createdAt">Newest</SelectItem>
+              <SelectItem value="points">XP Points</SelectItem>
+              <SelectItem value="title">Title</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <select
-          className="field-select px-3 text-xs w-full sm:w-auto h-11 py-0"
-          value={filters.grouping}
-          onChange={(e) => handleFilterChange("grouping", e.target.value)}
-        >
-          <option value="none">No Grouping</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
+        <div className="w-full sm:w-auto h-11">
+          <Select
+            value={filters.grouping}
+            onValueChange={(val) => handleFilterChange("grouping", val)}
+          >
+            <SelectTrigger className="w-full sm:w-[140px] h-full text-xs bg-black/10 dark:bg-white/5 border-none">
+              <SelectValue placeholder="Grouping" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Grouping</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         {activeSet && (
           <button
             type="button"
@@ -633,7 +661,7 @@ const Missions = () => {
                             <div className="flex items-start justify-between gap-3 mt-2">
                               <h2 className="text-xl font-bold group-hover:text-accent transition-colors line-clamp-2 flex-1 font-h2">{challenge.title}</h2>
                               {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-1">New</span>
+                                <span className="px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/25 shadow-[0_0_8px_rgba(59,130,246,0.35)] animate-pulse flex-shrink-0 mt-1">New</span>
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 mt-auto pt-4">
@@ -668,7 +696,7 @@ const Missions = () => {
                               <div className="flex items-start gap-3">
                                 <h2 className="text-lg font-bold group-hover:text-accent transition-colors line-clamp-1 flex-1 font-h2">{challenge.title}</h2>
                                 {new Date() - new Date(challenge.createdAt || Date.now()) < 7 * 24 * 60 * 60 * 1000 && (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/20 text-blue-400 flex-shrink-0 mt-0.5">New</span>
+                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-blue-500/15 text-blue-400 border border-blue-500/25 shadow-[0_0_8px_rgba(59,130,246,0.35)] animate-pulse flex-shrink-0 mt-0.5">New</span>
                                 )}
                               </div>
                               <div className="flex flex-wrap gap-2 mt-2">

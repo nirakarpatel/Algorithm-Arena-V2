@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { api, setUnauthorizedHandler } from '../lib/api';
 import AuthContext from './context';
@@ -16,12 +16,21 @@ const getStoredUser = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(getStoredUser);
   const [loading, setLoading] = useState(true);
+  // Track whether we've shown the session-expired toast to avoid spamming
+  const sessionExpiredToastShown = useRef(false);
 
-  const clearSession = useCallback((nextLoading = false) => {
+  const clearSession = useCallback((nextLoading = false, showToast = false) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     setLoading(nextLoading);
+    if (showToast && !sessionExpiredToastShown.current) {
+      sessionExpiredToastShown.current = true;
+      toast.error('Your session expired. Please sign in again.', {
+        duration: 5000,
+        id: 'session-expired',
+      });
+    }
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -50,6 +59,7 @@ export const AuthProvider = ({ children }) => {
       };
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
+      sessionExpiredToastShown.current = false; // reset on successful refresh
 
       if (me?.dailyXpAwarded) {
         setTimeout(() => {
@@ -71,7 +81,7 @@ export const AuthProvider = ({ children }) => {
 
       return normalizedUser;
     } catch {
-      clearSession();
+      clearSession(false, false); // /me failed — the interceptor will attempt refresh first
       return null;
     } finally {
       setLoading(false);
@@ -82,9 +92,29 @@ export const AuthProvider = ({ children }) => {
     refreshMe();
   }, [refreshMe]);
 
+  // Proactive token refresh every 45 minutes so the user is never logged out
+  // while they are actively using the app (token TTL is 60m).
+  useEffect(() => {
+    const REFRESH_INTERVAL_MS = 45 * 60 * 1000; // 45 minutes
+    const interval = setInterval(() => {
+      if (localStorage.getItem('token')) {
+        api.post('/api/auth/refresh')
+          .then(res => {
+            const token = res.data?.data?.token;
+            if (token) localStorage.setItem('token', token);
+          })
+          .catch(() => {
+            // If proactive refresh fails, the next API call will trigger the
+            // reactive interceptor path — no need to log out immediately.
+          });
+      }
+    }, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      clearSession();
+      clearSession(false, true); // show toast when forcibly logged out
     });
   }, [clearSession]);
 
@@ -109,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     }
     localStorage.setItem('user', JSON.stringify(normalizedUser));
     setUser(normalizedUser);
+    sessionExpiredToastShown.current = false;
 
     // Show daily XP bonus toast if awarded
     if (payload?.dailyXpAwarded) {

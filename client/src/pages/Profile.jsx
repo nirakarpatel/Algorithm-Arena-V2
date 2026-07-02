@@ -58,7 +58,8 @@ const Profile = () => {
       const res = await api.get(endpoint);
       return res.data.data;
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const subsQ = useQuery({
@@ -70,7 +71,8 @@ const Profile = () => {
       const res = await api.get(endpoint);
       return res.data.data || [];
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    refetchIntervalInBackground: false,
   });
 
   const submissions = useMemo(() => subsQ.data || [], [subsQ.data]);

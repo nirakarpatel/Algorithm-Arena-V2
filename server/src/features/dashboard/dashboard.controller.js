@@ -7,6 +7,35 @@ const { sendSuccess } = require('../../../utils/response');
 const { getUserRank } = require('../../../utils/leaderboard');
 const { getAllBadgesForUser } = require('../badges/badge.service');
 
+const heatmapCache = new Map();
+
+const getCachedHeatmap = async (userId) => {
+  const CACHE_TTL = process.env.NODE_ENV === 'test' ? 0 : 5 * 60 * 1000;
+  const now = Date.now();
+  const cacheKey = userId.toString();
+
+  const cached = heatmapCache.get(cacheKey);
+  if (cached && (now - cached.timestamp < CACHE_TTL)) {
+    return cached.data;
+  }
+
+  const data = await Submission.aggregate([
+    { $match: { userId, status: 'Accepted' } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' } },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  if (CACHE_TTL > 0) {
+    heatmapCache.set(cacheKey, { data, timestamp: now });
+  }
+
+  return data;
+};
+
 const getDashboardSummary = async (req, res, next) => {
   try {
     const [totalChallenges, pending, solvedDistinct] = await Promise.all([
@@ -115,15 +144,7 @@ const getProfileStats = async (req, res, next) => {
       : 0;
 
     // Calculate Heatmap Data
-    const heatmapAggregation = await Submission.aggregate([
-      { $match: { userId, status: 'Accepted' } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$submittedAt" } },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
+    const heatmapAggregation = await getCachedHeatmap(userId);
 
     const heatmapMap = {};
     heatmapAggregation.forEach(item => {
@@ -183,9 +204,18 @@ const getProfileStats = async (req, res, next) => {
 
     // Get XP breakdown
     const XpLog = mongoose.models.XpLog || mongoose.model('XpLog');
-    const xpLogs = await XpLog.find({ userId, reason: 'Daily Login' });
-    const loginXp = xpLogs.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    const loginCount = xpLogs.length;
+    const [xpStats] = await XpLog.aggregate([
+      { $match: { userId, reason: 'Daily Login' } },
+      {
+        $group: {
+          _id: null,
+          loginXp: { $sum: '$amount' },
+          loginCount: { $sum: 1 }
+        }
+      }
+    ]);
+    const loginXp = xpStats?.loginXp || 0;
+    const loginCount = xpStats?.loginCount || 0;
     const challengeXp = (user.points || 0) - loginXp;
 
     // Compute unlocked badges dynamically
@@ -229,9 +259,9 @@ const getUserProfile = async (req, res, next) => {
   try {
     let user;
     if (req.params.userId) {
-      user = await User.findById(req.params.userId).populate('clan', 'name tag');
+      user = await User.findById(req.params.userId).populate('clan', 'name tag').populate('featuredBadge');
     } else if (req.params.username) {
-      user = await User.findOne({ username: req.params.username }).populate('clan', 'name tag');
+      user = await User.findOne({ username: req.params.username }).populate('clan', 'name tag').populate('featuredBadge');
     }
 
     if (!user) {
@@ -292,15 +322,7 @@ const getUserProfile = async (req, res, next) => {
     difficultyTotals.forEach((d) => { totalsMap[d._id] = d.count; });
 
     // Calculate streak from heatmap
-    const heatmapAggregation = await Submission.aggregate([
-      { $match: { userId, status: 'Accepted' } },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' } },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    const heatmapAggregation = await getCachedHeatmap(userId);
     const heatmapMap = {};
     heatmapAggregation.forEach((item) => { heatmapMap[item._id] = item.count; });
 
@@ -353,9 +375,18 @@ const getUserProfile = async (req, res, next) => {
 
     // Get XP breakdown
     const XpLog = mongoose.models.XpLog || mongoose.model('XpLog');
-    const xpLogs = await XpLog.find({ userId, reason: 'Daily Login' });
-    const loginXp = xpLogs.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-    const loginCount = xpLogs.length;
+    const [xpStats] = await XpLog.aggregate([
+      { $match: { userId, reason: 'Daily Login' } },
+      {
+        $group: {
+          _id: null,
+          loginXp: { $sum: '$amount' },
+          loginCount: { $sum: 1 }
+        }
+      }
+    ]);
+    const loginXp = xpStats?.loginXp || 0;
+    const loginCount = xpStats?.loginCount || 0;
     const challengeXp = (user.points || 0) - loginXp;
 
     // Global rank using shared utility (DB-level, no full array in RAM)
@@ -421,7 +452,7 @@ const getUserProfile = async (req, res, next) => {
 const getAdminDashboardSummary = async (req, res, next) => {
   try {
     const totalMembers = await User.countDocuments();
-    const activeClans = await Clan.countDocuments();
+    const activeClans = await Clan.countDocuments({ status: 'active' });
     
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -437,20 +468,98 @@ const getAdminDashboardSummary = async (req, res, next) => {
     
     const pendingAssignments = await User.countDocuments({ clan: null, role: 'user' });
     
-    const avgCompletion = 68; // Mocked average for now to keep it lightweight
+    // Fetch all active clans and populate their members (we only need _id)
+    const clans = await Clan.find({ status: 'active' }).populate('members', '_id');
     
-    const clans = await Clan.find().limit(4);
-    const clanPerformance = clans.map((c, i) => {
-      const colors = [
-        'from-purple-500 to-indigo-500',
-        'from-blue-500 to-cyan-500',
-        'from-green-500 to-emerald-500',
-        'from-orange-500 to-red-500'
-      ];
+    // Gather all member IDs across all active clans
+    const memberIds = [];
+    clans.forEach(c => {
+      if (c.members) {
+        c.members.forEach(m => {
+          memberIds.push(m._id);
+        });
+      }
+    });
+
+    // Query weekly accepted submissions for those members to count unique challenge solves
+    const weeklySolvedMap = {};
+    if (memberIds.length > 0) {
+      const weeklyStats = await Submission.aggregate([
+        { 
+          $match: { 
+            userId: { $in: memberIds }, 
+            status: 'Accepted', 
+            submittedAt: { $gte: oneWeekAgo } 
+          } 
+        },
+        {
+          $group: {
+            _id: { userId: '$userId', challengeId: '$challengeId' }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id.userId',
+            weeklySolved: { $sum: 1 }
+          }
+        }
+      ]);
+      weeklyStats.forEach(stat => {
+        weeklySolvedMap[stat._id.toString()] = stat.weeklySolved;
+      });
+    }
+
+    const TARGET_PROBLEMS = 5;
+    
+    // Compute completion rate for each clan
+    const clanCompletions = clans.map(c => {
+      const members = c.members || [];
+      const memberCount = members.length;
+      if (memberCount === 0) {
+        return {
+          clan: c,
+          completion: 0
+        };
+      }
+      const totalSolved = members.reduce((sum, m) => {
+        const solved = weeklySolvedMap[m._id.toString()] || 0;
+        return sum + Math.min(solved, TARGET_PROBLEMS);
+      }, 0);
+      const totalPossible = memberCount * TARGET_PROBLEMS;
+      const completion = Math.round((totalSolved / totalPossible) * 100);
       return {
-        name: c.name,
-        tag: c.tag,
-        completion: Math.floor(Math.random() * 40) + 50, // Mocked per clan
+        clan: c,
+        completion
+      };
+    });
+
+    // Calculate avgCompletion across all active clans
+    const avgCompletion = clanCompletions.length > 0
+      ? Math.round(clanCompletions.reduce((sum, c) => sum + c.completion, 0) / clanCompletions.length)
+      : 0;
+
+    // Sort by completion rate descending, sub-sort by name/tag, and limit to 4 for performance display
+    const sortedClans = [...clanCompletions].sort((a, b) => {
+      if (b.completion !== a.completion) {
+        return b.completion - a.completion;
+      }
+      return a.clan.name.localeCompare(b.clan.name);
+    });
+    
+    const topClans = sortedClans.slice(0, 4);
+
+    const colors = [
+      'from-purple-500 to-indigo-500',
+      'from-blue-500 to-cyan-500',
+      'from-green-500 to-emerald-500',
+      'from-orange-500 to-red-500'
+    ];
+
+    const clanPerformance = topClans.map((c, i) => {
+      return {
+        name: c.clan.name,
+        tag: c.clan.tag,
+        completion: c.completion,
         color: colors[i % colors.length]
       };
     });
@@ -547,11 +656,30 @@ const getPendingTasks = async (req, res, next) => {
   }
 };
 
+const updateFeaturedBadge = async (req, res, next) => {
+  try {
+    const { badgeId } = req.body;
+    if (!badgeId) {
+      const user = await User.findByIdAndUpdate(req.user.id, { featuredBadge: null }, { new: true }).populate('featuredBadge');
+      return sendSuccess(res, { data: user });
+    }
+    const unlockedBadges = await getAllBadgesForUser(req.user.id);
+    const hasBadge = unlockedBadges.some(b => b._id.toString() === badgeId.toString());
+    if (!hasBadge) {
+      return res.status(403).json({ success: false, message: 'You have not unlocked this badge.' });
+    }
+    const user = await User.findByIdAndUpdate(req.user.id, { featuredBadge: badgeId }, { new: true }).populate('featuredBadge');
+    return sendSuccess(res, { data: user, message: 'Featured badge updated successfully!' });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getDashboardSummary,
   getProfileStats,
   getUserProfile,
+  updateFeaturedBadge,
   getAdminDashboardSummary,
   getPendingTasks
 };
-

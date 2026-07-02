@@ -59,6 +59,42 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
   const isArchived = clan.status === 'archived';
   const [viewMode, setViewMode] = useState('grid');
 
+  // Fetch member badges to determine Star Performer
+  const { data: memberBadgeMap = {} } = useQuery({
+    queryKey: ['member-badges', clan?._id],
+    queryFn: async () => {
+      if (!members.length) return {};
+      try {
+        const userIds = members.map(m => m._id);
+        const res = await api.post('/api/badges/batch', { userIds });
+        const badgeMap = res.data?.data || {};
+
+        const results = Object.entries(badgeMap).map(([userId, badges]) => {
+          const chiefAwarded = (badges || []).filter(b => b.isChiefBadge && b.isUnlocked);
+          return [userId, chiefAwarded.length];
+        });
+        return Object.fromEntries(results);
+      } catch (err) {
+        console.error('Failed to batch fetch badges', err);
+        return {};
+      }
+    },
+    enabled: !!members.length,
+    staleTime: 60000,
+  });
+
+  const starPerformerId = React.useMemo(() => {
+    let maxBadges = 0;
+    let starId = null;
+    for (const [memId, count] of Object.entries(memberBadgeMap)) {
+      if (count > maxBadges) {
+        maxBadges = count;
+        starId = memId;
+      }
+    }
+    return maxBadges > 0 ? starId : null;
+  }, [memberBadgeMap]);
+
   return (
     <div className="space-y-6">
       {/* Header Banner */}
@@ -176,6 +212,16 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                       <span className="text-[10px] text-orange-400 font-bold flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-lg" title={`${member.streak || 0} Day Streak`}>
                         🔥 {member.streak || 0}
                       </span>
+                      {memberBadgeMap[member._id] > 0 && (
+                        <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded-lg" title="Clan Badges Earned">
+                          <FiAward size={10} /> {memberBadgeMap[member._id]}
+                        </span>
+                      )}
+                      {starPerformerId === member._id && (
+                        <span className="text-[10px] bg-gradient-to-r from-amber-500 to-yellow-400 text-black px-2 py-1 rounded-lg font-black flex items-center gap-1 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+                          ✨ Star Performer
+                        </span>
+                      )}
                       {isMemberChief ? (
                         <span className="text-[10px] bg-yellow-500/15 text-yellow-400 px-2 py-1 rounded-lg font-bold">
                           CHIEF

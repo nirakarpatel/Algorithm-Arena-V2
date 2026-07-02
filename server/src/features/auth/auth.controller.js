@@ -549,7 +549,7 @@ const logoutAll = async (req, res, next) => {
 
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).populate('clan', 'name').lean();
+    const user = await User.findById(req.user.id).populate('clan', 'name').populate('featuredBadge').lean();
     if (!user) {
       res.status(404);
       throw new Error('User not found');
@@ -607,6 +607,18 @@ const updateMe = async (req, res, next) => {
   try {
     const { bio, branch, year, section, location, github, twitter, linkedin, website, profilePicture, preferredLanguage, editorThemeDark, editorThemeLight } = req.body;
 
+    // Normalize URLs: prepend https:// if the value looks like a URL but has no protocol
+    const normalizeUrl = (val) => {
+      if (!val || typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      if (!trimmed) return trimmed;
+      // If it already has a protocol, leave it alone
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      // If it looks like a domain/path (contains a dot or slash), prepend https://
+      if (/[.\/]/.test(trimmed)) return `https://${trimmed}`;
+      return trimmed;
+    };
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
       {
@@ -616,10 +628,10 @@ const updateMe = async (req, res, next) => {
           year,
           section,
           location,
-          github,
-          twitter,
-          linkedin,
-          website,
+          github: normalizeUrl(github),
+          twitter: normalizeUrl(twitter),
+          linkedin: normalizeUrl(linkedin),
+          website: normalizeUrl(website),
           profilePicture,
           preferredLanguage,
           editorThemeDark,

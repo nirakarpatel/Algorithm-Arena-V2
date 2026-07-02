@@ -6,8 +6,8 @@ const PermissionLegend = ({ title = 'Access Guide', items = [], note }) => {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
       <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-secondary">{title}</h3>
-        {note ? <p className="text-xs text-tertiary mt-1">{note}</p> : null}
+        <h3 className="text-xs font-black uppercase tracking-widest text-secondary footer-page">{title}</h3>
+        {note ? <p className="text-xs text-tertiary mt-1 footer-page">{note}</p> : null}
       </div>
       <div className="grid grid-cols-1 gap-2">
         {items.map((item) => {
@@ -18,8 +18,8 @@ const PermissionLegend = ({ title = 'Access Guide', items = [], note }) => {
                 <Icon size={16} />
               </div>
               <div>
-                <p className="text-sm font-bold text-primary">{item.label}</p>
-                <p className="text-xs text-tertiary leading-relaxed">{item.description}</p>
+                <p className="text-sm font-bold text-primary select-none">{item.label}</p>
+                <p className="text-xs text-tertiary leading-relaxed footer-page">{item.description}</p>
               </div>
             </div>
           );

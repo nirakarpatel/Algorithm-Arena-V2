@@ -51,14 +51,12 @@ const Footer = () => {
 
             {/* Social Icons */}
             <div className="flex items-center gap-4">
-
               <a 
                 href="https://whatsapp.com/channel/0029VbBdIckHVvTRsbC5SJ16" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="WhatsApp Channel"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary hover:text-accent hover:border-accent hover:bg-accent/5 transition-all duration-300"
-                style={{ borderColor: `rgba(var(--accent-rgb), 0.25)` }}
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-whatsapp transition-all duration-300"
               >
                 <FaWhatsapp size={16} />
               </a>
@@ -67,8 +65,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="Instagram"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary hover:text-accent hover:border-accent hover:bg-accent/5 transition-all duration-300"
-                style={{ borderColor: `rgba(var(--accent-rgb), 0.25)` }}
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-instagram transition-all duration-300"
               >
                 <FiInstagram size={16} />
               </a>
@@ -77,12 +74,10 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="LinkedIn"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary hover:text-accent hover:border-accent hover:bg-accent/5 transition-all duration-300"
-                style={{ borderColor: `rgba(var(--accent-rgb), 0.25)` }}
+                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-linkedin transition-all duration-300"
               >
                 <FiLinkedin size={16} />
               </a>
-
             </div>
           </div>
         </div>

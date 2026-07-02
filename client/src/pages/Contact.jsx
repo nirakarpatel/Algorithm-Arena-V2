@@ -90,7 +90,7 @@ const Contact = () => {
       </nav>
 
       {/* ── Main Content ── */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-6 py-16 flex flex-col items-center justify-center">
+      <main className="footer-page flex-1 w-full max-w-6xl mx-auto px-6 py-16 flex flex-col items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

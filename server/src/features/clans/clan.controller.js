@@ -110,7 +110,7 @@ const getMyClan = async (req, res, next) => {
       $or: [{ chief: userId }, { members: userId }]
     })
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points solvedProblems regNo clan profilePicture streak')
+      .populate('members', 'name username email status codingLevel points solvedProblems regNo clan profilePicture streak')
       .populate('requests', 'username email regNo')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -166,7 +166,7 @@ const getClans = async (req, res, next) => {
   try {
     const clansDocs = await Clan.find(getClanStatusFilter(req.query.status))
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture streak')
+      .populate('members', 'name username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -201,7 +201,7 @@ const getClan = async (req, res, next) => {
   try {
     const clanDoc = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture streak')
+      .populate('members', 'name username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -258,39 +258,72 @@ const getClanLeaderboard = async (req, res, next) => {
     const clanFilter = getClanStatusFilter(req.query.status);
 
     if (window === 'all') {
-      // For Overall, fetch clans and populate members with their current true points and solved counts
-      const clans = await Clan.find(clanFilter)
-        .populate('chief', 'username')
-        .populate('members', 'points solvedProblems')
-        .lean();
+      const clans = await Clan.aggregate([
+        { $match: clanFilter },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'chief',
+            foreignField: '_id',
+            as: 'chief',
+          },
+        },
+        {
+          $unwind: {
+            path: '$chief',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'members',
+            foreignField: '_id',
+            as: 'memberDetails',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            tag: 1,
+            description: 1,
+            createdBy: 1,
+            archivedAt: 1,
+            archivedBy: 1,
+            restoredAt: 1,
+            restoredBy: 1,
+            status: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            notices: 1,
+            requests: 1,
+            chief: {
+              $cond: {
+                if: '$chief._id',
+                then: {
+                  _id: '$chief._id',
+                  username: '$chief.username',
+                },
+                else: null,
+              },
+            },
+            members: 1,
+            memberCount: { $size: { $ifNull: ['$members', []] } },
+            totalPoints: { $sum: '$memberDetails.points' },
+            solvedCount: { $sum: '$memberDetails.solvedProblems' },
+          },
+        },
+      ]);
 
       if (clans.length === 0) {
         return sendSuccess(res, { data: [] });
       }
 
-      const enriched = clans.map((clan) => {
-        let solvedCount = 0;
-        let totalPoints = 0;
-        const members = clan.members || [];
-        
-        members.forEach(m => {
-          solvedCount += m.solvedProblems || 0;
-          totalPoints += m.points || 0;
-        });
+      clans.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount || String(a._id).localeCompare(String(b._id)));
+      clans.forEach((c, i) => { c.rank = i + 1; });
 
-        return {
-          ...clan,
-          members: members.map(m => m._id), // keep payload small
-          memberCount: members.length,
-          solvedCount,
-          totalPoints,
-        };
-      });
-
-      enriched.sort((a, b) => b.totalPoints - a.totalPoints || b.solvedCount - a.solvedCount || String(a._id).localeCompare(String(b._id)));
-      enriched.forEach((c, i) => { c.rank = i + 1; });
-
-      return sendSuccess(res, { data: enriched });
+      return sendSuccess(res, { data: clans });
     }
 
     // For Weekly (7d) or Monthly (30d)
@@ -386,7 +419,7 @@ const getClanAdminStats = async (req, res, next) => {
   try {
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points regNo branch year profilePicture streak')
+      .populate('members', 'name username email status codingLevel points regNo branch year profilePicture streak')
       .populate('requests', 'username email regNo branch year')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')

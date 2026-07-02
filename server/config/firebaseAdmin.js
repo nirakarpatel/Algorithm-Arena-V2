@@ -14,10 +14,11 @@ if (!env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       credential: cert(serviceAccount),
     });
   } catch (err) {
+    console.log(err);
     // If parsing fails, try using it as a file path
     try {
       firebaseApp = initializeApp({
-        credential: cert(env.FIREBASE_SERVICE_ACCOUNT_KEY),
+        credential: cert(env.FIREBASE_SERVICE_ACCOUNT_KEY_FILE),
       });
     } catch (err2) {
       console.error('Firebase Admin SDK initialization failed:', err2.message);

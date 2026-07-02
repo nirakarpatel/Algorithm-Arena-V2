@@ -9,6 +9,7 @@ import Card from '../components/Card';
 import PageHeader from '../components/PageHeader';
 import toast from 'react-hot-toast';
 import Logo from '../components/Logo';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../components/ui/select';
 
 
 const PREVIEW_CODE = {
@@ -206,52 +207,66 @@ const Settings = () => {
 
               <div className="space-y-2">
                 <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Branch / Course</label>
-                <select name="branch" className="field-select" value={formData.branch} onChange={handleChange}>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="">Select Branch/Domain</option>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Engineering & Technology">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech CSE">B.Tech CSE</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech CSIT">B.Tech CSIT</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech IT">B.Tech IT</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech ECE">B.Tech ECE</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech EE">B.Tech EE</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech EEE">B.Tech EEE</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech Mechanical">B.Tech Mechanical</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Tech Civil">B.Tech Civil</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="M.Tech">M.Tech</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Computer Applications">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BCA">BCA</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MCA">MCA</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Medical & Health Sciences">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MBBS">MBBS</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BDS (Dental)">BDS (Dental)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Pharm (Pharmacy)">B.Pharm (Pharmacy)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Nursing">B.Sc Nursing</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MD / MS">MD / MS</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Law">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BA LLB / BBA LLB">BA LLB / BBA LLB</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="LLB">LLB</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="LLM">LLM</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Management & Commerce">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BBA">BBA</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="MBA">MBA</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Com">B.Com</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Agriculture & Sciences">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Agriculture">B.Sc Agriculture</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc Biotech">B.Sc Biotech</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="B.Sc (Hons)">B.Sc (Hons)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="M.Sc">M.Sc</option>
-                  </optgroup>
-                  <optgroup className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-bold" label="Other Domains">
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BHMCT (Hotel Management)">BHMCT (Hotel Management)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="BA (Hons)">BA (Hons)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white font-normal" value="Other">Other</option>
-                  </optgroup>
-                </select>
+                <Select
+                  value={formData.branch || ""}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, branch: val }))}
+                >
+                  <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                    <SelectValue placeholder="Select Branch/Domain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Engineering & Technology</SelectLabel>
+                      <SelectItem value="B.Tech CSE">B.Tech CSE</SelectItem>
+                      <SelectItem value="B.Tech CSIT">B.Tech CSIT</SelectItem>
+                      <SelectItem value="B.Tech IT">B.Tech IT</SelectItem>
+                      <SelectItem value="B.Tech ECE">B.Tech ECE</SelectItem>
+                      <SelectItem value="B.Tech EE">B.Tech EE</SelectItem>
+                      <SelectItem value="B.Tech EEE">B.Tech EEE</SelectItem>
+                      <SelectItem value="B.Tech Mechanical">B.Tech Mechanical</SelectItem>
+                      <SelectItem value="B.Tech Civil">B.Tech Civil</SelectItem>
+                      <SelectItem value="M.Tech">M.Tech</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Computer Applications</SelectLabel>
+                      <SelectItem value="BCA">BCA</SelectItem>
+                      <SelectItem value="MCA">MCA</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Medical & Health Sciences</SelectLabel>
+                      <SelectItem value="MBBS">MBBS</SelectItem>
+                      <SelectItem value="BDS (Dental)">BDS (Dental)</SelectItem>
+                      <SelectItem value="B.Pharm (Pharmacy)">B.Pharm (Pharmacy)</SelectItem>
+                      <SelectItem value="B.Sc Nursing">B.Sc Nursing</SelectItem>
+                      <SelectItem value="MD / MS">MD / MS</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Law</SelectLabel>
+                      <SelectItem value="BA LLB / BBA LLB">BA LLB / BBA LLB</SelectItem>
+                      <SelectItem value="LLB">LLB</SelectItem>
+                      <SelectItem value="LLM">LLM</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Management & Commerce</SelectLabel>
+                      <SelectItem value="BBA">BBA</SelectItem>
+                      <SelectItem value="MBA">MBA</SelectItem>
+                      <SelectItem value="B.Com">B.Com</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Agriculture & Sciences</SelectLabel>
+                      <SelectItem value="B.Sc Agriculture">B.Sc Agriculture</SelectItem>
+                      <SelectItem value="B.Sc Biotech">B.Sc Biotech</SelectItem>
+                      <SelectItem value="B.Sc (Hons)">B.Sc (Hons)</SelectItem>
+                      <SelectItem value="M.Sc">M.Sc</SelectItem>
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Other Domains</SelectLabel>
+                      <SelectItem value="BHMCT (Hotel Management)">BHMCT (Hotel Management)</SelectItem>
+                      <SelectItem value="BA (Hons)">BA (Hons)</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -271,13 +286,20 @@ const Settings = () => {
 
               <div className="space-y-2">
                 <label className="field-label flex items-center gap-2"><FiLayers className="text-accent" size={14} /> Year of Study</label>
-                <select name="year" className="field-select" value={formData.year} onChange={handleChange}>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="">Select Year</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="First Year">First Year</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="Second Year">Second Year</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="Third Year">Third Year</option>
-                  <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="Fourth Year">Fourth Year</option>
-                </select>
+                <Select
+                  value={formData.year || ""}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, year: val }))}
+                >
+                  <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                    <SelectValue placeholder="Select Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="First Year">First Year</SelectItem>
+                    <SelectItem value="Second Year">Second Year</SelectItem>
+                    <SelectItem value="Third Year">Third Year</SelectItem>
+                    <SelectItem value="Fourth Year">Fourth Year</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -303,40 +325,64 @@ const Settings = () => {
               <div className="xl:col-span-5 space-y-6">
                 <div className="space-y-2">
                   <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Preferred Code Language</label>
-                  <select name="preferredLanguage" className="field-select" value={formData.preferredLanguage} onChange={handleChange}>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="javascript">JavaScript</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="python">Python</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="java">Java</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="cpp">C++</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="c">C</option>
-                  </select>
+                  <Select
+                    value={formData.preferredLanguage || "javascript"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, preferredLanguage: val }))}
+                  >
+                    <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                      <SelectValue placeholder="Select Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="javascript">JavaScript</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="java">Java</SelectItem>
+                      <SelectItem value="cpp">C++</SelectItem>
+                      <SelectItem value="c">C</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-[10px] text-tertiary">Pre-selected language in challenge editor</p>
                 </div>
 
                 <div className="space-y-2">
                   <label className="field-label flex items-center gap-2"><FiZap className="text-accent" size={14} /> Dark Mode Editor Theme</label>
-                  <select name="editorThemeDark" className="field-select" value={formData.editorThemeDark} onChange={handleChange}>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="default">System Theme (Algo Arena Dark)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="algo-arena-dark">Algo Arena Dark</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="dracula">Dracula</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="one-dark">One Dark Pro</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="monokai">Monokai</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="nord">Nord</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="github-dark">GitHub Dark</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="vs-dark">Monaco Dark</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="hc-black">High Contrast Black</option>
-                  </select>
+                  <Select
+                    value={formData.editorThemeDark || "default"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, editorThemeDark: val }))}
+                  >
+                    <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                      <SelectValue placeholder="Select Dark Theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">System Theme (Algo Arena Dark)</SelectItem>
+                      <SelectItem value="algo-arena-dark">Algo Arena Dark</SelectItem>
+                      <SelectItem value="dracula">Dracula</SelectItem>
+                      <SelectItem value="one-dark">One Dark Pro</SelectItem>
+                      <SelectItem value="monokai">Monokai</SelectItem>
+                      <SelectItem value="nord">Nord</SelectItem>
+                      <SelectItem value="github-dark">GitHub Dark</SelectItem>
+                      <SelectItem value="vs-dark">Monaco Dark</SelectItem>
+                      <SelectItem value="hc-black">High Contrast Black</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-[10px] text-tertiary">Theme used when the app is in Dark Mode</p>
                 </div>
 
                 <div className="space-y-2">
                   <label className="field-label flex items-center gap-2"><FiZap className="text-accent" size={14} /> Light Mode Editor Theme</label>
-                  <select name="editorThemeLight" className="field-select" value={formData.editorThemeLight} onChange={handleChange}>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="default">System Theme (Algo Arena Light)</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="algo-arena-light">Algo Arena Light</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="solarized-light">Solarized Light</option>
-                    <option className="bg-white dark:bg-[#0f111a] text-black dark:text-white" value="vs">Monaco Light</option>
-                  </select>
+                  <Select
+                    value={formData.editorThemeLight || "default"}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, editorThemeLight: val }))}
+                  >
+                    <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                      <SelectValue placeholder="Select Light Theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">System Theme (Algo Arena Light)</SelectItem>
+                      <SelectItem value="algo-arena-light">Algo Arena Light</SelectItem>
+                      <SelectItem value="solarized-light">Solarized Light</SelectItem>
+                      <SelectItem value="vs">Monaco Light</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-[10px] text-tertiary">Theme used when the app is in Light Mode</p>
                 </div>
               </div>

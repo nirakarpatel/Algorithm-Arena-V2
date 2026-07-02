@@ -487,7 +487,7 @@ const Home = () => {
             />
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-2">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] mb-2 select-none">
             <span className="text-primary block">Compete.</span>
             <span className="text-primary block">
               Solve.{" "}
@@ -510,7 +510,7 @@ const Home = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.25 }}
-          className="text-lg md:text-xl text-secondary max-w-xl mx-auto leading-relaxed mt-6"
+          className="footer-page text-lg md:text-xl text-secondary max-w-xl mx-auto leading-relaxed mt-6"
         >
           The competitive programming arena built for ITER students. Sharpen
           your DSA skills, climb the ranks, and get interview-ready.
@@ -600,14 +600,14 @@ const Home = () => {
               <section className="space-y-8">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center recent-activity-icon-container"
                     style={{ background: "rgba(99, 102, 241, 0.1)" }}
                   >
-                    <FiActivity className="text-accent animate-pulse" />
+                    <FiActivity className="text-accent animate-pulse recent-activity-icon" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-black">Recent Activity</h2>
-                    <p className="text-secondary text-sm">
+                    <p className="text-secondary text-sm footer-page">
                       Track your progress and updates.
                     </p>
                   </div>
@@ -618,7 +618,7 @@ const Home = () => {
                     const isAttempted = task.status === "Attempted";
                     const isRejected = task.status === "Rejected";
                     const isPending = task.status === "Pending";
-                    
+
                     const badgeText = isAttempted
                       ? "Attempted"
                       : isRejected
@@ -626,7 +626,7 @@ const Home = () => {
                         : isPending
                           ? "Pending Review"
                           : "Solved";
-                          
+
                     const badgeColor = isAttempted
                       ? "text-blue-400 bg-blue-500/10 border-blue-500/20"
                       : isRejected
@@ -634,7 +634,7 @@ const Home = () => {
                         : isPending
                           ? "text-yellow-400 bg-yellow-500/10 border-yellow-500/20"
                           : "text-green-400 bg-green-500/10 border-green-500/20";
-                          
+
                     const diffColor = isAttempted
                       ? "99, 102, 241"
                       : isRejected
