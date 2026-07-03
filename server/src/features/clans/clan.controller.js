@@ -129,25 +129,21 @@ const getMyClan = async (req, res, next) => {
       clan.members.forEach(m => {
         totalClanPoints += m.points || 0;
       });
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const weeklyStats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
-        {
-          $group: {
-            _id: { userId: '$userId', challengeId: '$challengeId' }
-          }
-        },
-        {
-          $group: {
-            _id: '$_id.userId',
-            weeklySolved: { $sum: 1 }
-          }
-        }
-      ]);
-      const weeklyByUser = {};
-      weeklyStats.forEach(s => {
-        weeklyByUser[s._id.toString()] = s.weeklySolved;
-      });
+
+      let weeklyByUser = {};
+      try {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const weeklyStats = await Submission.aggregate([
+          { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
+          { $group: { _id: { userId: '$userId', challengeId: '$challengeId' } } },
+          { $group: { _id: '$_id.userId', weeklySolved: { $sum: 1 } } }
+        ]);
+        weeklyStats.forEach(s => {
+          weeklyByUser[s._id.toString()] = s.weeklySolved;
+        });
+      } catch (aggErr) {
+        console.warn('Weekly stats aggregation failed (non-fatal):', aggErr.message);
+      }
 
       clan.members = clan.members.map(m => ({
         ...m,
@@ -223,25 +219,21 @@ const getClan = async (req, res, next) => {
       clan.members.forEach(m => {
         totalClanPoints += m.points || 0;
       });
-      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const weeklyStats = await Submission.aggregate([
-        { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
-        {
-          $group: {
-            _id: { userId: '$userId', challengeId: '$challengeId' }
-          }
-        },
-        {
-          $group: {
-            _id: '$_id.userId',
-            weeklySolved: { $sum: 1 }
-          }
-        }
-      ]);
-      const weeklyByUser = {};
-      weeklyStats.forEach(s => {
-        weeklyByUser[s._id.toString()] = s.weeklySolved;
-      });
+
+      let weeklyByUser = {};
+      try {
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const weeklyStats = await Submission.aggregate([
+          { $match: { userId: { $in: memberIds }, status: 'Accepted', submittedAt: { $gte: oneWeekAgo } } },
+          { $group: { _id: { userId: '$userId', challengeId: '$challengeId' } } },
+          { $group: { _id: '$_id.userId', weeklySolved: { $sum: 1 } } }
+        ]);
+        weeklyStats.forEach(s => {
+          weeklyByUser[s._id.toString()] = s.weeklySolved;
+        });
+      } catch (aggErr) {
+        console.warn('getClan weekly stats failed (non-fatal):', aggErr.message);
+      }
 
       clan.members = clan.members.map(m => ({
         ...m,
