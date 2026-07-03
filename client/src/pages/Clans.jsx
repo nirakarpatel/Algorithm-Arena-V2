@@ -310,9 +310,9 @@ const ClanBrowser = ({ clans, loading, userId, onApply, onViewClan, userHasClan,
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Card className={`h-full group hover:border-accent/40 transition-all ${viewMode === 'list' ? 'flex flex-col sm:flex-row sm:items-center gap-4 py-3 px-5' : 'flex flex-col'}`}>
+                <Card className={`h-full group hover:border-accent/40 transition-all ${viewMode === 'list' ? 'flex flex-row items-center gap-4 py-3 px-5' : 'flex flex-col'}`}>
                   <div className={`flex items-start justify-between ${viewMode === 'list' ? 'shrink-0 mb-0 pr-4 min-w-[200px]' : 'mb-3'}`}>
-                    <div>
+                    <div className="flex items-baseline gap-2">
                       <ClanHoverCard clanId={clan._id}>
                         <h3 className={`font-bold text-lg text-primary group-hover:text-accent transition-colors cursor-pointer ${viewMode === 'list' ? 'whitespace-nowrap' : 'truncate'}`}>
                           {clan.name}
@@ -327,47 +327,49 @@ const ClanBrowser = ({ clans, loading, userId, onApply, onViewClan, userHasClan,
                     )}
                   </div>
 
-                  <p className={`text-secondary text-sm leading-relaxed ${viewMode === 'list' ? 'sm:flex-1 mb-0 line-clamp-2' : 'flex-1 mb-4 line-clamp-3'}`}>
+                  <p className={`text-secondary text-sm leading-relaxed ${viewMode === 'list' ? 'flex-1 mb-0 line-clamp-2' : 'flex-1 mb-4 line-clamp-3'}`}>
                     {clan.description || 'No description provided.'}
                   </p>
 
-                  <div className={`flex items-center gap-4 text-xs text-secondary ${viewMode === 'list' ? 'sm:w-1/4 sm:justify-end pt-0 border-0 mb-0 shrink-0' : 'mb-4 pt-3 border-t border-glass-border/40'}`}>
-                    <span className="flex items-center gap-1">
-                      <FiUsers size={12} /> {(clan.members || []).length} {viewMode === 'grid' ? 'members' : ''}
-                    </span>
-                    <span className="flex items-center gap-1 truncate">
-                      <FiShield size={12} /> {clan.chief?.username || 'None'}
-                    </span>
-                  </div>
+                  <div className={viewMode === 'list' ? 'flex items-center gap-6 ml-auto shrink-0' : 'flex flex-col mt-auto'}>
+                    <div className={`flex items-center gap-4 text-xs text-secondary ${viewMode === 'list' ? 'pt-0 border-0 mb-0 shrink-0' : 'mb-4 pt-3 border-t border-glass-border/40'}`}>
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <FiUsers size={12} /> {(clan.members || []).length} {viewMode === 'grid' ? 'members' : ''}
+                      </span>
+                      <span className="flex items-center gap-1 truncate max-w-[100px] sm:max-w-none">
+                        <FiShield size={12} /> {clan.chief?.username || 'None'}
+                      </span>
+                    </div>
 
-                  <div className={`${viewMode === 'list' ? 'mt-0 sm:ml-4 shrink-0' : 'mt-auto'}`}>
-                    {userHasClan ? (
-                       <button
-                         onClick={() => onViewClan(clan)}
-                         className={`btn-secondary text-sm flex items-center justify-center gap-2 ${viewMode === 'list' ? 'px-4 py-2' : 'w-full'}`}
-                       >
-                         <FiSearch size={14} /> View{viewMode === 'grid' ? ' Clan' : ''}
-                       </button>
-                    ) : isMember ? (
-                      <div className="flex items-center justify-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg">
-                        <FiCheckCircle size={14} /> Joined
-                      </div>
-                    ) : (
-                      <div className={`flex gap-2 ${viewMode === 'list' ? '' : 'w-full'}`}>
-                        <button
-                          onClick={() => onViewClan(clan)}
-                          className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2 px-3 py-2"
-                        >
-                          <FiSearch size={14} /> Preview
-                        </button>
-                        <button
-                          onClick={() => onApply(clan._id)}
-                          className="btn-primary flex-1 text-sm px-3 py-2"
-                        >
-                          Apply
-                        </button>
-                      </div>
-                    )}
+                    <div className={`${viewMode === 'list' ? 'mt-0 shrink-0' : 'w-full'}`}>
+                      {userHasClan ? (
+                         <button
+                           onClick={() => onViewClan(clan)}
+                           className={`btn-secondary text-sm flex items-center justify-center gap-2 ${viewMode === 'list' ? 'px-4 py-2' : 'w-full'}`}
+                         >
+                           <FiSearch size={14} /> View{viewMode === 'grid' ? ' Clan' : ''}
+                         </button>
+                      ) : isMember ? (
+                        <div className="flex items-center justify-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg">
+                          <FiCheckCircle size={14} /> Joined
+                        </div>
+                      ) : (
+                        <div className={`flex gap-2 ${viewMode === 'list' ? '' : 'w-full'}`}>
+                          <button
+                            onClick={() => onViewClan(clan)}
+                            className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2 px-3 py-2"
+                          >
+                            <FiSearch size={14} /> Preview
+                          </button>
+                          <button
+                            onClick={() => onApply(clan._id)}
+                            className="btn-primary flex-1 text-sm px-3 py-2"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </Card>
               </motion.div>
