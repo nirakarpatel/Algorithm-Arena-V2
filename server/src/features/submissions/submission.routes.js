@@ -32,7 +32,8 @@ const runLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    return req.user ? req.user.id : 'anonymous';
+    const { ipKeyGenerator } = require('express-rate-limit');
+    return req.user ? req.user.id : ipKeyGenerator(req.ip);
   },
   message: { success: false, message: 'Too many code execution requests. Please try again after a minute.' },
 });
