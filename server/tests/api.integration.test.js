@@ -710,7 +710,7 @@ test('leaderboard window=all pagination, tie-breaking, and topThree calculation 
   assert.equal(page2.body.data[0].username, 'user_c');
   assert.equal(page2.body.data[0].rank, 2); // User C has same points/solved as User B, so gets rank 2
   assert.equal(page2.body.data[1].username, 'user_d');
-  assert.equal(page2.body.data[1].rank, 4); // User D has rank 4 since there are 3 users ahead of them
+  assert.equal(page2.body.data[1].rank, 3); // User D has rank 3 since dense ranking doesn't skip ranks
 
   // Page 3, Limit 2
   const page3 = await request(app)
@@ -720,7 +720,7 @@ test('leaderboard window=all pagination, tie-breaking, and topThree calculation 
   assert.equal(page3.status, 200);
   assert.equal(page3.body.data.length, 1);
   assert.equal(page3.body.data[0].username, 'user_e');
-  assert.equal(page3.body.data[0].rank, 5); // User E has rank 5 since there are 4 users ahead of them
+  assert.equal(page3.body.data[0].rank, 4); // User E has rank 4 since dense ranking doesn't skip ranks
 });
 
 test('getMySubmissions default limit defaults to 100', async () => {
