@@ -80,8 +80,11 @@ export const AuthProvider = ({ children }) => {
       }
 
       return normalizedUser;
-    } catch {
-      clearSession(false, false); // /me failed — the interceptor will attempt refresh first
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        clearSession(false, false); // /me failed with auth error — clear session
+      }
       return null;
     } finally {
       setLoading(false);
