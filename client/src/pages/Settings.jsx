@@ -61,13 +61,29 @@ const Settings = () => {
     preferredLanguage: 'javascript',
     editorThemeDark: 'default',
     editorThemeLight: 'default',
+    preferredTheme: 'dark',
   });
-  const [isPreviewDark, setIsPreviewDark] = useState(true);
+  const [isPreviewDark, setIsPreviewDark] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.preferredTheme) {
+          return parsed.preferredTheme === 'dark';
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    const initialTheme = localStorage.getItem('theme') || 'dark';
+    return initialTheme === 'dark';
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   // Sync form with user data when user loads
   useEffect(() => {
     if (user) {
+      const userTheme = user.preferredTheme || localStorage.getItem('theme') || 'dark';
       setFormData({
         bio: user.bio || '',
         branch: user.branch || '',
@@ -82,9 +98,21 @@ const Settings = () => {
         preferredLanguage: user.preferredLanguage || 'javascript',
         editorThemeDark: user.editorThemeDark || 'default',
         editorThemeLight: user.editorThemeLight || 'default',
+        preferredTheme: userTheme,
       });
+      setIsPreviewDark(userTheme === 'dark');
     }
-  }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website, user?.profilePicture, user?.preferredLanguage, user?.editorThemeDark, user?.editorThemeLight]);
+  }, [user, user?.bio, user?.branch, user?.year, user?.section, user?.location, user?.github, user?.twitter, user?.linkedin, user?.website, user?.profilePicture, user?.preferredLanguage, user?.editorThemeDark, user?.editorThemeLight, user?.preferredTheme]);
+
+  // Sync theme when updated globally via floating button
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setFormData(prev => ({ ...prev, preferredTheme: e.detail }));
+      setIsPreviewDark(e.detail === 'dark');
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
 
   /**
    * Extract just the username when a user pastes a full profile URL.
@@ -135,13 +163,13 @@ const Settings = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     // Check file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
       toast.error('File size must be less than 2MB');
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       setFormData((prev) => ({ ...prev, profilePicture: reader.result }));
@@ -315,14 +343,45 @@ const Settings = () => {
             <div className="flex items-center gap-3 mb-8 pb-4 border-b border-glass-border">
               <div className="p-2 rounded-lg bg-accent/10 text-accent"><FiTerminal size={20} /></div>
               <div>
-                <h3 className="text-lg font-bold">Code Editor Settings</h3>
-                <p className="text-xs text-secondary">Configure your workspace defaults and preview them in real time</p>
+                <h3 className="text-lg font-bold">Workspace & Appearance Settings</h3>
+                <p className="text-xs text-secondary">Configure your workspace defaults and website theme preferences</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
               {/* Form Settings Controls */}
               <div className="xl:col-span-5 space-y-6">
+                <div className="space-y-2">
+                  <label className="field-label flex items-center gap-2"><FiSun className="text-accent" size={14} /> Preferred Site Theme</label>
+                  <Select
+                    value={formData.preferredTheme || "dark"}
+                    onValueChange={(val) => {
+                      setFormData(prev => ({ ...prev, preferredTheme: val }));
+                      setIsPreviewDark(val === "dark");
+                      // Instantly apply the theme to the document element for preview
+                      const root = window.document.documentElement;
+                      if (val === "dark") {
+                        root.classList.add("dark");
+                        root.setAttribute("data-theme", "dark");
+                      } else {
+                        root.classList.remove("dark");
+                        root.setAttribute("data-theme", "light");
+                      }
+                      localStorage.setItem("theme", val);
+                      window.dispatchEvent(new CustomEvent('theme-change', { detail: val }));
+                    }}
+                  >
+                    <SelectTrigger className="field-select w-full h-auto py-2.5 flex items-center justify-between">
+                      <SelectValue placeholder="Select Theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dark">Dark Theme</SelectItem>
+                      <SelectItem value="light">Light Theme</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-tertiary">Select your primary user interface theme for the website</p>
+                </div>
+
                 <div className="space-y-2">
                   <label className="field-label flex items-center gap-2"><FiCpu className="text-accent" size={14} /> Preferred Code Language</label>
                   <Select

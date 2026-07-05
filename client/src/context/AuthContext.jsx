@@ -175,6 +175,24 @@ export const AuthProvider = ({ children }) => {
     });
   }, []);
 
+  // Synchronize site theme with database setting on load/change.
+  // Always apply — not just when it differs from localStorage — so that
+  // Settings.jsx and ThemeToggle always reflect the correct saved theme.
+  useEffect(() => {
+    if (user?.preferredTheme) {
+      const root = window.document.documentElement;
+      if (user.preferredTheme === "dark") {
+        root.classList.add("dark");
+        root.setAttribute("data-theme", "dark");
+      } else {
+        root.classList.remove("dark");
+        root.setAttribute("data-theme", "light");
+      }
+      localStorage.setItem("theme", user.preferredTheme);
+      window.dispatchEvent(new CustomEvent('theme-change', { detail: user.preferredTheme }));
+    }
+  }, [user?.preferredTheme]);
+
   const value = useMemo(
     () => ({
       user,

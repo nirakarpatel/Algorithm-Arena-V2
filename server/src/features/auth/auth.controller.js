@@ -45,6 +45,7 @@ const toAuthPayload = (user, accessToken, { isChief = false, dailyXpAwarded = fa
     preferredLanguage: user.preferredLanguage || 'javascript',
     editorThemeDark: user.editorThemeDark || 'default',
     editorThemeLight: user.editorThemeLight || 'default',
+    preferredTheme: user.preferredTheme || 'dark',
     createdAt: user.createdAt,
     isChief,
     dailyXpAwarded,
@@ -606,7 +607,7 @@ const getMe = async (req, res, next) => {
 
 const updateMe = async (req, res, next) => {
   try {
-    const { bio, branch, year, section, location, github, twitter, linkedin, website, profilePicture, preferredLanguage, editorThemeDark, editorThemeLight } = req.body;
+    const { bio, branch, year, section, location, github, twitter, linkedin, website, profilePicture, preferredLanguage, editorThemeDark, editorThemeLight, preferredTheme } = req.body;
 
     // Normalize URLs: prepend https:// if the value looks like a URL but has no protocol
     const normalizeUrl = (val) => {
@@ -618,6 +619,13 @@ const updateMe = async (req, res, next) => {
       // If it looks like a domain/path (contains a dot or slash), prepend https://
       if (/[.\/]/.test(trimmed)) return `https://${trimmed}`;
       return trimmed;
+    };
+
+    const cleanEnumField = (val, defaultValue) => {
+      if (!val || val === '' || val === 'undefined' || val === 'null') {
+        return defaultValue;
+      }
+      return val;
     };
 
     const user = await User.findByIdAndUpdate(
@@ -634,9 +642,10 @@ const updateMe = async (req, res, next) => {
           linkedin: normalizeUrl(linkedin),
           website: normalizeUrl(website),
           profilePicture,
-          preferredLanguage,
-          editorThemeDark,
-          editorThemeLight
+          preferredLanguage: cleanEnumField(preferredLanguage, 'javascript'),
+          editorThemeDark: cleanEnumField(editorThemeDark, 'default'),
+          editorThemeLight: cleanEnumField(editorThemeLight, 'default'),
+          preferredTheme: cleanEnumField(preferredTheme, 'dark'),
         }
       },
       { new: true, runValidators: true }
