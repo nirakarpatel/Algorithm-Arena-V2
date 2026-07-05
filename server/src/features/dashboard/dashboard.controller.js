@@ -163,11 +163,13 @@ const getProfileStats = async (req, res, next) => {
     for (let i = 0; i < 365; i++) {
       const d = new Date(startUTC + (i * 24 * 60 * 60 * 1000));
       const dateStr = d.toISOString().split('T')[0];
+      if (dateStr > todayStr) {
+        break;
+      }
       
       heatmapData.push({
         date: dateStr,
-        count: dateStr > todayStr ? 0 : (heatmapMap[dateStr] || 0),
-        isFuture: dateStr > todayStr
+        count: heatmapMap[dateStr] || 0
       });
     }
 
@@ -339,11 +341,13 @@ const getUserProfile = async (req, res, next) => {
     for (let i = 0; i < 365; i++) {
       const d = new Date(startUTC + (i * 24 * 60 * 60 * 1000));
       const dateStr = d.toISOString().split('T')[0];
+      if (dateStr > todayStr) {
+        break;
+      }
       
       heatmapData.push({
         date: dateStr,
-        count: dateStr > todayStr ? 0 : (heatmapMap[dateStr] || 0),
-        isFuture: dateStr > todayStr
+        count: heatmapMap[dateStr] || 0
       });
     }
 
