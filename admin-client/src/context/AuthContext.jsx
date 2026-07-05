@@ -53,8 +53,11 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(normalizedUser));
       setUser(normalizedUser);
       return normalizedUser;
-    } catch {
-      clearSession();
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        clearSession();
+      }
       return null;
     } finally {
       setLoading(false);
@@ -64,6 +67,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     refreshMe();
   }, [refreshMe]);
+
+  // Proactive token refresh every 45 minutes so admin session is never lost while working
+  useEffect(() => {
+    const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+    const interval = setInterval(() => {
+      if (localStorage.getItem('token')) {
+        api.post('/api/auth/refresh')
+          .then(res => {
+            const token = res.data?.data?.token;
+            if (token) localStorage.setItem('token', token);
+          })
+          .catch(() => {});
+      }
+    }, REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
