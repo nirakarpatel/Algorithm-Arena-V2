@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       return normalizedUser;
+      
     } catch (err) {
       const status = err?.response?.status;
       if (status === 401 || status === 403) {
@@ -108,7 +109,6 @@ export const AuthProvider = ({ children }) => {
           })
           .catch(() => {
             // If proactive refresh fails, the next API call will trigger the
-            // reactive interceptor path — no need to log out immediately.
           });
       }
     }, REFRESH_INTERVAL_MS);
@@ -143,7 +143,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(normalizedUser));
     setUser(normalizedUser);
     sessionExpiredToastShown.current = false;
-
+    
     // Show daily XP bonus toast if awarded
     if (payload?.dailyXpAwarded) {
       setTimeout(() => {
@@ -160,6 +160,7 @@ export const AuthProvider = ({ children }) => {
             secondary: '#fff',
           },
         });
+        
       }, 800);
     }
   }, []);
