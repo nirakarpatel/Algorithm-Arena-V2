@@ -52,8 +52,8 @@ const Profile = () => {
   const profileQ = useQuery({
     queryKey: ["full-profile-stats", username || "me"],
     queryFn: async () => {
-      const endpoint = username 
-        ? `/api/profile/username/${username}` 
+      const endpoint = username
+        ? `/api/profile/username/${username}`
         : `/api/profile/stats`;
       const res = await api.get(endpoint);
       return res.data.data;
@@ -65,8 +65,8 @@ const Profile = () => {
   const subsQ = useQuery({
     queryKey: ["full-profile-submissions", username || "me"],
     queryFn: async () => {
-      const endpoint = username 
-        ? `/api/submissions/user/${username}?limit=100` 
+      const endpoint = username
+        ? `/api/submissions/user/${username}?limit=100`
         : `/api/submissions/my-submissions?limit=100`;
       const res = await api.get(endpoint);
       return res.data.data || [];
@@ -108,52 +108,46 @@ const Profile = () => {
   const solvedPct = Math.round((solved / total) * 100);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 pb-12">
-      
+    <div className="flex flex-col lg:flex-row gap-6 pb-12">
+
       <ProfileSidebar user={displayUser} profile={profile} badges={profile?.badges} />
 
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 space-y-4">
         <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md shrink-0">
           <div className="absolute top-0 right-0 p-4 text-right z-10">
-            <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30 flex items-center gap-2">
+            <div className="px-3 py-1.5 rounded-full bg-accent/20 border dark:border-white/20 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
               <span className="text-xs font-black text-primary">{profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0} XP</span>
             </div>
           </div>
           <div className="relative z-10">
-            {!username && (
-              <span className="inline-block px-3 py-1 rounded-full border border-accent/20 bg-accent/10 text-[9px] font-black uppercase tracking-widest text-accent mb-3">
-                {getGreeting()}
-              </span>
-            )}
-            <h1 className="text-3xl md:text-4xl font-black text-primary mb-2">{displayUser?.username}</h1>
+            <h1 className="text-3xl md:text-4xl font-black mb-2 bg-gradient-to-b from-primary to-secondary bg-clip-text text-transparent">{displayUser?.username}</h1>
             <p className="text-sm text-secondary max-w-md">
-                {username ? `Viewing ${displayUser?.username}'s public profile.` : "Track your journey, analyze your performance, and dominate the algorithm arena."}
+              {username ? `Viewing ${displayUser?.username}'s public profile.` : "Track your journey, analyze your performance, and dominate the algorithm arena."}
             </p>
           </div>
         </motion.div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 shrink-0">
           <motion.div {...fd(0.15)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-6 flex flex-col">
             <h2 className="text-xs font-black uppercase tracking-widest text-primary mb-2">Algorithm Mastery</h2>
             <MasteryPieChart easy={easy} medium={medium} hard={hard} total={total} solvedPct={solvedPct} />
           </motion.div>
 
           <motion.div {...fd(0.2)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-5 overflow-hidden flex flex-col justify-center">
-             <ActivityHeatmap submissions={submissions} />
+            <ActivityHeatmap submissions={submissions} />
           </motion.div>
         </div>
 
         <motion.div {...fd(0.25)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md overflow-hidden flex flex-col h-[380px]">
           <div className="p-4 border-b border-black/[0.06] dark:border-b-white/[0.06] flex items-center justify-between shrink-0">
-             <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-               <FiActivity className="text-accent" /> Recent Submissions
-             </h2>
-             <button onClick={() => setShowAllSubs(true)} className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
-               View All <FiArrowRight size={10} />
-             </button>
+            <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <FiActivity className="text-accent" /> Recent Submissions
+            </h2>
+            <button onClick={() => setShowAllSubs(true)} className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
+              View All <FiArrowRight size={10} />
+            </button>
           </div>
-          
+
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             {recentSubs.length === 0 ? (
               <div className="p-10 text-center h-full flex flex-col items-center justify-center">

@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 const LegendItem = ({ label, solved, total, color, bg, shadow, onMouseEnter, onMouseLeave, isActive }) => (
-  <div 
+  <div
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
     className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all ${isActive ? 'bg-black/[0.06] dark:bg-white/[0.06] border-black/[0.1] dark:border-white/[0.1] scale-105' : 'bg-black/[0.02] dark:bg-white/[0.02] border-black/[0.04] dark:border-white/[0.04] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'}`}
   >
     <div className="flex items-center gap-2.5">
-      <div className={`w-2.5 h-2.5 rounded-full ${bg}`} style={{ boxShadow: isActive ? `0 0 15px ${shadow}` : `0 0 10px ${shadow}` }} />
       <span className={`text-[10px] font-black uppercase tracking-wider ${color}`}>{label}</span>
     </div>
     <span className="text-[11px] font-mono text-primary font-bold">{solved}<span className="text-tertiary/50 text-[9px] ml-0.5">/{total}</span></span>
@@ -29,10 +28,10 @@ const MasteryPieChart = ({ easy, medium, hard, total, solvedPct }) => {
           {/* Background circle (Unsolved) */}
           <path className="text-black/[0.03] dark:text-white/[0.03]" strokeWidth="4" stroke="currentColor" fill="none"
             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-          
+
           {/* Easy Segment */}
           {easyPct > 0 && (
-            <motion.path 
+            <motion.path
               initial={{ strokeDasharray: `0, 100` }}
               animate={{ strokeDasharray: `${easyPct}, 100` }}
               transition={{ duration: 1.2, ease: "easeOut" }}
@@ -44,7 +43,7 @@ const MasteryPieChart = ({ easy, medium, hard, total, solvedPct }) => {
 
           {/* Medium Segment */}
           {mediumPct > 0 && (
-            <motion.path 
+            <motion.path
               initial={{ strokeDasharray: `0, 100` }}
               animate={{ strokeDasharray: `${mediumPct}, 100` }}
               transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
@@ -56,7 +55,7 @@ const MasteryPieChart = ({ easy, medium, hard, total, solvedPct }) => {
 
           {/* Hard Segment */}
           {hardPct > 0 && (
-            <motion.path 
+            <motion.path
               initial={{ strokeDasharray: `0, 100` }}
               animate={{ strokeDasharray: `${hardPct}, 100` }}
               transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
@@ -92,21 +91,21 @@ const MasteryPieChart = ({ easy, medium, hard, total, solvedPct }) => {
       </div>
 
       <div className="flex flex-col gap-2.5 w-full sm:w-auto min-w-[140px]">
-        <LegendItem 
-          label="Easy" solved={easy.solved} total={easy.total} 
-          color="text-green-500" bg="bg-green-500" shadow="rgba(34,197,94,0.4)" 
+        <LegendItem
+          label="Easy" solved={easy.solved} total={easy.total}
+          color="text-green-500" bg="bg-green-500" shadow="rgba(34,197,94,0.4)"
           onMouseEnter={() => setHovered('easy')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'easy'}
         />
-        <LegendItem 
-          label="Medium" solved={medium.solved} total={medium.total} 
-          color="text-yellow-500" bg="bg-yellow-500" shadow="rgba(234,179,8,0.4)" 
+        <LegendItem
+          label="Medium" solved={medium.solved} total={medium.total}
+          color="text-yellow-500" bg="bg-yellow-500" shadow="rgba(234,179,8,0.4)"
           onMouseEnter={() => setHovered('medium')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'medium'}
         />
-        <LegendItem 
-          label="Hard" solved={hard.solved} total={hard.total} 
-          color="text-red-500" bg="bg-red-500" shadow="rgba(239,68,68,0.4)" 
+        <LegendItem
+          label="Hard" solved={hard.solved} total={hard.total}
+          color="text-red-500" bg="bg-red-500" shadow="rgba(239,68,68,0.4)"
           onMouseEnter={() => setHovered('hard')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'hard'}
         />
