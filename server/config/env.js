@@ -111,7 +111,7 @@ const env = Object.freeze({
       ? false
       : (parsed.data.COOKIE_SECURE ?? parsed.data.NODE_ENV === "production"),
   CORS_ORIGINS: parsed.data.CORS_ORIGINS.split(",")
-    .map((origin) => origin.trim().replace(/^['"]|['"]$/g, ""))
+    .map((origin) => origin.trim().replace(/^['"]|['"]$/g, "").replace(/\/$/, ""))
     .filter(Boolean),
   SUPER_ADMIN_EMAIL: parsed.data.SUPER_ADMIN_EMAIL || "akr6447@gmail.com",
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUser, FiCheck, FiX, FiArrowRight, FiLoader, FiFileText, FiHash, FiBookOpen, FiClock, FiGrid } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -6,6 +6,7 @@ import Card from '../components/Card';
 import PixelBlast from '../components/PixelBlast';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
+import { SocketContext } from '../context/socketContext';
 import Logo from '../components/Logo';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../components/ui/select';
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -24,6 +25,7 @@ const ClaimUsername = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
+  const socket = useContext(SocketContext);
 
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -78,17 +80,29 @@ const ClaimUsername = () => {
 
     setAvailability('checking');
 
-    const timer = setTimeout(async () => {
-      try {
-        const res = await api.get(`/api/auth/check-username/${encodeURIComponent(username)}`);
-        setAvailability(res.data?.available ? 'available' : 'taken');
-      } catch {
-        setAvailability('invalid');
+    const timer = setTimeout(() => {
+      if (socket && socket.connected) {
+        socket.emit('check_username', username, (res) => {
+          if (res && res.success) {
+            setAvailability(res.available ? 'available' : 'taken');
+          } else {
+            setAvailability('invalid');
+          }
+        });
+      } else {
+        // Fallback to HTTP
+        api.get(`/api/auth/check-username/${encodeURIComponent(username)}`)
+          .then((res) => {
+            setAvailability(res.data?.available ? 'available' : 'taken');
+          })
+          .catch(() => {
+            setAvailability('invalid');
+          });
       }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [username, usernameError]);
+  }, [username, usernameError, socket]);
 
   const isFormValid = useMemo(() => {
     return (

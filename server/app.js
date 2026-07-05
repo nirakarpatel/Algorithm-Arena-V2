@@ -13,6 +13,43 @@ const { env } = require('./config/env');
 const { logger } = require('./utils/logger');
 const { requestContext } = require('./middleware/requestContext');
 
+const mongoose = require('mongoose');
+mongoose.plugin((schema) => {
+  const transformFn = (doc, ret, options) => {
+    delete ret.__v;
+    delete ret.updatedAt;
+    const modelName = doc.constructor?.modelName;
+    if (modelName && ['Clan', 'Badge', 'Submission', 'XpLog'].includes(modelName)) {
+      delete ret.createdAt;
+    }
+    return ret;
+  };
+
+  const existingToJSON = schema.get('toJSON') || {};
+  schema.set('toJSON', {
+    ...existingToJSON,
+    transform: (doc, ret, options) => {
+      let result = ret;
+      if (typeof existingToJSON.transform === 'function') {
+        result = existingToJSON.transform(doc, ret, options);
+      }
+      return transformFn(doc, result, options);
+    }
+  });
+
+  const existingToObject = schema.get('toObject') || {};
+  schema.set('toObject', {
+    ...existingToObject,
+    transform: (doc, ret, options) => {
+      let result = ret;
+      if (typeof existingToObject.transform === 'function') {
+        result = existingToObject.transform(doc, ret, options);
+      }
+      return transformFn(doc, result, options);
+    }
+  });
+});
+
 const authRoutes = require('./src/features/auth/auth.routes');
 const challengeRoutes = require('./src/features/challenges/challenge.routes');
 const questionSetRoutes = require('./src/features/challenges/questionSet.routes');
@@ -70,8 +107,9 @@ const createApp = () => {
     cors({
       origin(origin, callback) {
         if (!origin) return callback(null, true);
-        if (env.CORS_ORIGINS.includes(origin)) return callback(null, true);
-        return callback(new Error('CORS origin not allowed'));
+        const cleanOrigin = origin.replace(/\/$/, '');
+        if (env.CORS_ORIGINS.includes(cleanOrigin)) return callback(null, true);
+        return callback(new Error(`CORS origin not allowed: ${origin}`));
       },
       credentials: true,
     })

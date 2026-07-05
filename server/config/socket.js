@@ -40,7 +40,14 @@ const resolveSocketUserId = async (socket) => {
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: env.CORS_ORIGINS,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const cleanOrigin = origin.replace(/\/$/, '');
+        if (env.CORS_ORIGINS.includes(cleanOrigin)) {
+          return callback(null, true);
+        }
+        return callback(new Error(`CORS origin not allowed: ${origin}`), false);
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -66,6 +73,48 @@ const initSocket = (server) => {
         socket.data.userId = null;
         socket.emit('auth', { ok: false });
       });
+
+    // Username check event (high-performance index lookup)
+    socket.on('check_username', async (username, callback) => {
+      try {
+        if (typeof callback !== 'function') return;
+
+        if (!username || username.length < 3) {
+          return callback({ success: false, available: false, message: 'Username must be at least 3 characters' });
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+          return callback({ success: false, available: false, message: 'Username can only contain letters, numbers, and underscores' });
+        }
+
+        const mongoose = require('mongoose');
+        const query = {
+          username: username.toLowerCase()
+        };
+
+        let currentUserId = socket.data.userId;
+        if (!currentUserId) {
+          currentUserId = await resolveSocketUserId(socket);
+        }
+
+        if (currentUserId) {
+          query._id = { $ne: new mongoose.Types.ObjectId(currentUserId) };
+        }
+
+        const existing = await User.findOne(query).select('_id').lean();
+
+        return callback({
+          success: true,
+          available: !existing,
+          message: existing ? 'Username is taken' : 'Username is available',
+        });
+      } catch (err) {
+        logger.error('Error checking username via socket', { error: err.message });
+        if (typeof callback === 'function') {
+          callback({ success: false, available: false, message: 'Internal server error' });
+        }
+      }
+    });
 
     // Basic connection-rate protection: drop sockets that reconnect too quickly.
     const now = Date.now();
