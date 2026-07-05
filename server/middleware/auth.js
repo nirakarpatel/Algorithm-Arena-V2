@@ -37,6 +37,7 @@ exports.protect = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
       }
       if (CACHE_TTL > 0) {
+        if (userCache.size > 5000) userCache.clear();
         userCache.set(cacheKey, { user, timestamp: now });
       }
     }
@@ -50,6 +51,7 @@ exports.protect = async (req, res, next) => {
       
       // Update cache entry timestamp if present to avoid DB query triggers on active user
       if (CACHE_TTL > 0 && userCache.has(cacheKey)) {
+        if (userCache.size > 5000) userCache.clear();
         userCache.set(cacheKey, { user, timestamp: Date.now() });
       }
     }
