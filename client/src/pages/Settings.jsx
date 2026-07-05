@@ -71,7 +71,7 @@ const Settings = () => {
         if (parsed?.preferredTheme) {
           return parsed.preferredTheme === 'dark';
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

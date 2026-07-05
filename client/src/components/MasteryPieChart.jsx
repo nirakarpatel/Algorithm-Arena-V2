@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
-const LegendItem = ({ label, solved, total, color, bg, shadow, onMouseEnter, onMouseLeave, isActive }) => (
+const LegendItem = ({ label, solved, total, color, onMouseEnter, onMouseLeave, isActive }) => (
   <div
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
@@ -93,19 +93,19 @@ const MasteryPieChart = ({ easy, medium, hard, total, solvedPct }) => {
       <div className="flex flex-col gap-2.5 w-full sm:w-auto min-w-[140px]">
         <LegendItem
           label="Easy" solved={easy.solved} total={easy.total}
-          color="text-green-500" bg="bg-green-500" shadow="rgba(34,197,94,0.4)"
+          color="text-green-500"
           onMouseEnter={() => setHovered('easy')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'easy'}
         />
         <LegendItem
           label="Medium" solved={medium.solved} total={medium.total}
-          color="text-yellow-500" bg="bg-yellow-500" shadow="rgba(234,179,8,0.4)"
+          color="text-yellow-500"
           onMouseEnter={() => setHovered('medium')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'medium'}
         />
         <LegendItem
           label="Hard" solved={hard.solved} total={hard.total}
-          color="text-red-500" bg="bg-red-500" shadow="rgba(239,68,68,0.4)"
+          color="text-red-500"
           onMouseEnter={() => setHovered('hard')} onMouseLeave={() => setHovered(null)}
           isActive={hovered === 'hard'}
         />
