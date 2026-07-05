@@ -100,9 +100,8 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${nextToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-          // console.log("Blocking logout for UI work");
-
-        if (typeof unauthorizedHandler === 'function') {
+        const refreshStatus = refreshError?.response?.status;
+        if ((refreshStatus === 401 || refreshStatus === 403) && typeof unauthorizedHandler === 'function') {
           unauthorizedHandler(refreshError);
         }
       }
