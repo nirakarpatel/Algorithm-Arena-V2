@@ -18,7 +18,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { useAuth } from "../context/useAuth";
-import ThemeToggle from "./ThemeToggle";
 import Logo from "./Logo";
 
 const Navbar = ({ onLogout }) => {

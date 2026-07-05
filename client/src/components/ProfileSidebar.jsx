@@ -40,7 +40,7 @@ const XPBar = ({ xp, loginXp = 0, challengeXp = 0, loginCount = 0 }) => {
   const currentLevelXp = xp % XP_PER_LEVEL;
   const pct = (currentLevelXp / XP_PER_LEVEL) * 100;
   const lvl = getLevel(xp);
-  
+
   const loginRatio = xp > 0 ? loginXp / xp : 0;
 
   return (
@@ -49,20 +49,20 @@ const XPBar = ({ xp, loginXp = 0, challengeXp = 0, loginCount = 0 }) => {
         <span className="text-tertiary">Level {lvl}</span>
         <span style={{ color: "rgb(var(--accent-rgb))" }}>{currentLevelXp} / {XP_PER_LEVEL} XP</span>
       </div>
-      
+
       {/* XP Breakdown Tooltip */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max bg-black/90 dark:bg-white/90 text-white dark:text-black text-[10px] font-bold p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl shadow-black/20 text-center flex flex-col gap-1 pointer-events-none">
         <div className="flex justify-between gap-4">
-           <span className="text-[#3b82f6]">Daily Login XP:</span>
-           <span>{loginXp} XP ({loginCount} days)</span>
+          <span className="text-[#3b82f6]">Daily Login XP:</span>
+          <span>{loginXp} XP ({loginCount} days)</span>
         </div>
         <div className="flex justify-between gap-4">
-           <span className="text-[#ec4899]">Challenges XP:</span>
-           <span>{challengeXp} XP</span>
+          <span className="text-[#ec4899]">Challenges XP:</span>
+          <span>{challengeXp} XP</span>
         </div>
         <div className="mt-1 pt-1 border-t border-white/20 dark:border-black/20 flex justify-between gap-4">
-           <span className="text-white/60 dark:text-black/60">Total XP:</span>
-           <span>{xp} XP</span>
+          <span className="text-white/60 dark:text-black/60">Total XP:</span>
+          <span>{xp} XP</span>
         </div>
         {/* Little triangle pointing down */}
         <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black/90 dark:border-t-white/90" />
@@ -82,7 +82,6 @@ const XPBar = ({ xp, loginXp = 0, challengeXp = 0, loginCount = 0 }) => {
       </div>
       <div className="flex justify-between text-[10px] text-tertiary">
         <span>{XP_PER_LEVEL - currentLevelXp} XP to Level {lvl + 1}</span>
-        <span className="font-semibold text-secondary">Total: {xp} XP</span>
       </div>
     </div>
   );
@@ -128,11 +127,11 @@ const DiffBar = ({ label, solved, total, color, delay }) => {
 const ProfileSidebar = ({ user, summary, profile, badges }) => {
   const initials = (user?.username || "?")[0].toUpperCase();
   const solved = summary?.solved ?? profile?.stats?.acceptedCount ?? profile?.acceptedCount ?? 0;
-  const total = summary?.totalChallenges ?? 
-    (profile?.difficultyBreakdown ? 
-      (profile.difficultyBreakdown.easy.total + 
-       profile.difficultyBreakdown.medium.total + 
-       profile.difficultyBreakdown.hard.total) 
+  const total = summary?.totalChallenges ??
+    (profile?.difficultyBreakdown ?
+      (profile.difficultyBreakdown.easy.total +
+        profile.difficultyBreakdown.medium.total +
+        profile.difficultyBreakdown.hard.total)
       : 0);
   const pending = summary?.pending ?? profile?.stats?.pendingCount ?? profile?.pendingCount ?? 0;
   const streak = profile?.streak ?? 0;
@@ -262,15 +261,14 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
             {/* Name + role badges */}
             <div className="flex-1 min-w-0 pt-0.5">
               <h2 className="text-base font-black text-primary leading-tight truncate">{user?.username || "Operative"}</h2>
-              <p className="text-[10px] text-tertiary mt-0.5 font-mono truncate">{user?.email || ""}</p>
+              <p className="text-[10px] text-secondary mt-0.5 truncate">{user?.email || ""}</p>
 
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                    user?.customTitle
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${user?.customTitle
                       ? "border-cyan-600/30 bg-cyan-600/10 text-cyan-700 dark:border-cyan-400/50 dark:bg-cyan-400/15 dark:text-cyan-400 dark:shadow-[0_0_10px_rgba(34,211,238,0.2)]"
                       : ""
-                  }`}
+                    }`}
                   style={!user?.customTitle ? {
                     borderColor: "rgba(var(--accent-rgb),0.4)",
                     background: "rgba(var(--accent-rgb),0.1)",
@@ -292,6 +290,36 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               </div>
             </div>
           </div>
+
+          {/* Social links — all clickable */}
+          {(user?.github || user?.twitter || user?.linkedin || user?.website) && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {user.github && (
+                <a href={`https://github.com/${user.github}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.07] dark:border-white/[0.07] text-[10px] text-secondary hover:text-primary hover:border-black/15 dark:hover:border-white/15 transition-all">
+                  <FiGithub size={10} /> {user.github}
+                </a>
+              )}
+              {user.twitter && (
+                <a href={`https://twitter.com/${user.twitter}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/[0.06] border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-all">
+                  <FiTwitter size={10} /> @{user.twitter}
+                </a>
+              )}
+              {user.linkedin && (
+                <a href={`https://linkedin.com/in/${user.linkedin}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-700/[0.08] border border-blue-700/20 text-[10px] text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-all">
+                  <FiLinkedin size={10} />
+                </a>
+              )}
+              {user.website && (
+                <a href={user.website} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/[0.06] border border-green-500/20 text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 transition-all">
+                  <FiGlobe size={10} /> Site
+                </a>
+              )}
+            </div>
+          )}
 
           {/* XP Level bar */}
           <XPBar xp={xp} loginXp={loginXp} challengeXp={challengeXp} loginCount={loginCount} />
@@ -347,37 +375,6 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               </ClanHoverCard>
             );
           })()}
-
-          {/* Social links — all clickable */}
-          {(user?.github || user?.twitter || user?.linkedin || user?.website) && (
-            <div className="flex flex-wrap gap-1.5">
-              {user.github && (
-                <a href={`https://github.com/${user.github}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.07] dark:border-white/[0.07] text-[10px] text-secondary hover:text-primary hover:border-black/15 dark:hover:border-white/15 transition-all">
-                  <FiGithub size={10} /> {user.github}
-                </a>
-              )}
-              {user.twitter && (
-                <a href={`https://twitter.com/${user.twitter}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/[0.06] border border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-all">
-                  <FiTwitter size={10} /> @{user.twitter}
-                </a>
-              )}
-              {user.linkedin && (
-                <a href={`https://linkedin.com/in/${user.linkedin}`} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-700/[0.08] border border-blue-700/20 text-[10px] text-blue-700 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-all">
-                  <FiLinkedin size={10} /> LinkedIn
-                </a>
-              )}
-              {user.website && (
-                <a href={user.website} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/[0.06] border border-green-500/20 text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 transition-all">
-                  <FiGlobe size={10} /> Site
-                </a>
-              )}
-            </div>
-          )}
-
           {/* Actions CTA */}
           <div className="flex gap-2 w-full">
             {isOwnProfile && (
@@ -448,9 +445,9 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                       scale: 1,
                       opacity: 1,
                       boxShadow: [
-                        "0 0 10px rgba(250, 204, 21, 0.5)",
-                        "0 0 25px rgba(250, 204, 21, 1)",
-                        "0 0 10px rgba(250, 204, 21, 0.5)"
+                        `0 0 10px rgba(${r.glow})`,
+                        `0 0 25px rgba(${r.glow})`,
+                        `0 0 10px rgba(${r.glow})`
                       ]
                     } : {
                       scale: 1,
@@ -470,7 +467,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                     style={{
                       background: r.bg,
                       border: isUnlocked
-                        ? "2px solid #facc15"
+                        ? `2px solid ${r.border}`
                         : `1px solid ${r.border}44`,
                     }}
                   >
@@ -478,7 +475,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                     {isUnlocked && (
                       <>
                         {/* Aura Ring Light */}
-                        <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: "inset 0 0 12px #facc15" }} />
+                        <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: `inset 0 0 12px ${r.border}` }} />
 
                         {/* Shining sweeping line */}
                         <motion.div
@@ -494,7 +491,13 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                           }}
                         />
                         {/* Status dot in corner */}
-                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white/30 bg-yellow-400 pointer-events-none" style={{ boxShadow: "0 0 8px #facc15" }} />
+                        <div 
+                          className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white/30 pointer-events-none" 
+                          style={{
+                            backgroundColor: r.border,
+                            boxShadow: `0 0 8px ${r.border}`
+                          }}
+                        />
                       </>
                     )}
                   </motion.div>

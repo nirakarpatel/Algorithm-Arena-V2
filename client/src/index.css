@@ -250,9 +250,15 @@ body {
 
 /* Apply default font families to HTML elements for seamless rendering */
 h1,
-.font-h1,
-.text-display,
 .text-page-title {
+    font-family: var(--font-h1);
+    background-image: linear-gradient(to bottom, var(--fg-primary), var(--fg-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.font-h1,
+.text-display {
     font-family: var(--font-h1);
 }
 

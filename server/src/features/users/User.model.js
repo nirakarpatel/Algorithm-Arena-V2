@@ -94,6 +94,11 @@ const userSchema = new mongoose.Schema({
     enum: ['default', 'algo-arena-light', 'vs', 'solarized-light'],
     default: 'default',
   },
+  preferredTheme: {
+    type: String,
+    enum: ['light', 'dark'],
+    default: 'dark',
+  },
   points: {
     type: Number,
     default: 0,

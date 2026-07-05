@@ -9,13 +9,6 @@ import SkeletonCard from "../components/SkeletonCard";
 import ProfileSidebar from "../components/ProfileSidebar";
 import ActivityHeatmap from "../components/ActivityHeatmap";
 
-const getGreeting = () => {
-  const h = new Date().getHours();
-  if (h >= 5 && h < 12) return "Good Morning";
-  if (h >= 12 && h < 17) return "Good Afternoon";
-  if (h >= 17 && h < 21) return "Good Evening";
-  return "Good Night";
-};
 
 const fd = (delay = 0) => ({
   initial: { opacity: 0, y: 14 },
@@ -44,6 +37,15 @@ const DiffBar = ({ label, solved, total, color }) => {
 
 import MasteryPieChart from '../components/MasteryPieChart';
 
+const PRESTIGE_ORDER = { LEGENDARY: 3, EPIC: 2, RARE: 1, COMMON: 0 };
+
+const RARITY = {
+  COMMON: { border: "#334155", bg: "#1e293b" },
+  RARE: { border: "#3b82f6", bg: "#1e3a5f" },
+  EPIC: { border: "#a855f7", bg: "#3b1f6e" },
+  LEGENDARY: { border: "#facc15", bg: "#422006" },
+};
+
 const Profile = () => {
   const { user } = useAuth();
   const { username } = useParams();
@@ -52,8 +54,8 @@ const Profile = () => {
   const profileQ = useQuery({
     queryKey: ["full-profile-stats", username || "me"],
     queryFn: async () => {
-      const endpoint = username 
-        ? `/api/profile/username/${username}` 
+      const endpoint = username
+        ? `/api/profile/username/${username}`
         : `/api/profile/stats`;
       const res = await api.get(endpoint);
       return res.data.data;
@@ -65,8 +67,8 @@ const Profile = () => {
   const subsQ = useQuery({
     queryKey: ["full-profile-submissions", username || "me"],
     queryFn: async () => {
-      const endpoint = username 
-        ? `/api/submissions/user/${username}?limit=100` 
+      const endpoint = username
+        ? `/api/submissions/user/${username}?limit=100`
         : `/api/submissions/my-submissions?limit=100`;
       const res = await api.get(endpoint);
       return res.data.data || [];
@@ -80,6 +82,17 @@ const Profile = () => {
   const recentSubs = useMemo(() => {
     return [...submissions].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 10);
   }, [submissions]);
+
+  const profile = profileQ.data || {};
+  const displayUser = username ? profile : user;
+
+  const topBadges = useMemo(() => {
+    const list = profile?.badges || [];
+    return list
+      .filter(b => b.isUnlocked)
+      .sort((a, b) => (PRESTIGE_ORDER[b.rarity] || 0) - (PRESTIGE_ORDER[a.rarity] || 0))
+      .slice(0, 3);
+  }, [profile?.badges]);
 
   if (profileQ.isLoading || subsQ.isLoading) {
     return (
@@ -96,9 +109,6 @@ const Profile = () => {
     );
   }
 
-  const profile = profileQ.data || {};
-  const displayUser = username ? profile : user;
-
   const easy = profile?.difficultyBreakdown?.easy ?? { solved: 0, total: 0 };
   const medium = profile?.difficultyBreakdown?.medium ?? { solved: 0, total: 0 };
   const hard = profile?.difficultyBreakdown?.hard ?? { solved: 0, total: 0 };
@@ -108,52 +118,65 @@ const Profile = () => {
   const solvedPct = Math.round((solved / total) * 100);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 pb-12">
-      
+    <div className="flex flex-col lg:flex-row gap-6 pb-12">
+
       <ProfileSidebar user={displayUser} profile={profile} badges={profile?.badges} />
 
-      <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex-1 min-w-0 space-y-4">
         <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md shrink-0">
           <div className="absolute top-0 right-0 p-4 text-right z-10">
-            <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/30 flex items-center gap-2">
+            <div className="px-3 py-1.5 rounded-full bg-accent/20 border dark:border-white/20 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
               <span className="text-xs font-black text-primary">{profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0} XP</span>
             </div>
           </div>
           <div className="relative z-10">
-            {!username && (
-              <span className="inline-block px-3 py-1 rounded-full border border-accent/20 bg-accent/10 text-[9px] font-black uppercase tracking-widest text-accent mb-3">
-                {getGreeting()}
-              </span>
-            )}
-            <h1 className="text-3xl md:text-4xl font-black text-primary mb-2">{displayUser?.username}</h1>
+            <div className="flex items-center gap-3.5 mb-2 flex-wrap">
+              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-b from-primary to-secondary bg-clip-text text-transparent leading-none">{displayUser?.username}</h1>
+              {topBadges.length > 0 && (
+                <div className="flex items-center gap-1.5  px-2 py-1">
+                  {topBadges.map((badge) => (
+                    <div
+                      key={badge._id}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-base border cursor-help shadow-sm transition-transform hover:scale-110"
+                      title={`${badge.name} (${badge.rarity}) — ${badge.description || ""}`}
+                      style={{
+                        background: RARITY[badge.rarity]?.bg || "#1e293b",
+                        borderColor: RARITY[badge.rarity]?.border || "#334155",
+                      }}
+                    >
+                      {badge.icon}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <p className="text-sm text-secondary max-w-md">
-                {username ? `Viewing ${displayUser?.username}'s public profile.` : "Track your journey, analyze your performance, and dominate the algorithm arena."}
+              {username ? `Viewing ${displayUser?.username}'s public profile.` : "Track your journey, analyze your performance, and dominate the algorithm arena."}
             </p>
           </div>
         </motion.div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 shrink-0">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 shrink-0">
           <motion.div {...fd(0.15)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-6 flex flex-col">
             <h2 className="text-xs font-black uppercase tracking-widest text-primary mb-2">Algorithm Mastery</h2>
             <MasteryPieChart easy={easy} medium={medium} hard={hard} total={total} solvedPct={solvedPct} />
           </motion.div>
 
           <motion.div {...fd(0.2)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md p-5 overflow-hidden flex flex-col justify-center">
-             <ActivityHeatmap submissions={submissions} />
+            <ActivityHeatmap submissions={submissions} />
           </motion.div>
         </div>
 
         <motion.div {...fd(0.25)} className="rounded-2xl border border-black/[0.06] dark:border-white/[0.06] bg-[var(--glass-surface)] shadow-md overflow-hidden flex flex-col h-[380px]">
           <div className="p-4 border-b border-black/[0.06] dark:border-b-white/[0.06] flex items-center justify-between shrink-0">
-             <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-               <FiActivity className="text-accent" /> Recent Submissions
-             </h2>
-             <button onClick={() => setShowAllSubs(true)} className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
-               View All <FiArrowRight size={10} />
-             </button>
+            <h2 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <FiActivity className="text-accent" /> Recent Submissions
+            </h2>
+            <button onClick={() => setShowAllSubs(true)} className="text-[10px] font-bold text-accent hover:text-accent/80 uppercase tracking-wider flex items-center gap-1 bg-accent/10 px-2 py-1 rounded">
+              View All <FiArrowRight size={10} />
+            </button>
           </div>
-          
+
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             {recentSubs.length === 0 ? (
               <div className="p-10 text-center h-full flex flex-col items-center justify-center">

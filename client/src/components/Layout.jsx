@@ -14,9 +14,9 @@ const Layout = ({ onLogout }) => {
   const MotionContainer = motion.div;
 
   // Log out after 20 minutes of true inactivity (no mouse moves, typing, etc.)
-  useIdleTimeout(() => {
-    toast('You were logged out due to inactivity.', { 
-      icon: '💤', 
+useIdleTimeout(() => {
+    toast('You were logged out due to inactivity.', {
+      icon: '💤',
       id: 'idle-logout',
       style: {
         background: '#0f1115',
