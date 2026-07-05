@@ -449,10 +449,19 @@ const refresh = async (req, res, next) => {
     }
 
     const refreshTokenHash = hashToken(refreshToken);
-    const existingToken = await RefreshToken.findOne({
+    let existingToken = await RefreshToken.findOne({
       tokenHash: refreshTokenHash,
       revokedAt: null,
     });
+
+    // Grace period for concurrency/multi-tab under heavy load:
+    // If token was rotated within the last 60 seconds by a concurrent request, allow session refresh instead of failing with 401.
+    if (!existingToken) {
+      existingToken = await RefreshToken.findOne({
+        tokenHash: refreshTokenHash,
+        revokedAt: { $gte: new Date(Date.now() - 60 * 1000) },
+      });
+    }
 
     if (!existingToken || existingToken.expiresAt <= new Date()) {
       clearRefreshTokenCookie(res);
