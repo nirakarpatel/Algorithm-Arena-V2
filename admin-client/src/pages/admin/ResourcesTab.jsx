@@ -15,7 +15,7 @@ const ResourcesTab = () => {
   const queryClient = useQueryClient();
   const [activeFolder, setActiveFolder] = useState('Arrays');
   const [uploadModal, setUploadModal] = useState(false);
-  const [form, setForm] = useState({ title: '', folder: 'Arrays', type: 'PDF', url: '', sizeBytes: 0, file: null });
+  const [form, setForm] = useState({ title: '', folder: 'Arrays', type: 'PDF', url: '', sizeBytes: 0, file: null, isSolution: false });
   const [dragActive, setDragActive] = useState(false);
   const [fileName, setFileName] = useState('');
 
@@ -34,6 +34,7 @@ const ResourcesTab = () => {
         fd.append('file', data.file);
         fd.append('title', data.title);
         fd.append('folder', data.folder);
+        fd.append('isSolution', data.isSolution || false);
         const res = await api.post('/api/resources/upload', fd, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -44,6 +45,7 @@ const ResourcesTab = () => {
         folder: data.folder,
         type: data.type,
         url: data.url,
+        isSolution: data.isSolution || false,
       });
       return res.data;
     },
@@ -51,7 +53,7 @@ const ResourcesTab = () => {
       toast.success('Resource added!');
       queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
       setUploadModal(false);
-      setForm({ title: '', folder: activeFolder, type: 'PDF', url: '', sizeBytes: 0, file: null });
+      setForm({ title: '', folder: activeFolder, type: 'PDF', url: '', sizeBytes: 0, file: null, isSolution: false });
       setFileName('');
     },
     onError: (err) => {
@@ -156,6 +158,7 @@ const ResourcesTab = () => {
                   <h3 className="font-bold text-primary truncate group-hover:text-blue-400 transition-colors">{res.title}</h3>
                   <div className="flex gap-3 text-[10px] font-mono text-tertiary mt-1">
                     <span className="uppercase font-bold">{res.type}</span>
+                    {res.isSolution && <span className="text-emerald-400 font-bold uppercase">Solution</span>}
                     {res.sizeBytes > 0 && <span>{formatSize(res.sizeBytes)}</span>}
                     <span>Added {new Date(res.createdAt).toLocaleDateString()}</span>
                   </div>
@@ -237,6 +240,19 @@ const ResourcesTab = () => {
                       </div>
                     </div>
                   )}
+
+                  <div className="flex items-center gap-2 py-1">
+                    <input 
+                      type="checkbox" 
+                      id="isSolution"
+                      checked={form.isSolution || false} 
+                      onChange={e => setForm({...form, isSolution: e.target.checked})}
+                      className="rounded bg-black/20 border border-white/10 text-blue-500 focus:ring-blue-500/30 w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="isSolution" className="text-xs text-secondary font-bold select-none cursor-pointer">
+                      Mark as Solution
+                    </label>
+                  </div>
 
                   <div className="flex gap-3 justify-end pt-4">
                     <button type="button" onClick={() => setUploadModal(false)} className="px-4 py-2 rounded-xl font-bold text-sm bg-white/5 text-secondary hover:bg-white/10 transition-colors">Cancel</button>

@@ -50,7 +50,7 @@ exports.uploadResource = async (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
-    const { title, folder } = req.body;
+    const { title, folder, isSolution } = req.body;
     if (!title || !folder) {
       return res.status(400).json({ success: false, message: 'Title and folder are required' });
     }
@@ -58,6 +58,7 @@ exports.uploadResource = async (req, res, next) => {
     const resource = await Resource.create({
       title,
       folder,
+      isSolution: isSolution === 'true' || isSolution === true,
       type: 'PDF',
       mimeType: req.file.mimetype,
       fileData: req.file.buffer.toString('base64'),

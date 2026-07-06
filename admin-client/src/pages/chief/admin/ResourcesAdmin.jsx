@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 const ResourcesAdmin = () => {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({ title: '', category: 'DP', type: 'PDF', url: '' });
+  const [formData, setFormData] = useState({ title: '', category: 'DP', type: 'PDF', url: '', isSolution: false });
 
   const { data: resources = [], isLoading } = useQuery({
     queryKey: ['admin-resources'],
@@ -20,13 +20,20 @@ const ResourcesAdmin = () => {
 
   const uploadMutation = useMutation({
     mutationFn: async (newResource) => {
-      const res = await api.post('/api/resources', newResource);
+      const body = {
+        title: newResource.title,
+        folder: newResource.category,
+        type: newResource.type,
+        url: newResource.url,
+        isSolution: newResource.isSolution || false
+      };
+      const res = await api.post('/api/resources', body);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-resources'] });
       toast.success('Resource deployed to Intel Archives.');
-      setFormData({ title: '', category: 'DP', type: 'PDF', url: '' });
+      setFormData({ title: '', category: 'DP', type: 'PDF', url: '', isSolution: false });
     },
     onError: () => toast.error('Failed to deploy resource.')
   });
@@ -101,6 +108,18 @@ const ResourcesAdmin = () => {
                 className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-primary focus:outline-none focus:border-accent/50" 
               />
             </div>
+            <div className="flex items-center gap-2 py-1">
+              <input 
+                type="checkbox" 
+                id="isSolution"
+                checked={formData.isSolution || false} 
+                onChange={e => setFormData({...formData, isSolution: e.target.checked})}
+                className="rounded bg-black/20 border border-white/10 text-accent focus:ring-accent/50 w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="isSolution" className="text-xs text-secondary font-bold select-none cursor-pointer">
+                Mark as Solution
+              </label>
+            </div>
             <button 
               type="submit" 
               disabled={uploadMutation.isPending}
@@ -125,7 +144,10 @@ const ResourcesAdmin = () => {
                     <FiFileText className="text-accent" />
                     <div>
                       <p className="text-sm font-bold text-primary leading-tight">{res.title}</p>
-                      <p className="text-[10px] uppercase font-black text-tertiary">{res.category} • {res.type}</p>
+                      <p className="text-[10px] uppercase font-black text-tertiary">
+                        {res.category || res.folder} • {res.type}
+                        {res.isSolution && <span className="text-emerald-400 font-bold ml-1">• Solution</span>}
+                      </p>
                     </div>
                   </div>
                   <button 
