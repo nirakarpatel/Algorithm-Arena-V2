@@ -30,8 +30,49 @@ import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 // Local Project Imports
 import SkeletonCard from "../components/SkeletonCard";
 import { api } from "../lib/api";
+import { argsToJsonStdin, wrapWithDriver } from "../lib/leetcodeDriver";
 
 import { useAuth } from "../context/useAuth";
+
+/**
+ * Decode HTML entities that may be present in LeetCode-sourced data.
+ */
+const decodeHtmlEntities = (str) => {
+  if (!str) return "";
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+};
+
+/**
+ * Normalize output for comparison across languages.
+ */
+const LANG_LITERALS = { True: "true", False: "false", None: "null" };
+const normalizeOutput = (s) => {
+  let decoded = decodeHtmlEntities(s ?? "");
+  let trimmed = decoded.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+    trimmed = trimmed.slice(1, -1);
+  }
+  return trimmed
+    .replace(/\s+/g, "")
+    .replace(/'/g, '"')
+    .replace(/\b(True|False|None)\b/g, (m) => LANG_LITERALS[m]);
+};
+
+/** Clean an expected value for display (decode entities, strip outer quotes). */
+const displayExpected = (val) => {
+  if (!val) return val;
+  let decoded = decodeHtmlEntities(val).trim();
+  if (decoded.startsWith('"') && decoded.endsWith('"') && decoded.length >= 2) {
+    decoded = decoded.slice(1, -1);
+  }
+  return decoded;
+};
 
 /**
  * Converts a single test-case arg value to its stdin representation.
@@ -249,8 +290,17 @@ const ChallengeDetails = () => {
     },
   });
 
-  // Prefer user's saved edits, then the generic full-program template.
-  const codeSnippet = codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
+  // Prefer user's saved edits, then the LeetCode snippet if available, then the generic template.
+  const starterCode = useMemo(() => {
+    const challenge = challengeQuery.data;
+    if (challenge?.codeSnippets) {
+      const match = challenge.codeSnippets.find((s) => s.langSlug === language);
+      if (match) return match.code;
+    }
+    return defaultStarterByLanguage[language] ?? "";
+  }, [challengeQuery.data, language]);
+
+  const codeSnippet = codeByLang[language] ?? starterCode;
 
   // Pre-load submitted code into editor when in review mode
   useEffect(() => {
@@ -311,22 +361,29 @@ const ChallengeDetails = () => {
 
   // --- JUDGE0 RUN LOGIC ---
   const runTestCases = async (signal) => {
-    const testCases = challengeQuery.data?.testCases ?? [];
+    const challenge = challengeQuery.data;
+    const testCases = challenge?.testCases ?? [];
+    const hasFunction = !!challenge?.functionName;
+    const isSupportedDriver = language === "python" || language === "javascript";
 
     const runs =
       testCases.length > 0
         ? testCases.map((tc) => ({
             label: tc.label,
-            stdinValue: argsToStdin(tc.args),
+            stdinValue: (hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args),
             expected: tc.expected ?? null,
           }))
         : [{ label: "Run", stdinValue: stdin, expected: null }];
 
     const langId = LANGUAGE_MAP[language]?.id ?? 63;
     const commentChar = language === "python" ? "#" : "//";
+    const finalSourceCode = (hasFunction && isSupportedDriver)
+      ? wrapWithDriver(codeSnippet, language, challenge.functionName)
+      : codeSnippet;
+
     const freshSource = (idx) =>
       b64Encode(
-        `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `${finalSourceCode}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       );
 
     const batchRes = await api.post(
@@ -762,7 +819,9 @@ const ChallengeDetails = () => {
                               key={i}
                               onClick={() => {
                                 setSelectedCaseIdx(i);
-                                setStdin(argsToStdin(tc.args));
+                                const hasFunction = !!challenge?.functionName;
+                                const isSupportedDriver = language === "python" || language === "javascript";
+                                setStdin((hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args));
                               }}
                               className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors ${
                                 selectedCaseIdx === i
@@ -779,7 +838,9 @@ const ChallengeDetails = () => {
                         {(() => {
                           const tc = challenge.testCases[selectedCaseIdx];
                           if (!tc) return null;
-                          const inputStr = argsToStdin(tc.args);
+                          const hasFunction = !!challenge?.functionName;
+                          const isSupportedDriver = language === "python" || language === "javascript";
+                          const inputStr = (hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args);
                           return (
                             <div className="flex gap-2 shrink-0">
                               <div className="flex-1 min-w-0">
@@ -792,7 +853,7 @@ const ChallengeDetails = () => {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Expected</p>
                                   <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
-                                    {tc.expected}
+                                    {displayExpected(tc.expected)}
                                   </pre>
                                 </div>
                               )}
@@ -841,11 +902,11 @@ const ChallengeDetails = () => {
                           const passed =
                             !hasError &&
                             c.expected != null &&
-                            c.stdout?.trim() === c.expected.trim();
+                            normalizeOutput(c.stdout) === normalizeOutput(c.expected);
                           const failed =
                             !hasError &&
                             c.expected != null &&
-                            c.stdout?.trim() !== c.expected.trim();
+                            normalizeOutput(c.stdout) !== normalizeOutput(c.expected);
                           return (
                             <div
                               key={i}
@@ -905,7 +966,7 @@ const ChallengeDetails = () => {
                                     <div>
                                       <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Expected</p>
                                       <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
-                                        {c.expected}
+                                        {displayExpected(c.expected)}
                                       </pre>
                                     </div>
                                   )}
