@@ -20,6 +20,21 @@ const parseTestCaseArgs = (stdinStr, params) => {
   });
 };
 
+const decodeHtmlEntities = (str) => {
+  if (!str) return "";
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+};
+
+const cleanExpectedOutput = (val) => {
+  return decodeHtmlEntities(val).trim();
+};
+
 /**
  * Extract expected output strings from LeetCode's HTML description.
  */ 
@@ -29,7 +44,7 @@ const extractExpectedOutputs = (html) => {
   let m;
   while ((m = rx.exec(html)) !== null) {
     const val = m[1].trim();
-    if (val) results.push(val);
+    if (val) results.push(cleanExpectedOutput(val));
   }
   return results;
 };

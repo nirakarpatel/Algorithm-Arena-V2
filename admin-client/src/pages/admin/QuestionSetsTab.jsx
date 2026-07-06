@@ -22,6 +22,21 @@ const prepareTestCases = (raw) => raw.filter(tc=>tc.label.trim()).map(tc=>{
 });
 const emptyTestCase = ()=>({label:'',args:'[]',expected:''});
 
+/** Decode HTML entities and strip outer quotes from expected values. */
+const cleanExpected = (val) => {
+  if (!val) return val;
+  let s = val
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .trim();
+  if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) s = s.slice(1, -1);
+  return s;
+};
+
 const QuestionSetsTab = () => {
   const qc = useQueryClient();
   const [view,setView] = useState('list');
@@ -75,7 +90,7 @@ const QuestionSetsTab = () => {
       nq[index].title=data.title||'';nq[index].description=data.content||'';nq[index].difficulty=data.difficulty||'Easy';
       const tags=(data.topicTags||[]).map(t=>t.name);nq[index].category=tags[0]||'General';nq[index].tags=tags;
       nq[index].codeSnippets=data.codeSnippets||[];nq[index].functionName=data.functionName||'';
-      nq[index].testCases=(data.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args)}));
+      nq[index].testCases=(data.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}));
       setForm({...form,questions:nq});
     },
     onError:(e)=>toast.error(e.response?.data?.message||'Failed to fetch')
@@ -116,7 +131,7 @@ const QuestionSetsTab = () => {
       const tags=(topicTags||[]).map(t=>t.name);
       setCreateChallengeForm(p=>({...p,title,description:content,difficulty,category:tags[0]||p.category,
         link:`https://leetcode.com/problems/${slug}/`,tags,codeSnippets:codeSnippets||[],
-        functionName:functionName||'',testCases:(testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args)}))}));
+        functionName:functionName||'',testCases:(testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}))}));
       if(codeSnippets?.length)setSnippetLang(codeSnippets[0].langSlug);
       toast.success('Fetched!');
     }catch(e){toast.error(e.response?.data?.message||'Failed')}finally{setIsFetchingLC(false)}
@@ -140,7 +155,7 @@ const QuestionSetsTab = () => {
         ...q,
         hints:(q.hints&&q.hints.length)?q.hints:[''],
         leetcodeSlug:'',
-        testCases:(q.testCases||[]).map(tc=>({label:tc.label||'',args:JSON.stringify(tc.args??[]),expected:tc.expected??''})),
+        testCases:(q.testCases||[]).map(tc=>({label:tc.label||'',args:JSON.stringify(tc.args??[]),expected:cleanExpected(tc.expected??'')})),
       })),
     });
     setView('create');
@@ -355,7 +370,7 @@ const QuestionSetsTab = () => {
             <div key={ch._id} className="border border-glass-border rounded-xl p-4 flex flex-wrap gap-3 justify-between items-start hover:border-accent/20 transition-all duration-300 bg-white/[0.01]">
               <div><h3 className="font-semibold text-primary">{ch.title}</h3><p className="text-secondary text-sm">{ch.difficulty} - {ch.points} XP - {ch.category}</p></div>
               <div className="flex gap-2">
-                <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-accent/10 hover:text-accent transition-colors" onClick={()=>setEditingChallenge({...ch,testCases:(ch.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args??[])}))})}>Edit</button>
+                <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-accent/10 hover:text-accent transition-colors" onClick={()=>setEditingChallenge({...ch,testCases:(ch.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args??[]),expected:cleanExpected(tc.expected)}))})}>Edit</button>
                 <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-red-500/10 hover:text-red-400 transition-colors" onClick={()=>setDeleteTarget(ch)}>Delete</button>
               </div>
             </div>

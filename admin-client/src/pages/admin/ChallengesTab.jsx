@@ -36,6 +36,21 @@ const prepareTestCases = (rawCases) =>
 
 const emptyTestCase = () => ({ label: "", args: "[]", expected: "" });
 
+/** Decode HTML entities and strip outer quotes from expected values. */
+const cleanExpected = (val) => {
+  if (!val) return val;
+  let s = val
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .trim();
+  if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) s = s.slice(1, -1);
+  return s;
+};
+
 const mockDelay = () => new Promise((r) => setTimeout(r, 400));
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -80,6 +95,7 @@ const ChallengesTab = () => {
         testCases: (testCases || []).map((tc) => ({
           ...tc,
           args: JSON.stringify(tc.args),
+          expected: cleanExpected(tc.expected),
         })),
       }));
 
@@ -959,6 +975,7 @@ const ChallengesTab = () => {
                           testCases: (challenge.testCases || []).map((tc) => ({
                             ...tc,
                             args: JSON.stringify(tc.args ?? []),
+                            expected: cleanExpected(tc.expected),
                           })),
                         })
                       }
