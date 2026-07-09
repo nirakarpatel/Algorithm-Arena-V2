@@ -11,14 +11,33 @@ import EmptyState from '../../components/EmptyState';
 import CodeEditor from '../../components/CodeEditor';
 import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from '../../constants/languages';
 import { api } from '../../lib/api';
+import { isDrivableSignature } from '../../lib/leetcodeDriver';
+
+const SignatureInfo = ({ functionName, params, returnType }) => {
+  const hasParams = Array.isArray(params) && params.length > 0;
+  if (!functionName && !hasParams && !returnType) return null;
+  const paramsStr = hasParams ? params.map(p=>`${p.name}: ${p.type}`).join(', ') : '(none)';
+  const javaOk = isDrivableSignature('java', params, returnType);
+  const cppOk = isDrivableSignature('cpp', params, returnType);
+  return (
+    <div className="text-[11px] font-mono bg-black/5 dark:bg-white/5 rounded px-2 py-1.5 mt-1 text-secondary">
+      <div>{functionName||'?'}({paramsStr}) → {returnType||'?'}</div>
+      <div className="mt-0.5">
+        Java driver: <span className={javaOk?'text-green-500':'text-red-500'}>{javaOk?'supported':'not supported'}</span>
+        {'  ·  '}
+        C++ driver: <span className={cppOk?'text-green-500':'text-red-500'}>{cppOk?'supported':'not supported'}</span>
+      </div>
+    </div>
+  );
+};
 
 const initialQuestionState = {
   title:'',difficulty:'Easy',points:100,category:'',description:'',
-  hints:[''],leetcodeSlug:'',tags:[],codeSnippets:[],solutions:[],functionName:'',testCases:[]
+  hints:[''],leetcodeSlug:'',tags:[],codeSnippets:[],solutions:[],functionName:'',params:[],returnType:'',testCases:[]
 };
 const defaultChallengeForm = {
   title:'',description:'',link:'',difficulty:'Easy',points:100,
-  category:'Logic',tags:[],codeSnippets:[],solutions:[],functionName:'',testCases:[]
+  category:'Logic',tags:[],codeSnippets:[],solutions:[],functionName:'',params:[],returnType:'',testCases:[]
 };
 const prepareTestCases = (raw) => raw.filter(tc=>tc.label.trim()).map(tc=>{
   let args=[]; try{args=JSON.parse(tc.args)}catch{/* ignore parse error */} return{label:tc.label,args,expected:tc.expected};
@@ -302,6 +321,7 @@ const QuestionSetsTab = () => {
       nq[index].title=data.title||'';nq[index].description=data.content||'';nq[index].difficulty=data.difficulty||'Easy';
       const tags=(data.topicTags||[]).map(t=>t.name);nq[index].category=tags[0]||'General';nq[index].tags=tags;
       nq[index].codeSnippets=data.codeSnippets||[];nq[index].functionName=data.functionName||'';
+      nq[index].params=data.params||[];nq[index].returnType=data.returnType||'';
       nq[index].testCases=(data.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}));
       setForm({...form,questions:nq});
     },
@@ -339,11 +359,12 @@ const QuestionSetsTab = () => {
     setIsFetchingLC(true);
     try{
       const r=await api.get(`/api/challenges/fetch-leetcode-details?slug=${slug}`);
-      const{title,content,difficulty,topicTags,codeSnippets,functionName,testCases}=r.data.data;
+      const{title,content,difficulty,topicTags,codeSnippets,functionName,params,returnType,testCases}=r.data.data;
       const tags=(topicTags||[]).map(t=>t.name);
       setCreateChallengeForm(p=>({...p,title,description:content,difficulty,category:tags[0]||p.category,
         link:`https://leetcode.com/problems/${slug}/`,tags,codeSnippets:codeSnippets||[],
-        functionName:functionName||'',testCases:(testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}))}));
+        functionName:functionName||'',params:params||[],returnType:returnType||'',
+        testCases:(testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}))}));
       if(codeSnippets?.length)setSnippetLang(codeSnippets[0].langSlug);
       toast.success('Fetched!');
     }catch(e){toast.error(e.response?.data?.message||'Failed')}finally{setIsFetchingLC(false)}
@@ -436,7 +457,7 @@ const QuestionSetsTab = () => {
   };
 
   const handleCreateChallengeSubmit=(e)=>{e.preventDefault();createChallengeMutation.mutate({...createChallengeForm,solutions:prepareSolutions(createChallengeForm.solutions),testCases:prepareTestCases(createChallengeForm.testCases)})};
-  const handleUpdateChallengeSubmit=(e)=>{e.preventDefault();if(!editingChallenge)return;updateChallengeMutation.mutate({id:editingChallenge._id,body:{title:editingChallenge.title,description:editingChallenge.description,link:editingChallenge.link||'',difficulty:editingChallenge.difficulty,points:Number(editingChallenge.points),category:editingChallenge.category,solutions:prepareSolutions(editingChallenge.solutions||[]),functionName:editingChallenge.functionName||'',testCases:prepareTestCases(editingChallenge.testCases||[])}})};
+  const handleUpdateChallengeSubmit=(e)=>{e.preventDefault();if(!editingChallenge)return;updateChallengeMutation.mutate({id:editingChallenge._id,body:{title:editingChallenge.title,description:editingChallenge.description,link:editingChallenge.link||'',difficulty:editingChallenge.difficulty,points:Number(editingChallenge.points),category:editingChallenge.category,solutions:prepareSolutions(editingChallenge.solutions||[]),functionName:editingChallenge.functionName||'',params:editingChallenge.params||[],returnType:editingChallenge.returnType||'',testCases:prepareTestCases(editingChallenge.testCases||[])}})};
 
   const renderSolutionEditor = ({ editorKey, solutions = [], onChange }) => {
     const selectedLang = solutionLangByKey[editorKey] || solutions.find((s) => s.code?.trim())?.langSlug || 'javascript';
@@ -562,7 +583,7 @@ const QuestionSetsTab = () => {
                         <div className="md:col-span-3"><label className="field-label text-[10px]">Problem Description</label><textarea required rows="3" className="field-textarea text-sm" value={q.description} onChange={e=>updateQuestion(i,'description',e.target.value)}/></div>
                         <div className="md:col-span-3"><label className="field-label text-[10px]">Hints (optional)</label>{q.hints.map((hint,hi)=>(<input key={hi} className="field-input text-sm mb-2" placeholder="Hint..." value={hint} onChange={e=>updateHint(i,hi,e.target.value)}/>))}</div>
                         {renderSolutionEditor({ editorKey: `set-question-${i}`, solutions: q.solutions||[], onChange: v=>updateQuestion(i,'solutions',v) })}
-                        <div className="md:col-span-3"><label className="field-label text-[10px]">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={q.functionName||''} onChange={e=>updateQuestion(i,'functionName',e.target.value.trim())}/></div>
+                        <div className="md:col-span-3"><label className="field-label text-[10px]">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={q.functionName||''} onChange={e=>updateQuestion(i,'functionName',e.target.value.trim())}/><SignatureInfo functionName={q.functionName} params={q.params} returnType={q.returnType}/></div>
                         <TestCaseEditor cases={q.testCases||[]} onChange={v=>updateQuestion(i,'testCases',v)}/>
                       </div>
                     </BaseCard>
@@ -654,7 +675,7 @@ const QuestionSetsTab = () => {
             {createChallengeForm.tags.length>0&&(<div><label className="field-label">Topic Tags</label><div className="flex flex-wrap gap-2">{createChallengeForm.tags.map(tag=>(<span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent border border-accent/20">{tag}<button type="button" className="ml-0.5 hover:text-red-400 transition-colors" onClick={()=>setCreateChallengeForm(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))}><FiX size={12}/></button></span>))}</div></div>)}
             {createChallengeForm.codeSnippets.length>0&&(<div><label className="field-label">Starter Code ({createChallengeForm.codeSnippets.length} languages)</label><div className="flex gap-2 mb-2 flex-wrap">{createChallengeForm.codeSnippets.map(s=>(<button key={s.langSlug} type="button" className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${snippetLang===s.langSlug?'bg-accent text-white':'bg-white/5 text-secondary hover:text-primary'}`} onClick={()=>setSnippetLang(s.langSlug)}>{s.lang}</button>))}</div><pre className="bg-white/5 border border-white/10 rounded-xl p-4 text-xs overflow-x-auto max-h-48 overflow-y-auto font-mono"><code>{createChallengeForm.codeSnippets.find(s=>s.langSlug===snippetLang)?.code||'Select a language above'}</code></pre></div>)}
             {renderSolutionEditor({ editorKey: "create-challenge", solutions: createChallengeForm.solutions||[], onChange: v=>setCreateChallengeForm(p=>({...p,solutions:v})) })}
-            <div><label className="field-label">Solution Function Name</label><input className="field-input font-mono" placeholder="e.g. twoSum" value={createChallengeForm.functionName} onChange={e=>setCreateChallengeForm(p=>({...p,functionName:e.target.value.trim()}))}/></div>
+            <div><label className="field-label">Solution Function Name</label><input className="field-input font-mono" placeholder="e.g. twoSum" value={createChallengeForm.functionName} onChange={e=>setCreateChallengeForm(p=>({...p,functionName:e.target.value.trim()}))}/><SignatureInfo functionName={createChallengeForm.functionName} params={createChallengeForm.params} returnType={createChallengeForm.returnType}/></div>
             <TestCaseEditor cases={createChallengeForm.testCases} onChange={v=>setCreateChallengeForm(p=>({...p,testCases:v}))}/>
             <button type="submit" disabled={createChallengeMutation.isLoading} className="btn-primary w-full shadow-[0_0_20px_rgba(168,85,247,0.4)]">{createChallengeMutation.isLoading?'Creating...':'Create Challenge'}</button>
           </form>
@@ -676,7 +697,7 @@ const QuestionSetsTab = () => {
                 <div><label className="field-label text-xs">Category</label><input className="field-input text-sm" required value={editingChallenge.category} onChange={e=>setEditingChallenge(p=>({...p,category:e.target.value}))}/></div>
               </div>
               {renderSolutionEditor({ editorKey: "edit-challenge", solutions: editingChallenge.solutions||[], onChange: v=>setEditingChallenge(p=>({...p,solutions:v})) })}
-              <div><label className="field-label text-xs">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={editingChallenge.functionName||''} onChange={e=>setEditingChallenge(p=>({...p,functionName:e.target.value.trim()}))}/></div>
+              <div><label className="field-label text-xs">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={editingChallenge.functionName||''} onChange={e=>setEditingChallenge(p=>({...p,functionName:e.target.value.trim()}))}/><SignatureInfo functionName={editingChallenge.functionName} params={editingChallenge.params} returnType={editingChallenge.returnType}/></div>
               <TestCaseEditor cases={editingChallenge.testCases||[]} onChange={v=>setEditingChallenge(p=>({...p,testCases:v}))}/>
               <div className="flex justify-end gap-2 border-t border-glass-border pt-3">
                 <button type="button" className="btn-secondary py-2 px-4 text-sm font-bold" onClick={()=>setEditingChallenge(null)}>Cancel</button>
