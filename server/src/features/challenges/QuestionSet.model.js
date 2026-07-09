@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+// A plain `{ name: String, type: String }` object literal is misread by Mongoose:
+// the `type` key is its own type-shorthand syntax, so the whole object collapses
+// to a bare String schema instead of a subdocument. An explicit Schema avoids that.
+const paramSchema = new mongoose.Schema({ name: String, type: String }, { _id: false });
+
 const questionSetSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -38,6 +43,8 @@ const questionSetSchema = new mongoose.Schema({
       code: String
     }],
     functionName: { type: String, default: '' },
+    params: [paramSchema],
+    returnType: { type: String, default: '' },
     testCases: [{
       label: { type: String },
       args: { type: mongoose.Schema.Types.Mixed },
