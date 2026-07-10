@@ -2,6 +2,7 @@ import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
+import BottomTabBar from "./BottomTabBar";
 import Logo from "../components/Logo";
 import Footer from "../components/Footer";
 import { useIdleTimeout } from "../hooks/useIdleTimeout";
@@ -40,9 +41,10 @@ useIdleTimeout(() => {
 
       {/* 2. Top Navigation */}
       {user?.usernameSet !== false && <Navbar onLogout={onLogout} />}
+      {user?.usernameSet !== false && <BottomTabBar />}
 
       {/* 3. Main Content Area */}
-      <main className={`mx-auto flex-1 w-full ${isFullWidth ? "max-w-none px-0 py-0" : "max-w-7xl px-4 sm:px-6 lg:px-8 py-8"}`}>
+      <main className={`mx-auto flex-1 w-full ${isFullWidth ? "max-w-none px-0 pt-0 pb-16 md:pb-0" : "max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8"}`}>
         <AnimatePresence mode="wait" initial={false}>
           <MotionContainer
             key={location.pathname}
@@ -55,7 +57,11 @@ useIdleTimeout(() => {
       </main>
 
       {/* Footer */}
-      {!isFullWidth && <Footer />}
+      {!isFullWidth && (
+        <div className={user?.usernameSet !== false ? "pb-24 md:pb-0" : undefined}>
+          <Footer />
+        </div>
+      )}
     </div>
   );
 };

@@ -55,7 +55,7 @@ function App() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="app-container">
-        <div className="fixed bottom-20 sm:bottom-6 right-6 z-[60]">
+        <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-[60]">
           <ThemeToggle />
         </div>
         <NotificationListener />
