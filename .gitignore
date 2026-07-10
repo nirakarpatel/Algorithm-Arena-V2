@@ -11,3 +11,7 @@ brain/
 server/DEPLOYMENT_NOTES.md
 CLAUDE.MD
 .playwright-mcp/
+docs/
+.superpowers/sdd/
+.claude/
+CLAUDE.md
