@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import { MotionConfig } from 'framer-motion';
+import { initSpotlight } from './lib/spotlight';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -41,6 +42,8 @@ function App() {
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  React.useEffect(() => initSpotlight(), []);
 
   const handleLoginSuccess = () => {};
 
