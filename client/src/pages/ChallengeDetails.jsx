@@ -47,6 +47,7 @@ import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 // Local Project Imports
 import SkeletonCard from "../components/SkeletonCard";
 import { api } from "../lib/api";
+import { argsToJsonStdin, wrapWithDriver, isDrivableSignature } from "../lib/leetcodeDriver";
 import { MANUAL_TOPICS } from "../constants/manualContent";
 import FeedbackDialog from "../components/FeedbackDialog";
 
@@ -59,11 +60,40 @@ import { useAuth } from "../context/useAuth";
  * 3. Normalize cross-language literals (Python's True/False/None → true/false/null)
  */
 const LANG_LITERALS = { True: "true", False: "false", None: "null" };
-const normalizeOutput = (s) =>
-  (s ?? "")
-    .trim()
+
+const decodeHtmlEntities = (str) => {
+  if (!str) return "";
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+};
+
+const normalizeOutput = (s) => {
+  let decoded = decodeHtmlEntities(s ?? "");
+  let trimmed = decoded.trim();
+  // Strip outer quotes if it's a string literal, e.g. starts and ends with double quotes
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+    trimmed = trimmed.slice(1, -1);
+  }
+  return trimmed
     .replace(/\s+/g, "")
+    .replace(/'/g, '"') // Normalize single quotes to double quotes for comparison
     .replace(/\b(True|False|None)\b/g, (m) => LANG_LITERALS[m]);
+};
+
+/** Clean an expected value for display (decode entities, strip outer quotes). */
+const displayExpected = (val) => {
+  if (!val) return val;
+  let decoded = decodeHtmlEntities(val).trim();
+  if (decoded.startsWith('"') && decoded.endsWith('"') && decoded.length >= 2) {
+    decoded = decoded.slice(1, -1);
+  }
+  return decoded;
+};
 
 /**
  * Converts a single test-case arg value to its stdin representation.
@@ -150,6 +180,7 @@ const ChallengeDetails = () => {
   const [language, setLanguage] = useState(
     user?.preferredLanguage || "javascript",
   );
+  const [solutionLanguage, setSolutionLanguage] = useState("javascript");
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState("description");
 
@@ -363,9 +394,17 @@ const ChallengeDetails = () => {
     },
   });
 
-  // Prefer user's saved edits, then the generic full-program template.
-  const codeSnippet =
-    codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
+  // Prefer user's saved edits, then the LeetCode snippet if available, then the generic template.
+  const starterCode = useMemo(() => {
+    const challenge = challengeQuery.data;
+    if (challenge?.codeSnippets) {
+      const match = challenge.codeSnippets.find((s) => s.langSlug === language);
+      if (match) return match.code;
+    }
+    return defaultStarterByLanguage[language] ?? "";
+  }, [challengeQuery.data, language]);
+
+  const codeSnippet = codeByLang[language] ?? starterCode;
 
   useEffect(() => {
     setShowSubmitAnyway(false);
@@ -433,22 +472,30 @@ const ChallengeDetails = () => {
 
   // --- JUDGE0 RUN LOGIC ---
   const runTestCases = async (signal) => {
-    const testCases = challengeQuery.data?.testCases ?? [];
+    const challenge = challengeQuery.data;
+    const testCases = challenge?.testCases ?? [];
+    const hasFunction = !!challenge?.functionName;
+    const isSupportedDriver = language === "python" || language === "javascript"
+      || isDrivableSignature(language, challenge?.params, challenge?.returnType);
 
     const runs =
       testCases.length > 0
         ? testCases.map((tc) => ({
             label: tc.label,
-            stdinValue: argsToStdin(tc.args),
+            stdinValue: (hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args),
             expected: tc.expected ?? null,
           }))
         : [{ label: "Run", stdinValue: stdin, expected: null }];
 
     const langId = LANGUAGE_MAP[language]?.id ?? 63;
     const commentChar = language === "python" ? "#" : "//";
+    const finalSourceCode = (hasFunction && isSupportedDriver)
+      ? wrapWithDriver(codeSnippet, language, challenge.functionName, challenge.params, challenge.returnType)
+      : codeSnippet;
+
     const freshSource = (idx) =>
       b64Encode(
-        `${codeSnippet}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        `${finalSourceCode}\n${commentChar} run:${idx}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       );
 
     const batchRes = await api.post(
@@ -623,14 +670,37 @@ const ChallengeDetails = () => {
     }
   };
 
+  const challenge = challengeQuery.data;
+  const solutionEntries = useMemo(
+    () => (challenge?.solutions || []).filter((solution) => solution.code?.trim()),
+    [challenge],
+  );
+
+  useEffect(() => {
+    if (solutionEntries.length === 0) return;
+    if (solutionEntries.some((solution) => solution.langSlug === solutionLanguage)) return;
+
+    const matchingEditorLanguage = solutionEntries.find(
+      (solution) => solution.langSlug === language,
+    );
+    setSolutionLanguage(
+      matchingEditorLanguage?.langSlug || solutionEntries[0].langSlug || "javascript",
+    );
+  }, [language, solutionEntries, solutionLanguage]);
+
+  const selectedSolution = useMemo(
+    () => solutionEntries.find((solution) => solution.langSlug === solutionLanguage),
+    [solutionEntries, solutionLanguage],
+  );
+
   // Sanitize the HTML description
   const sanitizedDescription = useMemo(() => {
-    const raw = challengeQuery.data?.description || "";
+    const raw = challenge?.description || "";
     return DOMPurify.sanitize(raw, {
       ADD_TAGS: ["img"],
       ADD_ATTR: ["target"],
     });
-  }, [challengeQuery.data?.description]);
+  }, [challenge?.description]);
 
   if (challengeQuery.isLoading)
     return (
@@ -652,7 +722,6 @@ const ChallengeDetails = () => {
       </div>
     );
 
-  const challenge = challengeQuery.data;
   const difficultyColor =
     challenge.difficulty === "Easy"
       ? "text-green-400"
@@ -746,7 +815,7 @@ const ChallengeDetails = () => {
         <div
           className={`flex-1 lg:flex-none flex-col min-h-0 macos-glass rounded-xl overflow-hidden w-full lg:w-[var(--left-width)] lg:mb-0 mb-3 h-full panel-slide-left ${isMaximized ? "hidden" : ""} ${mobileTab === 'editor' ? 'hidden lg:flex' : 'flex'}`}
         >
-          <div className="flex border-b border-black/10 dark:border-white/10 shrink-0">
+          <div className="flex border-b border-black/10 dark:border-white/10 shrink-0 overflow-x-auto">
             <button
               className={`px-4 py-3 text-sm font-semibold relative ${leftTab === "description" ? "text-primary" : "text-secondary"}`}
               onClick={() => setLeftTab("description")}
@@ -764,6 +833,16 @@ const ChallengeDetails = () => {
               <FiClock className="inline mr-2" />
               Submissions
               {leftTab === "submissions" && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
+              )}
+            </button>
+            <button
+              className={`px-4 py-3 text-sm font-semibold relative ${leftTab === "solutions" ? "text-primary" : "text-secondary"}`}
+              onClick={() => setLeftTab("solutions")}
+            >
+              <FiCode className="inline mr-2" />
+              Solutions
+              {leftTab === "solutions" && (
                 <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full" />
               )}
             </button>
@@ -807,6 +886,50 @@ const ChallengeDetails = () => {
                     </span>
                   </Link>
                 ))}
+              </div>
+            ) : leftTab === "solutions" ? (
+              <div className="flex flex-col min-h-[520px] space-y-4">
+                {solutionEntries.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-primary">Uploaded Solution</p>
+                        <p className="text-xs text-secondary">
+                          {solutionEntries.length} language{solutionEntries.length === 1 ? "" : "s"} available
+                        </p>
+                      </div>
+                      <div className="w-[150px]">
+                        <Select value={solutionLanguage} onValueChange={setSolutionLanguage}>
+                          <SelectTrigger className="h-8 text-xs bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {solutionEntries.map((solution) => (
+                              <SelectItem key={solution.langSlug} value={solution.langSlug} className="text-xs">
+                                {solution.lang || LANGUAGE_OPTIONS.find((opt) => opt.key === solution.langSlug)?.label || solution.langSlug}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-h-[460px] overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-black/40">
+                      <CodeEditor
+                        value={selectedSolution?.code || "// No solution uploaded for this language."}
+                        language={LANGUAGE_MAP[solutionLanguage]?.monacoLang ?? solutionLanguage}
+                        isDark={isDark}
+                        readOnly={true}
+                        height="460px"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center border border-dashed border-black/10 dark:border-white/10 rounded-xl bg-black/5 dark:bg-white/5 p-6">
+                    <FiCode className="text-tertiary mb-3" size={28} />
+                    <p className="text-sm font-semibold text-primary">No uploaded solutions yet</p>
+                    <p className="text-xs text-secondary mt-1">Solutions added by admins will appear here.</p>
+                  </div>
+                )}
               </div>
             ) : leftTab === "manual" ? (
               <div className="flex flex-col h-full space-y-4">
@@ -880,7 +1003,7 @@ const ChallengeDetails = () => {
                   <SelectContent>
                     {LANGUAGE_OPTIONS.map((opt) => (
                       <SelectItem key={opt.key} value={opt.key} className="text-xs">
-                        {opt.label}
+                        {opt.label}{opt.version && ` (${opt.version})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1062,7 +1185,10 @@ const ChallengeDetails = () => {
                               key={i}
                               onClick={() => {
                                 setSelectedCaseIdx(i);
-                                setStdin(argsToStdin(tc.args));
+                                const hasFunction = !!challenge?.functionName;
+                                const isSupportedDriver = language === "python" || language === "javascript"
+                                  || isDrivableSignature(language, challenge?.params, challenge?.returnType);
+                                setStdin((hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args));
                               }}
                               className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors ${
                                 selectedCaseIdx === i
@@ -1079,7 +1205,10 @@ const ChallengeDetails = () => {
                         {(() => {
                           const tc = challenge.testCases[selectedCaseIdx];
                           if (!tc) return null;
-                          const inputStr = argsToStdin(tc.args);
+                          const hasFunction = !!challenge?.functionName;
+                          const isSupportedDriver = language === "python" || language === "javascript"
+                            || isDrivableSignature(language, challenge?.params, challenge?.returnType);
+                          const inputStr = (hasFunction && isSupportedDriver) ? argsToJsonStdin(tc.args) : argsToStdin(tc.args);
                           return (
                             <div className="flex gap-2 shrink-0">
                               <div className="flex-1 min-w-0">
@@ -1096,7 +1225,7 @@ const ChallengeDetails = () => {
                                     Expected
                                   </p>
                                   <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
-                                    {tc.expected}
+                                    {displayExpected(tc.expected)}
                                   </pre>
                                 </div>
                               )}
@@ -1240,7 +1369,7 @@ const ChallengeDetails = () => {
                                         Expected
                                       </p>
                                       <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
-                                        {c.expected}
+                                        {displayExpected(c.expected)}
                                       </pre>
                                     </div>
                                   )}

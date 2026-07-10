@@ -41,7 +41,7 @@ const Navbar = ({ onLogout }) => {
           <div className="flex justify-between items-center h-16 gap-10">
             <Link
               to="/"
-              className="flex items-center group"
+              className="flex items-center group font-h1"
               onClick={closeMenu}
             >
               <Logo variant="arena" showText={true} size="sm" />

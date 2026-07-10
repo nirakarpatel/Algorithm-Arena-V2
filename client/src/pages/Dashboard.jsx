@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from 'react-hot-toast';
+import toast from "react-hot-toast";
 import {
   FiArrowRight,
   FiZap,
@@ -16,16 +16,195 @@ import {
   FiClock,
   FiTrendingUp,
   FiMessageSquare,
+  FiLayers,
+  FiList,
+  FiGitBranch,
+  FiShare2,
+  FiDatabase,
+  FiLink,
+  FiType,
+  FiHash,
+  FiGrid,
 } from "react-icons/fi";
 import { api } from "../lib/api";
 import { useAuth } from "../context/useAuth";
 import SkeletonCard from "../components/SkeletonCard";
 import EmptyState from "../components/EmptyState";
 import ChallengeCard from "../components/Card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { getSessionGreeting } from "../constants/greetings";
 
 /* ── helpers ─────────────────────────────────── */
+const getDominantIcon = (activeSet) => {
+  if (!activeSet) return FiCpu;
+
+  const title = (activeSet.title || "").toLowerCase();
+  const questions = activeSet.questions || [];
+
+  const topics = [
+    {
+      name: "stack",
+      icon: FiLayers,
+      keywords: ["stack", "monotonic stack"],
+    },
+    {
+      name: "queue",
+      icon: FiList,
+      keywords: ["queue", "deque", "priority queue", "heap", "monotonic queue"],
+    },
+    {
+      name: "tree",
+      icon: FiGitBranch,
+      keywords: [
+        "tree",
+        "binary tree",
+        "bst",
+        "trie",
+        "segment tree",
+        "avl",
+        "red-black tree",
+      ],
+    },
+    {
+      name: "graph",
+      icon: FiShare2,
+      keywords: [
+        "graph",
+        "dfs",
+        "bfs",
+        "union find",
+        "disjoint set",
+        "topological sort",
+        "dijkstra",
+        "mst",
+        "kruskal",
+        "prim",
+        "shortest path",
+        "bipartite",
+        "network",
+      ],
+    },
+    {
+      name: "hash-table",
+      icon: FiDatabase,
+      keywords: [
+        "hash table",
+        "hashmap",
+        "hashset",
+        "map",
+        "set",
+        "hash",
+        "dictionary",
+      ],
+    },
+    {
+      name: "linked-list",
+      icon: FiLink,
+      keywords: ["linked list", "doubly linked list", "list"],
+    },
+    {
+      name: "string",
+      icon: FiType,
+      keywords: ["string", "substring", "anagram", "palindrome", "regex"],
+    },
+    {
+      name: "math",
+      icon: FiHash,
+      keywords: [
+        "math",
+        "geometry",
+        "number theory",
+        "bit manipulation",
+        "bitwise",
+        "prime",
+        "modulo",
+        "combinatorics",
+        "binary",
+      ],
+    },
+    {
+      name: "dp",
+      icon: FiCpu,
+      keywords: [
+        "dp",
+        "recursion",
+        "memoization",
+        "backtracking",
+        "knapsack",
+        "lcs",
+        "lis",
+      ],
+    },
+    {
+      name: "array",
+      icon: FiGrid,
+      keywords: [
+        "array",
+        "matrix",
+        "sorting",
+        "searching",
+        "binary search",
+        "two pointers",
+        "sliding window",
+        "divide and conquer",
+      ],
+    },
+  ];
+
+  const scores = {};
+  topics.forEach((t) => {
+    scores[t.name] = 0;
+  });
+
+  topics.forEach((t) => {
+    t.keywords.forEach((kw) => {
+      if (title.includes(kw)) {
+        scores[t.name] += 10;
+      }
+    });
+  });
+
+  questions.forEach((q) => {
+    const qTitle = (q.title || "").toLowerCase();
+    const qCategory = (q.category || "").toLowerCase();
+    const qTags = (q.tags || []).map((tag) => tag.toLowerCase());
+
+    topics.forEach((t) => {
+      t.keywords.forEach((kw) => {
+        if (qTitle.includes(kw)) {
+          scores[t.name] += 3;
+        }
+        if (qCategory.includes(kw)) {
+          scores[t.name] += 2;
+        }
+        qTags.forEach((tag) => {
+          if (tag.includes(kw) || kw.includes(tag)) {
+            scores[t.name] += 2;
+          }
+        });
+      });
+    });
+  });
+
+  let maxScore = 0;
+  let dominantTopic = null;
+
+  topics.forEach((t) => {
+    if (scores[t.name] > maxScore) {
+      maxScore = scores[t.name];
+      dominantTopic = t;
+    }
+  });
+
+  return dominantTopic ? dominantTopic.icon : FiCpu;
+};
+
 const getLocalDrafts = () => {
   const drafts = [];
   try {
@@ -36,7 +215,9 @@ const getLocalDrafts = () => {
         const raw = localStorage.getItem(key);
         if (raw) {
           const draft = JSON.parse(raw);
-          const hasCode = draft.codeByLang && Object.values(draft.codeByLang).some(c => c && c.trim());
+          const hasCode =
+            draft.codeByLang &&
+            Object.values(draft.codeByLang).some((c) => c && c.trim());
           if (draft.repoUrl?.trim() || hasCode) {
             drafts.push({
               _id: `draft-${challengeId}`,
@@ -61,19 +242,78 @@ const getLocalDrafts = () => {
 
 const getCardBadge = (chId, subsMap, drafts) => {
   if (subsMap[chId] === "Accepted") {
-    return { label: "Solved", cls: "bg-green-500/10 text-green-400 border-green-500/20" };
+    return {
+      label: "Solved",
+      cls: "bg-green-500/10 text-green-400 border-green-500/20",
+    };
   }
   const hasDraft = drafts.some((d) => d.challengeId?._id === chId);
   if (hasDraft) {
-    return { label: "Attempted", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
+    return {
+      label: "Attempted",
+      cls: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    };
   }
   if (subsMap[chId] === "Rejected") {
-    return { label: "Rejected", cls: "bg-red-500/10 text-red-400 border-red-500/20" };
+    return {
+      label: "Rejected",
+      cls: "bg-red-500/10 text-red-400 border-red-500/20",
+    };
   }
   if (subsMap[chId] === "Pending") {
-    return { label: "Pending Review", cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" };
+    return {
+      label: "Pending Review",
+      cls: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    };
   }
   return null;
+};
+
+// QuestionSet.deadline is stored as UTC midnight of the due date (admin picks
+// a bare date, no time). Treat it as valid through the end of that day rather
+// than expiring the instant UTC midnight ticks over.
+const isDeadlineActive = (deadline, now) => {
+  const end = new Date(deadline);
+  end.setUTCHours(23, 59, 59, 999);
+  return end.getTime() > now;
+};
+
+// Friendly nudges for an unfinished set whose deadline is closing in. Several
+// tones per bucket so the greeting doesn't say the exact same thing every day.
+const DEADLINE_NUDGES = {
+  dayLeft: [
+    (set) => `Heads up — "${set}" wraps up tomorrow. A couple more solves today keeps you clear of the rush.`,
+    (set) => `One day left on "${set}"! Future-you will be very grateful if you knock a few out now.`,
+    (set) => `"${set}" closes tomorrow — solid excuse for one more coffee and one more problem. ☕`,
+    (set) => `Tick tock! "${set}" is due tomorrow — let's not let this one slip past the buzzer.`,
+    (set) => `Friendly reminder: "${set}" is due tomorrow. A quick sprint now beats a scramble later.`,
+  ],
+  finalHours: [
+    (set) => `"${set}" is due today — a few focused minutes now and you're in the clear!`,
+    (set) => `Final stretch! "${set}" closes today. You've got this. 🔥`,
+    (set) => `Last call for "${set}" — today's the day. Go grab those points before time's up!`,
+    (set) => `The clock's ticking on "${set}" — today's your last shot to lock in those solves.`,
+    (set) => `Heads up: "${set}" is due today. Small effort now, zero regrets later.`,
+  ],
+};
+
+const getDeadlineNudge = (set, now, subsMap) => {
+  if (!set) return null;
+  const questions = set.questions || [];
+  const solvedCount = questions.filter(
+    (q) => q.title && subsMap[q.title.trim().toLowerCase()] === "Accepted",
+  ).length;
+  if (questions.length > 0 && solvedCount >= questions.length) return null;
+
+  const end = new Date(set.deadline);
+  end.setUTCHours(23, 59, 59, 999);
+  const hoursLeft = (end.getTime() - now) / (1000 * 60 * 60);
+  if (hoursLeft <= 0 || hoursLeft > 48) return null;
+
+  const bucket = hoursLeft <= 24 ? "finalHours" : "dayLeft";
+  const pool = DEADLINE_NUDGES[bucket];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return pick(set.title);
 };
 
 const getRGB = (d) =>
@@ -85,13 +325,7 @@ const getRGB = (d) =>
         ? "239,68,68"
         : "99,102,241";
 
-const buildQS = ({
-  page,
-  limit,
-  search,
-  difficulty,
-  category,
-}) => {
+const buildQS = ({ page, limit, search, difficulty, category }) => {
   const p = new URLSearchParams();
   p.set("page", page);
   p.set("limit", limit);
@@ -124,7 +358,7 @@ const Dashboard = () => {
     if (user?.status === "Warned") {
       const warnedToastShown = sessionStorage.getItem("warnedToastShown");
       if (!warnedToastShown) {
-        toast.error('You have been warned', { icon: '⚠️', duration: 6000 });
+        toast.error("You have been warned", { icon: "⚠️", duration: 6000 });
         sessionStorage.setItem("warnedToastShown", "true");
       }
       const t = setTimeout(() => setShowWarning(false), 20000);
@@ -206,18 +440,27 @@ const Dashboard = () => {
     const map = {};
     (mySubmissionsQ.data || []).forEach((sub) => {
       if (!sub.challengeId) return;
-      const cid = typeof sub.challengeId === 'object'
-        ? (sub.challengeId._id || sub.challengeId.id)
-        : sub.challengeId;
+      const cid =
+        typeof sub.challengeId === "object"
+          ? sub.challengeId._id || sub.challengeId.id
+          : sub.challengeId;
       if (!cid) return;
       const cidStr = cid.toString();
-      if (!map[cidStr] || sub.status === "Accepted" || (sub.status === "Pending" && map[cidStr] !== "Accepted")) {
+      if (
+        !map[cidStr] ||
+        sub.status === "Accepted" ||
+        (sub.status === "Pending" && map[cidStr] !== "Accepted")
+      ) {
         map[cidStr] = sub.status;
       }
 
       const titleKey = sub.challengeId?.title?.trim().toLowerCase();
       if (titleKey) {
-        if (!map[titleKey] || sub.status === "Accepted" || (sub.status === "Pending" && map[titleKey] !== "Accepted")) {
+        if (
+          !map[titleKey] ||
+          sub.status === "Accepted" ||
+          (sub.status === "Pending" && map[titleKey] !== "Accepted")
+        ) {
           map[titleKey] = sub.status;
         }
       }
@@ -229,7 +472,7 @@ const Dashboard = () => {
     // 1. Group and filter out duplicate questions by title (case-insensitive)
     const seen = new Set();
     const unique = [];
-    for (const ch of (challenges || [])) {
+    for (const ch of challenges || []) {
       const titleKey = ch.title?.trim().toLowerCase();
       if (titleKey && !seen.has(titleKey)) {
         seen.add(titleKey);
@@ -244,7 +487,8 @@ const Dashboard = () => {
       const statusById = subsMap[chId];
       const statusByTitle = titleKey ? subsMap[titleKey] : null;
 
-      const isSolved = statusById === "Accepted" || statusByTitle === "Accepted";
+      const isSolved =
+        statusById === "Accepted" || statusByTitle === "Accepted";
       const isPending = statusById === "Pending" || statusByTitle === "Pending";
 
       return !isSolved && !isPending;
@@ -252,25 +496,30 @@ const Dashboard = () => {
 
     // 3. Sort by selected criteria
     const sorted = [...filtered].sort((a, b) => {
-      if (filters.sortBy === 'deadline') {
-        const dlA = a.questionSetId?.deadline ? new Date(a.questionSetId.deadline).getTime() : Infinity;
-        const dlB = b.questionSetId?.deadline ? new Date(b.questionSetId.deadline).getTime() : Infinity;
+      if (filters.sortBy === "deadline") {
+        const dlA = a.questionSetId?.deadline
+          ? new Date(a.questionSetId.deadline).getTime()
+          : Infinity;
+        const dlB = b.questionSetId?.deadline
+          ? new Date(b.questionSetId.deadline).getTime()
+          : Infinity;
 
         const isPastA = dlA < now;
         const isPastB = dlB < now;
 
         if (isPastA !== isPastB) return isPastA ? 1 : -1; // Upcoming before past
         if (dlA !== dlB) return dlA - dlB; // Ascending order
-      } else if (filters.sortBy === 'difficulty') {
+      } else if (filters.sortBy === "difficulty") {
         const dA = DIFF_ORDER[a.difficulty] || 4;
         const dB = DIFF_ORDER[b.difficulty] || 4;
         if (dA !== dB) return dA - dB;
-      } else if (filters.sortBy === 'points') {
-        if ((a.points || 0) !== (b.points || 0)) return (b.points || 0) - (a.points || 0);
-      } else if (filters.sortBy === 'title') {
-        const cmp = (a.title || '').localeCompare(b.title || '');
+      } else if (filters.sortBy === "points") {
+        if ((a.points || 0) !== (b.points || 0))
+          return (b.points || 0) - (a.points || 0);
+      } else if (filters.sortBy === "title") {
+        const cmp = (a.title || "").localeCompare(b.title || "");
         if (cmp !== 0) return cmp;
-      } else if (filters.sortBy === 'createdAt') {
+      } else if (filters.sortBy === "createdAt") {
         const tA = new Date(a.createdAt || 0).getTime();
         const tB = new Date(b.createdAt || 0).getTime();
         if (tA !== tB) return tB - tA;
@@ -287,7 +536,9 @@ const Dashboard = () => {
     return rawDrafts
       .map((d) => {
         if (d.challengeId?.title === "Unknown Challenge") {
-          const matched = (challenges || []).find((c) => c._id === d.challengeId._id);
+          const matched = (challenges || []).find(
+            (c) => c._id === d.challengeId._id,
+          );
           if (matched) {
             d.challengeId.title = matched.title;
             d.challengeId.difficulty = matched.difficulty;
@@ -327,10 +578,10 @@ const Dashboard = () => {
 
     const list = Array.from(uniqueMap.values());
     const statusWeight = {
-      "Attempted": 1,
-      "Rejected": 2,
-      "Pending": 3,
-      "Accepted": 4
+      Attempted: 1,
+      Rejected: 2,
+      Pending: 3,
+      Accepted: 4,
     };
 
     return list.sort((a, b) => {
@@ -345,39 +596,51 @@ const Dashboard = () => {
 
   const recentSubs = useMemo(() => combinedSubs.slice(0, 6), [combinedSubs]);
 
-  const solved = summary?.solved ?? profile?.stats?.acceptedCount ?? profile?.acceptedCount ?? 0;
+  const solved =
+    summary?.solved ??
+    profile?.stats?.acceptedCount ??
+    profile?.acceptedCount ??
+    0;
   const total = summary?.totalChallenges ?? 0;
-  const pending = summary?.pending ?? profile?.stats?.pendingCount ?? profile?.pendingCount ?? 0;
+  const pending =
+    summary?.pending ??
+    profile?.stats?.pendingCount ??
+    profile?.pendingCount ??
+    0;
   const solvedPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
-  const activeSets = useMemo(
-    () => {
-      const nowTime = new Date(now);
-      return (setsQ.data || [])
-        .filter((s) => new Date(s.deadline) > nowTime)
-        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-    },
-    [setsQ.data, now],
-  );
+  const activeSets = useMemo(() => {
+    return (setsQ.data || [])
+      .filter((s) => isDeadlineActive(s.deadline, now))
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+  }, [setsQ.data, now]);
   const clampedIdx = Math.min(heroIdx, Math.max(activeSets.length - 1, 0));
   const activeSet = activeSets[clampedIdx];
+
+  const HeroIcon = useMemo(() => getDominantIcon(activeSet), [activeSet]);
 
   const isNewSet = useMemo(() => {
     if (!activeSet) return false;
     const createdDate = activeSet.createdAt
       ? new Date(activeSet.createdAt)
       : activeSet.deadline
-        ? new Date(new Date(activeSet.deadline).getTime() - 7 * 24 * 60 * 60 * 1000)
+        ? new Date(
+            new Date(activeSet.deadline).getTime() - 7 * 24 * 60 * 60 * 1000,
+          )
         : new Date(now);
     return now - createdDate.getTime() < 7 * 24 * 60 * 60 * 1000;
   }, [activeSet, now]);
+
+  const closestSet = activeSets[0];
+  const deadlineNudge = useMemo(
+    () => getDeadlineNudge(closestSet, now, subsMap),
+    [closestSet, now, subsMap],
+  );
 
   const goHero = (dir) => {
     setHeroDir(dir);
     setHeroIdx((i) => Math.max(0, Math.min(activeSets.length - 1, i + dir)));
   };
-
-
 
   const diffChips = [
     { v: "", l: "All" },
@@ -397,7 +660,8 @@ const Dashboard = () => {
           <FiAlertTriangle className="text-red-400 text-lg flex-shrink-0" />
           <p className="text-sm text-red-400">
             <strong className="font-black mr-2">Official Warning:</strong>
-            {user?.warningMessage || "You have an active warning from your Clan Chief. Please review your activity."}
+            {user?.warningMessage ||
+              "You have an active warning from your Clan Chief. Please review your activity."}
           </p>
         </motion.div>
       )}
@@ -407,12 +671,21 @@ const Dashboard = () => {
         <h2 className="text-2xl font-black text-primary mb-1 font-h2">
           {greeting.heading.replace(
             "{username}",
-            (user?.name || user?.username || "Operative").trim().split(/\s+/)[0]
+            (user?.name || user?.username || "Operative")
+              .trim()
+              .split(/\s+/)[0],
           )}
         </h2>
-        <p className="text-secondary text-sm">
-          {greeting.subtext}
-        </p>
+        <p className="text-secondary text-sm">{greeting.subtext}</p>
+        {deadlineNudge && (
+          <motion.div
+            {...fd(0.06)}
+            className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-300 text-xs font-semibold"
+          >
+            <FiClock className="shrink-0" />
+            <span>{deadlineNudge}</span>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* ── Hero Carousel ────────────────────────── */}
@@ -420,16 +693,27 @@ const Dashboard = () => {
         {/* card shell */}
         <div
           className={`relative overflow-hidden rounded-2xl group transition-all duration-300 border transition-shadow duration-500
-          ${isNewSet
-            ? 'dark:border-white/10 shadow-[0_0_25px_rgba(var(--accent-rgb),0.18)] dark:shadow-[0_0_30px_rgba(var(--accent-rgb),0.25)]'
-            : 'border-black/[0.12] dark:border-white/[0.07] shadow-[0_5px_10px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.05)] dark:shadow-[0_5px_10px_rgba(var(--accent-rgb),0.1),inset_0_1px_0_rgba(255,255,255,0.05)]'
+          ${
+            isNewSet
+              ? "dark:border-white/10 shadow-[0_0_25px_rgba(var(--accent-rgb),0.18)] dark:shadow-[0_0_30px_rgba(var(--accent-rgb),0.25)]"
+              : "border-black/[0.12] dark:border-white/[0.07] shadow-[0_5px_10px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.05)] dark:shadow-[0_5px_10px_rgba(var(--accent-rgb),0.1),inset_0_1px_0_rgba(255,255,255,0.05)]"
           }`}
         >
           {/* glow orbs — static behind slides */}
-          <div className="absolute -top-20 -left-10 w-80 h-80 rounded-full blur-[120px] pointer-events-none opacity-20"
-            style={{ background: "radial-gradient(circle, rgba(var(--accent-rgb),1), transparent 70%)" }} />
-          <div className="absolute -bottom-16 left-40 w-60 h-60 rounded-full blur-[100px] pointer-events-none opacity-15"
-            style={{ background: "radial-gradient(circle, rgba(168,85,247,1), transparent 70%)" }} />
+          <div
+            className="absolute -top-20 -left-10 w-80 h-80 rounded-full blur-[120px] pointer-events-none opacity-20"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(var(--accent-rgb),1), transparent 70%)",
+            }}
+          />
+          <div
+            className="absolute -bottom-16 left-40 w-60 h-60 rounded-full blur-[100px] pointer-events-none opacity-15"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(168,85,247,1), transparent 70%)",
+            }}
+          />
 
           {/* slides */}
           <div className="relative overflow-hidden">
@@ -492,7 +776,11 @@ const Dashboard = () => {
                               : "This Week's Challenge"}
                           </span>
                           <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
-                            <FiClock size={9} /> Due {new Date(activeSet.deadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                            <FiClock size={9} /> Due{" "}
+                            {new Date(activeSet.deadline).toLocaleDateString(
+                              "en-GB",
+                              { day: "2-digit", month: "short" },
+                            )}
                           </span>
                           {isNewSet && (
                             <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse">
@@ -511,12 +799,31 @@ const Dashboard = () => {
                         {activeSet ? (
                           <>
                             {activeSet.title.split(" ").slice(0, -1).join(" ")}{" "}
-                            <span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                            <span
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                              }}
+                            >
                               {activeSet.title.split(" ").slice(-1)[0]}
                             </span>
                           </>
                         ) : (
-                          <>Mastering Dynamic{" "}<span style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Programming</span></>
+                          <>
+                            Mastering Dynamic{" "}
+                            <span
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,1))",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent",
+                              }}
+                            >
+                              Programming
+                            </span>
+                          </>
                         )}
                       </h1>
 
@@ -528,22 +835,34 @@ const Dashboard = () => {
 
                       <div className="flex flex-wrap items-center gap-3 z-10">
                         <Link
-                          to={activeSet ? `/missions?setId=${activeSet._id}` : "/missions"}
+                          to={
+                            activeSet
+                              ? `/missions?setId=${activeSet._id}`
+                              : "/missions"
+                          }
                           className="inline-flex items-center gap-2 px-6 py-2.5 z-30 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95"
-                          style={{ background: "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))", boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)" }}
+                          style={{
+                            background:
+                              "linear-gradient(135deg, rgb(var(--accent-rgb)), rgba(168,85,247,0.9))",
+                            boxShadow: "0 4px 20px rgba(var(--accent-rgb),0.4)",
+                          }}
                         >
                           Enter Arena <FiArrowRight size={14} />
                         </Link>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-tertiary">
                           <FiZap className="text-yellow-400" size={13} />+
-                          {activeSet?.questions?.reduce((a, q) => a + (q.points || 0), 0) || 50} XP
+                          {activeSet?.questions?.reduce(
+                            (a, q) => a + (q.points || 0),
+                            0,
+                          ) || 50}{" "}
+                          XP
                         </div>
                       </div>
                     </div>
 
                     {/* watermark */}
                     <div className="clip md:flex items-center justify-center flex-shrink-0 opacity-[0.08] group-hover:opacity-[0.4] transition-all duration-700 group-hover:rotate-6">
-                      <FiCpu size={180} className="text-accent" />
+                      <HeroIcon size={180} className="text-accent" />
                     </div>
                   </div>
                 </motion.div>
@@ -558,16 +877,28 @@ const Dashboard = () => {
               <div
                 onClick={() => clampedIdx > 0 && goHero(-1)}
                 className={`absolute inset-y-0 left-0 w-1/4 z-20 flex items-center justify-start group/left transition-all duration-300
-                  ${clampedIdx === 0 ? 'pointer-events-none' : 'cursor-pointer'}`}
+                  ${clampedIdx === 0 ? "pointer-events-none" : "cursor-pointer"}`}
               >
-                <div className="absolute inset-0 opacity-0 group-hover/left:opacity-100 transition-opacity duration-300 rounded-l-2xl"
-                  style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 100%)' }} />
+                <div
+                  className="absolute inset-0 opacity-0 group-hover/left:opacity-100 transition-opacity duration-300 rounded-l-2xl"
+                  style={{
+                    background:
+                      "linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 100%)",
+                  }}
+                />
                 <svg
-                  viewBox="0 0 24 24" fill="none" strokeWidth="2" stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  strokeWidth="2"
+                  stroke="currentColor"
                   className={`relative ml-3 w-5 h-5 transition-all duration-300
-                    ${clampedIdx === 0 ? 'text-white/0' : 'text-black/35 dark:text-white/35 group-hover/left:text-accent group-hover/left:-translate-x-0.5'}`}
+                    ${clampedIdx === 0 ? "text-white/0" : "text-black/35 dark:text-white/35 group-hover/left:text-accent group-hover/left:-translate-x-0.5"}`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </div>
 
@@ -575,16 +906,28 @@ const Dashboard = () => {
               <div
                 onClick={() => clampedIdx < activeSets.length - 1 && goHero(1)}
                 className={`absolute inset-y-0 right-0 w-1/4 z-20 flex items-center justify-end group/right transition-all duration-300
-                  ${clampedIdx === activeSets.length - 1 ? 'pointer-events-none' : 'cursor-pointer'}`}
+                  ${clampedIdx === activeSets.length - 1 ? "pointer-events-none" : "cursor-pointer"}`}
               >
-                <div className="absolute inset-0 opacity-0 group-hover/right:opacity-100 transition-opacity duration-300 rounded-r-2xl"
-                  style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.35) 0%, transparent 100%)' }} />
+                <div
+                  className="absolute inset-0 opacity-0 group-hover/right:opacity-100 transition-opacity duration-300 rounded-r-2xl"
+                  style={{
+                    background:
+                      "linear-gradient(to left, rgba(0,0,0,0.35) 0%, transparent 100%)",
+                  }}
+                />
                 <svg
-                  viewBox="0 0 24 24" fill="none" strokeWidth="2" stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  strokeWidth="2"
+                  stroke="currentColor"
                   className={`relative mr-3 w-5 h-5 transition-all duration-300
-                    ${clampedIdx === activeSets.length - 1 ? 'text-white/0' : 'text-black/35 dark:text-white/35 group-hover/right:text-accent group-hover/right:translate-x-0.5'}`}
+                    ${clampedIdx === activeSets.length - 1 ? "text-white/0" : "text-black/35 dark:text-white/35 group-hover/right:text-accent group-hover/right:translate-x-0.5"}`}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </div>
             </>
@@ -597,7 +940,10 @@ const Dashboard = () => {
             {activeSets.map((_, i) => (
               <button
                 key={i}
-                onClick={() => { setHeroDir(i > clampedIdx ? 1 : -1); setHeroIdx(i); }}
+                onClick={() => {
+                  setHeroDir(i > clampedIdx ? 1 : -1);
+                  setHeroIdx(i);
+                }}
                 className={`rounded-full transition-all duration-300 ${
                   i === clampedIdx
                     ? "w-5 h-1.5 bg-accent"
@@ -653,7 +999,9 @@ const Dashboard = () => {
                   {summaryQ.isLoading || profileQ.isLoading ? (
                     <div className="h-6 w-12 bg-black/10 dark:bg-white/10 rounded-md animate-pulse mt-0.5" />
                   ) : (
-                    <span className={`text-xl font-black ${color} font-h2`}>{value}</span>
+                    <span className={`text-xl font-black ${color} font-h2`}>
+                      {value}
+                    </span>
                   )}
                 </div>
               </div>
@@ -694,7 +1042,10 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center bg-white/[0.03] border border-black/[0.12] dark:border-white/[0.06] rounded-xl px-2 h-8">
               <FiFilter size={10} className="text-tertiary ml-1 shrink-0" />
-              <Select value={filters.sortBy} onValueChange={(val) => hf("sortBy", val)}>
+              <Select
+                value={filters.sortBy}
+                onValueChange={(val) => hf("sortBy", val)}
+              >
                 <SelectTrigger className="border-none bg-transparent h-full text-xs text-secondary font-semibold hover:bg-transparent focus:ring-0 focus:ring-offset-0 shadow-none py-0 pl-1 pr-2 w-auto gap-1">
                   <SelectValue placeholder="Sort By" />
                 </SelectTrigger>
@@ -815,14 +1166,17 @@ const Dashboard = () => {
                             ))}
                           {(!ch.tags || ch.tags.length === 0) &&
                             ch.category &&
-                            ch.category.split(',').slice(0, 3).map((cat, idx) => (
-                              <span
-                                key={`cat-${idx}`}
-                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/5 text-secondary border border-black/[0.1] dark:border-white/5"
-                              >
-                                {cat.trim()}
-                              </span>
-                            ))}
+                            ch.category
+                              .split(",")
+                              .slice(0, 3)
+                              .map((cat, idx) => (
+                                <span
+                                  key={`cat-${idx}`}
+                                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-white/5 text-secondary border border-black/[0.1] dark:border-white/5"
+                                >
+                                  {cat.trim()}
+                                </span>
+                              ))}
                         </div>
                       </ChallengeCard>
                     </Link>
@@ -843,7 +1197,10 @@ const Dashboard = () => {
             {summaryQ.isLoading || profileQ.isLoading ? (
               <div className="divide-y divide-black/[0.08] dark:divide-white/[0.04]">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-4 animate-pulse">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-4 py-4 animate-pulse"
+                  >
                     <div className="space-y-2 flex-1 min-w-0">
                       <div className="h-3.5 w-2/3 bg-black/10 dark:bg-white/10 rounded-full" />
                       <div className="h-2.5 w-1/3 bg-black/10 dark:bg-white/10 rounded-full" />
@@ -882,7 +1239,11 @@ const Dashboard = () => {
                   return (
                     <Link
                       key={sub._id + i}
-                      to={att ? `/challenge/${sub.challengeId?._id}` : `/submission/${sub._id}`}
+                      to={
+                        att
+                          ? `/challenge/${sub.challengeId?._id}`
+                          : `/submission/${sub._id}`
+                      }
                       className="group flex items-center justify-between px-4 py-3.5 hover:bg-white/[0.03] transition-all"
                     >
                       <div className="min-w-0 flex-1">
@@ -918,9 +1279,6 @@ const Dashboard = () => {
           </div>
         </motion.div>
       </div>
-
-
-
     </div>
   );
 };

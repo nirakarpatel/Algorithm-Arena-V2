@@ -74,7 +74,10 @@ const createQuestionSet = async (req, res, next) => {
         category: q.category || 'Logic',
         tags: q.tags || [],
         codeSnippets: q.codeSnippets || [],
+        solutions: q.solutions || [],
         functionName: q.functionName || '',
+        params: q.params || [],
+        returnType: q.returnType || '',
         testCases: q.testCases || [],
         questionSetId: set._id
       }));
@@ -113,7 +116,10 @@ const buildChallengePayload = (q, setId) => ({
   category: q.category || 'Logic',
   tags: q.tags || [],
   codeSnippets: q.codeSnippets || [],
+  solutions: q.solutions || [],
   functionName: q.functionName || '',
+  params: q.params || [],
+  returnType: q.returnType || '',
   testCases: q.testCases || [],
   questionSetId: setId,
 });

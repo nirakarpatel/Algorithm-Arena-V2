@@ -680,11 +680,32 @@ const updateFeaturedBadge = async (req, res, next) => {
   }
 };
 
+const getPublicStats = async (req, res, next) => {
+  try {
+    const [totalChallenges, totalCoders, totalSubmissions] = await Promise.all([
+      Challenge.countDocuments(),
+      User.countDocuments({ role: 'user' }),
+      Submission.countDocuments(),
+    ]);
+
+    return sendSuccess(res, {
+      data: {
+        totalChallenges,
+        totalCoders,
+        totalSubmissions,
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   getDashboardSummary,
   getProfileStats,
   getUserProfile,
   updateFeaturedBadge,
   getAdminDashboardSummary,
-  getPendingTasks
+  getPendingTasks,
+  getPublicStats
 };

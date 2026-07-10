@@ -124,11 +124,11 @@ const GridBackground = () => (
 /* ── Floating code snippets ── */
 const SNIPPETS = [
   "O(n log n)",
-  "adj[u].push_back(v)",
   "1 << n",
   "dp[mask][i]",
   "LCA(u, v)",
   "segmentTree.query(l, r)",
+  "adj[u].push_back(v)",
   "T(n) = 2T(n/2) + O(n)",
   "__builtin_popcount()",
   "priority_queue<int> pq",
@@ -216,7 +216,7 @@ const Home = () => {
   const homeRef = useRef(null);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 400], [0, -60]);
-  const heroOpacity = useTransform(scrollY, [0, 300], [1, 0.1]);
+  const heroOpacity = useTransform(scrollY, [0, 600], [1, 0]);
 
   useEffect(() => {
     const el = homeRef.current;
@@ -287,6 +287,21 @@ const Home = () => {
   });
 
   const challenges = challengesQuery.data || [];
+
+  const publicStatsQuery = useQuery({
+    queryKey: ["public-stats"],
+    queryFn: async () => {
+      const res = await api.get("/api/dashboard/public-stats");
+      return res.data.data;
+    },
+  });
+
+  const stats = publicStatsQuery.data;
+  const challengesCount = stats ? `${stats.totalChallenges}` : "...";
+  const codersCount = stats ? `${stats.totalCoders}` : "...";
+  const submissionsCount = stats
+    ? (stats.totalSubmissions >= 1000 ? `${(stats.totalSubmissions / 1000).toFixed(1)}k` : `${stats.totalSubmissions}`)
+    : "...";
 
   const submissionsQuery = useQuery({
     queryKey: ["my-submissions"],
@@ -362,31 +377,12 @@ const Home = () => {
   }, [submissionsQuery.data, drafts]);
 
 
-  return (
-    <div ref={homeRef} className="min-h-screen flex flex-col relative overflow-hidden bg-app text-primary font-sans selection:bg-accent selection:text-white">
-      <GridBackground />
+  const isScrollable = !isAuthenticated
+    ? false
+    : (challengesQuery.isLoading || challenges.length > 0 || recentActivities.length > 0);
 
-      {/* Floating snippets — decorative only */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {SNIPPETS.map((s, i) => {
-          const depth = 0.4 + (i % 4) * 0.2;
-          const rotation = -8 + (i % 5) * 4;
-          return (
-            <FloatingSnippet
-              key={i}
-              text={s}
-              depth={depth}
-              rotation={rotation}
-              style={{
-                top: `${8 + ((i * 7.5) % 85)}%`,
-                left: `${3 + ((i * 11) % 94)}%`,
-                opacity: .6 + (i % 3) * 0.75,
-              }}
-            />
-          );
-        })}
-      </div>
-
+  const heroAndNav = (
+    <>
       {/* ── Navigation ── */}
       <nav className="relative z-10 flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 w-full overflow-hidden">
         <Link to="/" className="group flex items-center shrink-0 min-w-0 mr-1 sm:mr-4">
@@ -432,7 +428,12 @@ const Home = () => {
       <motion.div
         ref={heroRef}
         style={{ y: heroY, opacity: heroOpacity }}
-        className="relative z-10 flex flex-col items-center justify-center text-center px-4 pt-16 pb-24"
+        className={`relative z-10 flex flex-col items-center justify-center text-center px-4 ${!isAuthenticated
+          ? "flex-1"
+          : isScrollable
+            ? "pt-16 pb-24"
+            : "flex-1"
+          }`}
       >
         {/* GDG badge */}
         <motion.div
@@ -462,12 +463,12 @@ const Home = () => {
           </div>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline with Blueprint Brackets */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="max-w-5xl mx-auto"
+          className="relative max-w-5xl mx-auto"
         >
           {/* Decorative rank label */}
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -479,7 +480,7 @@ const Home = () => {
               className="font-mono text-[10px] font-bold tracking-[0.3em] uppercase"
               style={{ color: `rgba(var(--accent-rgb), 0.6)` }}
             >
-              Season 02
+              Season 2
             </span>
             <div
               className="h-px flex-1 max-w-[80px]"
@@ -491,16 +492,18 @@ const Home = () => {
             <span className="text-primary block">Compete.</span>
             <span className="text-primary block">
               Solve.{" "}
-              <span
-                className="relative inline-block"
-                style={{
-                  background: `linear-gradient(135deg, rgb(var(--accent-rgb)), #a855f7, #ec4899)`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                Dominate.
+              <span className="relative inline-block">
+                <span
+                  className="relative inline-block"
+                  style={{
+                    background: `linear-gradient(135deg, rgb(var(--accent-rgb)), #a855f7, #ec4899)`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  Dominate.
+                </span>
               </span>
             </span>
           </h1>
@@ -556,40 +559,83 @@ const Home = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="flex flex-wrap justify-center gap-3 mt-12"
+          className="flex flex-wrap justify-center gap-3 mt-12 hidden"
         >
           <StatPill
             icon={FiZap}
-            value="50+"
+            value={challengesCount}
             label="Challenges"
             color="234, 179, 8"
           />
           <StatPill
             icon={FiUsers}
-            value="200+"
+            value={codersCount}
             label="Coders"
             color="34, 197, 94"
           />
           <StatPill
             icon={FiAward}
-            value="1.5k"
+            value={submissionsCount}
             label="Submissions"
             color="var(--accent-rgb)"
           />
         </motion.div>
       </motion.div>
+    </>
+  );
+
+  return (
+    <div
+      ref={homeRef}
+      className={`${(isScrollable || !isAuthenticated) ? "min-h-screen" : "h-screen"
+        } flex flex-col relative overflow-hidden bg-app text-primary font-sans selection:bg-accent selection:text-white`}
+    >
+      <GridBackground />
+
+      {/* Floating snippets — decorative only */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        {SNIPPETS.map((s, i) => {
+          const depth = 0.4 + (i % 4) * 0.2;
+          const rotation = -8 + (i % 5) * 4;
+          return (
+            <FloatingSnippet
+              key={i}
+              text={s}
+              depth={depth}
+              rotation={rotation}
+              style={{
+                top: `${8 + ((i * 7.5) % 85)}%`,
+                left: `${3 + ((i * 11) % 94)}%`,
+                opacity: .6 + (i % 3) * 0.75,
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {!isAuthenticated ? (
+        <div className="flex flex-col min-h-screen w-full flex-shrink-0">
+          {heroAndNav}
+        </div>
+      ) : (
+        <>
+          {heroAndNav}
+        </>
+      )}
 
       {/* ── Difficulty legend strip ── */}
 
       {/* Divider */}
-      <div
-        className="relative z-10 mx-auto w-full max-w-6xl px-6"
-        style={{
-          height: "2px",
-          background: `linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.3), transparent)`,
-          margin: "2rem auto",
-        }}
-      />
+      {isScrollable && (
+        <div
+          className="relative z-10 mx-auto w-full max-w-6xl px-6"
+          style={{
+            height: "2px",
+            background: `linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.3), transparent)`,
+            margin: "2rem auto",
+          }}
+        />
+      )}
 
       {/* ── Authenticated sections ── */}
       {isAuthenticated && (
@@ -757,13 +803,12 @@ const Home = () => {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <span
-                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                                challenge.difficulty === "Easy"
-                                  ? "bg-green-500/15 text-green-400 border-green-500/25"
-                                  : challenge.difficulty === "Medium"
-                                    ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25"
-                                    : "bg-red-500/15 text-red-400 border-red-500/25"
-                              }`}
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${challenge.difficulty === "Easy"
+                                ? "bg-green-500/15 text-green-400 border-green-500/25"
+                                : challenge.difficulty === "Medium"
+                                  ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25"
+                                  : "bg-red-500/15 text-red-400 border-red-500/25"
+                                }`}
                             >
                               {challenge.difficulty}
                             </span>

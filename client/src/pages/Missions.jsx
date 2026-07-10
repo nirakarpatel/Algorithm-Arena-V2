@@ -84,6 +84,15 @@ const getLocalDrafts = () => {
 
 const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
 
+// QuestionSet.deadline is stored as UTC midnight of the due date (admin picks
+// a bare date, no time), so treat it as valid through the end of that day.
+const isDeadlinePast = (deadlineMs, now) => {
+  if (!Number.isFinite(deadlineMs)) return false;
+  const end = new Date(deadlineMs);
+  end.setUTCHours(23, 59, 59, 999);
+  return end.getTime() < now;
+};
+
 const Missions = () => {
   const [now] = useState(() => Date.now());
   const { user } = useAuth();
@@ -345,8 +354,8 @@ const Missions = () => {
         const dlA = a.questionSetId?.deadline ? new Date(a.questionSetId.deadline).getTime() : Infinity;
         const dlB = b.questionSetId?.deadline ? new Date(b.questionSetId.deadline).getTime() : Infinity;
         
-        const isPastA = dlA < now;
-        const isPastB = dlB < now;
+        const isPastA = isDeadlinePast(dlA, now);
+        const isPastB = isDeadlinePast(dlB, now);
 
         if (isPastA !== isPastB) return isPastA ? 1 : -1; // Upcoming before past
         if (dlA !== dlB) return dlA - dlB; // Ascending order

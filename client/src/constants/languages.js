@@ -9,8 +9,8 @@ export const LANGUAGE_MAP = {
 // Ordered list for UI dropdowns
 export const LANGUAGE_OPTIONS = [
   { key: "javascript", label: "JavaScript" },
-  { key: "python",     label: "Python" },
-  { key: "java",       label: "Java" },
+  { key: "python",     label: "Python",     version: "3.8.1" },
+  { key: "java",       label: "Java",       version: "OpenJDK 13.0.1" },
   { key: "cpp",        label: "C++" },
   { key: "c",          label: "C" },
 ];

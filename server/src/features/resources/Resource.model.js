@@ -15,6 +15,7 @@ const resourceSchema = new mongoose.Schema({
   fileData: { type: String, select: false },
   mimeType: { type: String },
   sizeBytes: { type: Number },
+  isSolution: { type: Boolean, default: false },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 

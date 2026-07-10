@@ -54,7 +54,7 @@ const Navbar = ({ onLogout }) => {
             >
               <Logo variant="arena" showText={true} size="sm" />
             </Link>
-            <div className="hidden md:flex items-center space-x-1">
+            <div className="hidden md:flex flex-1 items-center justify-center gap-2 lg:gap-4">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 const Icon = item.icon;

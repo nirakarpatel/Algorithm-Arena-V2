@@ -1,12 +1,24 @@
 /* ==========================================================================
    FONT CONFIGURATION AREA (Change your fonts here!)
    ========================================================================== */
-/* 1. Import your Google Fonts or custom font packages here: */
-@import url("https://rsms.me/inter/inter.css");
-/* Example alternative imports (uncomment to test): */
-@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
+/* 1. IMPORT GOOGLE FONTS & CUSTOM FONTS
+   Uncomment or add imports below to easily test different styling. */
+
+/* Default Stack Imports: Inter (Body), Michroma & Orbitron (Headings) */
+@import url("https://rsms.me/inter/inter.css");
+@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
+
+/* Additional Alternative Premium Fonts (Pre-imported for easy testing): */
+/*
+   - Space Grotesk: Futuristic, clean, geometric heading font
+   - Outfit: Sleek, high-end, modern branding font
+   - Plus Jakarta Sans: Extremely premium and readable neo-grotesque body font
+   - JetBrains Mono: Gorgeous, clean developer monospaced code font
+   - Syne: Expressive, artistic headline font
+   - Montserrat: Bold, high-character sans-serif
+*/
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;1,200&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
 /* Tailwind Engine Directives */
 @tailwind base;
@@ -14,11 +26,23 @@
 @tailwind utilities;
 
 :root {
-    /* 2. Set your primary sans-serif and monospace font stacks here: */
-    --font-sans: "Michroma", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    /* 2. CHOOSE YOUR FONTS FOR EACH TYPE OF TEXT HERE: */
 
-    --font-stack: var(--font-sans);
+    /* [H1] Display / Hero Font (Try: "Michroma", "Orbitron", "Syne", "Outfit", "Space Grotesk") */
+    --font-h1: "Michroma", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [H2] Subheadings / Section Titles (Try: "Orbitron", "Michroma", "Outfit", "Space Grotesk", "Montserrat") */
+    --font-h2: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [BODY] Paragraphs, Cards, Inputs, General Text (Try: "Inter", "Plus Jakarta Sans", "Montserrat") */
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [MONOSPACE] Code, Technical Stats, Timestamps (Try: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco) */
+    --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    /* Legacy compatibility mappings: */
+    --font-sans: var(--font-body);
+    --font-stack: var(--font-body);
     --font-size-display: clamp(2rem, 3.2vw, 3.75rem);
     --font-size-h1: clamp(1.6rem, 2.4vw, 2.4rem);
     --font-size-h2: clamp(1.2rem, 1.6vw, 1.8rem);
@@ -78,7 +102,7 @@
     --card-shadow-opacity: 0.5;
     --card-glow-opacity: 0.3;
     --fg-secondary: #94a3b8;
-    --fg-tertiary: #475569;
+    --fg-tertiary: #63667e;
     --accent-primary: #6366f1;
     --accent-rgb: 99, 102, 241;
     --accent-glow: rgba(99, 102, 241, 0.4);
@@ -98,6 +122,11 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+}
+
+html {
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
 }
 
 body {
@@ -224,6 +253,46 @@ body {
     outline-offset: 2px;
 }
 
+/* Apply default font families to HTML elements for seamless rendering */
+h1,
+.text-page-title {
+    font-family: var(--font-h1);
+    background-image: linear-gradient(to bottom, var(--fg-primary), var(--fg-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.font-h1,
+.text-display {
+    font-family: var(--font-h1);
+}
+
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-h2,
+.text-section-title {
+    font-family: var(--font-h2);
+}
+
+body,
+p,
+.font-body,
+.text-body,
+.text-caption {
+    font-family: var(--font-body);
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+    font-family: var(--font-mono);
+}
+
 .text-display {
     font-size: var(--font-size-display);
     line-height: 1.05;
@@ -275,7 +344,7 @@ body {
             background 150ms ease;
     }
 
-    .field-select option {
+    select option {
         background-color: var(--bg-app);
         color: var(--fg-primary);
     }
@@ -413,3 +482,957 @@ body {
     background: var(--accent-primary);
     background-clip: border-box;
 }
+
+/* LeetCode Description Styling */
+.leetcode-description {
+    font-family: var(--font-body), sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--fg-secondary);
+}
+
+.leetcode-description::selection,
+.leetcode-description *::selection,
+.footer-page::selection,
+.footer-page *::selection {
+    background-color: transparent !important;
+    color: #000000 !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .leetcode-description::selection,
+[data-theme="dark"] .leetcode-description *::selection,
+[data-theme="dark"] .footer-page::selection,
+[data-theme="dark"] .footer-page *::selection {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.leetcode-description p {
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description p:last-child {
+    margin-bottom: 0;
+}
+
+.leetcode-description strong {
+    font-weight: 700;
+    color: var(--fg-primary);
+}
+
+/* Style example blocks */
+.leetcode-description pre {
+    background-color: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-lg);
+    padding: 0.85rem 1rem;
+    margin: 1rem 0;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.825rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: var(--fg-primary);
+}
+
+/* Inline code styles */
+.leetcode-description code {
+    background-color: color-mix(in srgb, var(--fg-primary) 8%, transparent);
+    color: var(--accent-primary);
+    font-family: var(--font-mono), monospace;
+    font-size: 0.85em;
+    padding: 0.1rem 0.3rem;
+    border-radius: var(--radius-sm);
+}
+
+/* Inside pre blocks, don't double style code tags */
+.leetcode-description pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    border-radius: 0;
+}
+
+/* Lists styling */
+.leetcode-description ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description ol {
+    list-style-type: decimal;
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description li {
+    margin-bottom: 0.3rem;
+}
+
+/* Highlight important terms/sections like Example 1, Constraints */
+.leetcode-description p strong:first-child {
+    display: inline-block;
+    margin-top: 0.35rem;
+}
+
+/* Local Accent Overrides for Challenge Details Page */
+.challenge-details-theme {
+    /* Light Mode: Accent is blue */
+    --accent-primary: #4f46e5;
+    --accent-rgb: 79, 70, 229;
+    --accent-glow: rgba(79, 70, 229, 0.25);
+}
+
+[data-theme="dark"] .challenge-details-theme {
+    /* Dark Mode: Accent is yellow */
+    --accent-primary: #eabe11ff;
+    --accent-rgb: 234, 190, 17;
+    --accent-glow: rgba(234, 190, 17, 0.4);
+}
+
+/* Responsive Viewport Improvements */
+@media (max-width: 640px) {
+    .app-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .segmented {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+    }
+
+    .segmented-btn {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .chip-btn {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.6rem;
+    }
+}
+
+/* Recent Activity Icon Glow in Dark Mode */
+[data-theme="dark"] .recent-activity-icon {
+    filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.75));
+}
+[data-theme="dark"] .recent-activity-icon-container {
+    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+/* Footer Social Icons Default and Hover States */
+.social-icon {
+    border-color: rgba(var(--accent-rgb), 0.25) !important;
+}
+
+.social-whatsapp:hover {
+    color: #25D366 !important;
+    border-color: #25D366 !important;
+    background-color: rgba(37, 211, 102, 0.1) !important;
+}
+
+.social-instagram:hover {
+    color: #E1306C !important;
+    border-color: #E1306C !important;
+    background-color: rgba(225, 48, 108, 0.1) !important;
+}
+.social-linkedin:hover {
+    color: #0077B5 !important;
+    border-color: #0077B5 !important;
+    background-color: rgba(0, 119, 181, 0.1) !important;
+}
+
+/* First-Place Podium Golden Glow Animations */
+@keyframes golden-glow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(250, 204, 21, 0.4), inset 0 0 8px rgba(250, 204, 21, 0.2);
+        border-color: rgba(250, 204, 21, 0.6) !important;
+    }
+    50% {
+        box-shadow: 0 0 28px rgba(250, 204, 21, 0.85), inset 0 0 12px rgba(250, 204, 21, 0.45);
+        border-color: rgba(250, 204, 21, 0.95) !important;
+    }
+}
+
+.podium-gold-glow {
+    animation: golden-glow 2.5s infinite ease-in-out;
+}
+
+@keyframes trophy-gold-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.5));
+        transform: scale(1) translateY(0);
+    }
+    50% {
+        filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.95));
+        transform: scale(1.1) translateY(-2px);
+    }
+}
+
+.podium-trophy-gold {
+    animation: trophy-gold-glow 2.5s infinite ease-in-out;
+    transform-origin: center bottom;
+}
+
+/* Panel slide-in animations (lg screens only) */
+@media (min-width: 1024px) {
+    @keyframes slideLeftIn {
+        from {
+            transform: translateX(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideRightIn {
+        from {
+            transform: translateX(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .panel-slide-left {
+        animation: slideLeftIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .panel-slide-right {
+        animation: slideRightIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+}
+
+
+/* ==========================================================================
+   FONT CONFIGURATION AREA (Change your fonts here!)
+   ========================================================================== */
+
+/* 1. IMPORT GOOGLE FONTS & CUSTOM FONTS
+   Uncomment or add imports below to easily test different styling. */
+
+/* Default Stack Imports: Inter (Body), Michroma & Orbitron (Headings) */
+@import url("https://rsms.me/inter/inter.css");
+@import url('https://fonts.googleapis.com/css2?family=Michroma&family=Orbitron:wght@400..900&display=swap');
+
+/* Additional Alternative Premium Fonts (Pre-imported for easy testing): */
+/*
+   - Space Grotesk: Futuristic, clean, geometric heading font
+   - Outfit: Sleek, high-end, modern branding font
+   - Plus Jakarta Sans: Extremely premium and readable neo-grotesque body font
+   - JetBrains Mono: Gorgeous, clean developer monospaced code font
+   - Syne: Expressive, artistic headline font
+   - Montserrat: Bold, high-character sans-serif
+*/
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;1,200&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* Tailwind Engine Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    /* 2. CHOOSE YOUR FONTS FOR EACH TYPE OF TEXT HERE: */
+
+    /* [H1] Display / Hero Font (Try: "Michroma", "Orbitron", "Syne", "Outfit", "Space Grotesk") */
+    --font-h1: "Michroma", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [H2] Subheadings / Section Titles (Try: "Orbitron", "Michroma", "Outfit", "Space Grotesk", "Montserrat") */
+    --font-h2: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [BODY] Paragraphs, Cards, Inputs, General Text (Try: "Inter", "Plus Jakarta Sans", "Montserrat") */
+    --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* [MONOSPACE] Code, Technical Stats, Timestamps (Try: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco) */
+    --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    /* Legacy compatibility mappings: */
+    --font-sans: var(--font-body);
+    --font-stack: var(--font-body);
+    --font-size-display: clamp(2rem, 3.2vw, 3.75rem);
+    --font-size-h1: clamp(1.6rem, 2.4vw, 2.4rem);
+    --font-size-h2: clamp(1.2rem, 1.6vw, 1.8rem);
+    --font-size-body: 1rem;
+    --font-size-caption: 0.85rem;
+    --card-shadow-opacity: 0.08;
+    --card-glow-opacity: 0.1;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.15);
+
+    /* LIGHT MODE (High Orbit) */
+    --bg-app: #f1f3f5;
+    --bg-sidebar: rgba(255, 255, 255, 0.85);
+    --fg-primary: #0f172a;
+    --fg-secondary: #475569;
+    --fg-tertiary: #94a3b8;
+    --accent-primary: #4f46e5;
+    --accent-glow: rgba(79, 70, 229, 0.25);
+
+    /* Define the raw RGB values without the brackets */
+    --accent-rgb: 79, 70, 229;
+
+    --glass-surface: rgba(255, 255, 255, 0.8);
+    --glass-border-color: rgba(0, 0, 0, 0.05);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --orb-1: rgba(79, 70, 229, 0.15);
+    --orb-2: rgba(236, 72, 153, 0.12);
+    --field-bg: rgba(0, 0, 0, 0.03);
+    --field-border: rgba(0, 0, 0, 0.08);
+
+    --glass-spotlight: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y),
+            rgba(79, 70, 229, 0.08),
+            transparent 40%);
+}
+
+[data-theme="dark"] {
+    /* DARK MODE (Deep Space) */
+    --bg-app: #030305;
+    --bg-sidebar: rgba(10, 10, 15, 0.8);
+    --fg-primary: #f8fafc;
+    --card-shadow-opacity: 0.5;
+    --card-glow-opacity: 0.3;
+    --fg-secondary: #94a3b8;
+    --fg-tertiary: #63667e;
+    --accent-primary: #6366f1;
+    --accent-rgb: 99, 102, 241;
+    --accent-glow: rgba(99, 102, 241, 0.4);
+    --glass-surface: rgba(20, 20, 25, 0.7);
+    --glass-border-color: rgba(255, 255, 255, 0.06);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --orb-1: rgba(99, 102, 241, 0.18);
+    --orb-2: rgba(217, 70, 239, 0.12);
+    --field-bg: rgba(255, 255, 255, 0.04);
+    --field-border: rgba(255, 255, 255, 0.08);
+    --glass-spotlight: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y),
+            rgba(99, 102, 241, 0.15),
+            transparent 40%);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+}
+
+body {
+    font-family: var(--font-stack);
+    line-height: 1.5;
+    color: var(--fg-primary);
+    background-color: var(--bg-app);
+    min-height: 100vh;
+    transition:
+        background-color 0.4s ease,
+        color 0.4s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--fg-tertiary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--fg-secondary);
+}
+
+/* Animated Background */
+.cosmos-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(5px);
+    z-index: -1;
+    will-change: transform;
+    animation: float 40s infinite alternate ease-in-out;
+}
+
+.orb-1 {
+    width: 40vw;
+    height: 40vw;
+    background: var(--orb-1);
+    top: -15%;
+    left: -15%;
+}
+
+.orb-2 {
+    width: 35vw;
+    height: 35vw;
+    background: var(--orb-2);
+    bottom: -15%;
+    right: -15%;
+    animation-delay: -5s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .orb {
+        animation: none;
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(40px, 20px) scale(1.05);
+    }
+}
+
+.blueprint-border {
+    position: relative;
+    background:
+        padding-box,
+        conic-gradient(from var(--border-angle),
+            transparent,
+            var(--accent-primary),
+            transparent) border-box;
+    border: 1px solid transparent;
+}
+
+.macos-glass {
+    background: var(--glass-surface);
+    backdrop-filter: blur(4px) saturate(120%);
+    -webkit-backdrop-filter: blur(4px) saturate(120%);
+    border: 1px solid var(--glass-border-color);
+    box-shadow: var(--glass-shadow);
+    border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--fg-tertiary);
+    border-radius: 4px;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* Apply default font families to HTML elements for seamless rendering */
+h1,
+.text-page-title {
+    font-family: var(--font-h1);
+    background-image: linear-gradient(to bottom, var(--fg-primary), var(--fg-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.font-h1,
+.text-display {
+    font-family: var(--font-h1);
+}
+
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-h2,
+.text-section-title {
+    font-family: var(--font-h2);
+}
+
+body,
+p,
+.font-body,
+.text-body,
+.text-caption {
+    font-family: var(--font-body);
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+    font-family: var(--font-mono);
+}
+
+.text-display {
+    font-size: var(--font-size-display);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+}
+
+.text-page-title {
+    font-size: var(--font-size-h1);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.text-section-title {
+    font-size: var(--font-size-h2);
+    line-height: 1.2;
+}
+
+.text-body {
+    font-size: var(--font-size-body);
+}
+
+.text-caption {
+    font-size: var(--font-size-caption);
+}
+
+@layer components {
+    .field-label {
+        display: block;
+        margin-bottom: var(--space-2);
+        color: var(--fg-secondary);
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .field-input,
+    .field-textarea,
+    .field-select {
+        width: 100%;
+        border: 1px solid var(--field-border);
+        border-radius: var(--radius-md);
+        background: var(--field-bg);
+        color: var(--fg-primary);
+        padding: 0.8rem 0.9rem;
+        transition:
+            border-color 150ms ease,
+            box-shadow 150ms ease,
+            background 150ms ease;
+    }
+
+    select option {
+        background-color: var(--bg-app);
+        color: var(--fg-primary);
+    }
+
+    .field-textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .field-input:focus,
+    .field-textarea:focus,
+    .field-select:focus {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 25%, transparent);
+        outline: none;
+    }
+
+    .btn-primary {
+        border: none;
+        border-radius: var(--radius-md);
+        background: var(--accent-primary);
+        color: white;
+        font-weight: 700;
+        padding: 0.8rem 1rem;
+        cursor: pointer;
+        transition:
+            transform 120ms ease,
+            box-shadow 150ms ease;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+        border: 1px solid var(--field-border);
+        border-radius: var(--radius-md);
+        background: var(--field-bg);
+        color: var(--fg-primary);
+        font-weight: 600;
+        padding: 0.75rem 1rem;
+    }
+
+    .segmented {
+        display: inline-flex;
+        gap: 0.35rem;
+        border: 1px solid var(--field-border);
+        border-radius: var(--radius-lg);
+        background: var(--field-bg);
+        padding: 0.25rem;
+    }
+
+    .segmented-btn {
+        border: none;
+        border-radius: calc(var(--radius-lg) - 0.2rem);
+        background: transparent;
+        color: var(--fg-secondary);
+        font-weight: 600;
+        padding: 0.1rem 0.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.1rem;
+        cursor: pointer;
+    }
+
+    .segmented-btn.active {
+        background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+        color: var(--fg-primary);
+    }
+
+    .chip-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .chip-btn {
+        border: 1px solid var(--field-border);
+        border-radius: 999px;
+        background: var(--field-bg);
+        color: var(--fg-secondary);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        padding: 0.45rem 0.75rem;
+        cursor: pointer;
+    }
+
+    .chip-btn.active {
+        color: var(--fg-primary);
+        border-color: color-mix(in srgb,
+                var(--accent-primary) 90%,
+                var(--glass-border-color));
+        background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+    }
+
+    .responsive-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+}
+
+@media (max-width: 768px) {
+    .hide-on-mobile {
+        display: none !important;
+    }
+
+    .mobile-stack {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Custom Heatmap Scrollbar (Sliding Bar) */
+.heatmap-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-track {
+    background: var(--field-bg);
+    border-radius: 10px;
+    margin: 0 10px;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background 0.3s ease;
+}
+
+.heatmap-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+    background-clip: border-box;
+}
+
+/* LeetCode Description Styling */
+.leetcode-description {
+    font-family: var(--font-body), sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: var(--fg-secondary);
+}
+
+.leetcode-description::selection,
+.leetcode-description *::selection,
+.footer-page::selection,
+.footer-page *::selection {
+    background-color: transparent !important;
+    color: #000000 !important;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .leetcode-description::selection,
+[data-theme="dark"] .leetcode-description *::selection,
+[data-theme="dark"] .footer-page::selection,
+[data-theme="dark"] .footer-page *::selection {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+}
+
+.leetcode-description p {
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description p:last-child {
+    margin-bottom: 0;
+}
+
+.leetcode-description strong {
+    font-weight: 700;
+    color: var(--fg-primary);
+}
+
+/* Style example blocks */
+.leetcode-description pre {
+    background-color: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-lg);
+    padding: 0.85rem 1rem;
+    margin: 1rem 0;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.825rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: var(--fg-primary);
+}
+
+/* Inline code styles */
+.leetcode-description code {
+    background-color: color-mix(in srgb, var(--fg-primary) 8%, transparent);
+    color: var(--accent-primary);
+    font-family: var(--font-mono), monospace;
+    font-size: 0.85em;
+    padding: 0.1rem 0.3rem;
+    border-radius: var(--radius-sm);
+}
+
+/* Inside pre blocks, don't double style code tags */
+.leetcode-description pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    border-radius: 0;
+}
+
+/* Lists styling */
+.leetcode-description ul {
+    list-style-type: disc;
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description ol {
+    list-style-type: decimal;
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.leetcode-description li {
+    margin-bottom: 0.3rem;
+}
+
+/* Highlight important terms/sections like Example 1, Constraints */
+.leetcode-description p strong:first-child {
+    display: inline-block;
+    margin-top: 0.35rem;
+}
+
+/* Local Accent Overrides for Challenge Details Page */
+.challenge-details-theme {
+    /* Light Mode: Accent is blue */
+    --accent-primary: #4f46e5;
+    --accent-rgb: 79, 70, 229;
+    --accent-glow: rgba(79, 70, 229, 0.25);
+}
+
+[data-theme="dark"] .challenge-details-theme {
+    /* Dark Mode: Accent is yellow */
+    --accent-primary: #eabe11ff;
+    --accent-rgb: 234, 190, 17;
+    --accent-glow: rgba(234, 190, 17, 0.4);
+}
+
+/* Responsive Viewport Improvements */
+@media (max-width: 640px) {
+    .app-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .segmented {
+        width: 100%;
+        display: flex;
+        overflow-x: auto;
+    }
+
+    .segmented-btn {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+
+    .chip-btn {
+        font-size: 0.7rem;
+        padding: 0.35rem 0.6rem;
+    }
+}
+
+/* Recent Activity Icon Glow in Dark Mode */
+[data-theme="dark"] .recent-activity-icon {
+    filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.75));
+}
+[data-theme="dark"] .recent-activity-icon-container {
+    box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+/* Footer Social Icons Default and Hover States */
+.social-icon {
+    border-color: rgba(var(--accent-rgb), 0.25) !important;
+}
+
+.social-whatsapp:hover {
+    color: #25D366 !important;
+    border-color: #25D366 !important;
+    background-color: rgba(37, 211, 102, 0.1) !important;
+}
+
+.social-instagram:hover {
+    color: #E1306C !important;
+    border-color: #E1306C !important;
+    background-color: rgba(225, 48, 108, 0.1) !important;
+}
+.social-linkedin:hover {
+    color: #0077B5 !important;
+    border-color: #0077B5 !important;
+    background-color: rgba(0, 119, 181, 0.1) !important;
+}
+
+/* First-Place Podium Golden Glow Animations */
+@keyframes golden-glow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(250, 204, 21, 0.4), inset 0 0 8px rgba(250, 204, 21, 0.2);
+        border-color: rgba(250, 204, 21, 0.6) !important;
+    }
+    50% {
+        box-shadow: 0 0 28px rgba(250, 204, 21, 0.85), inset 0 0 12px rgba(250, 204, 21, 0.45);
+        border-color: rgba(250, 204, 21, 0.95) !important;
+    }
+}
+
+.podium-gold-glow {
+    animation: golden-glow 2.5s infinite ease-in-out;
+}
+
+@keyframes trophy-gold-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.5));
+        transform: scale(1) translateY(0);
+    }
+    50% {
+        filter: drop-shadow(0 0 16px rgba(250, 204, 21, 0.95));
+        transform: scale(1.1) translateY(-2px);
+    }
+}
+
+.podium-trophy-gold {
+    animation: trophy-gold-glow 2.5s infinite ease-in-out;
+    transform-origin: center bottom;
+}
+
+/* Panel slide-in animations (lg screens only) */
+@media (min-width: 1024px) {
+    @keyframes slideLeftIn {
+        from {
+            transform: translateX(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideRightIn {
+        from {
+            transform: translateX(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .panel-slide-left {
+        animation: slideLeftIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .panel-slide-right {
+        animation: slideRightIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+}
+
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FiDownload, FiFileText, FiFolder, FiLink } from 'react-icons/fi';
+import { FiDownload, FiFileText, FiFolder, FiLink, FiCheckCircle } from 'react-icons/fi';
 import { api, API_BASE_URL } from '../lib/api';
 import PageHeader from '../components/PageHeader';
 import BaseCard from '../components/BaseCard';
@@ -39,9 +39,10 @@ const Resources = () => {
 
   const filteredResources = resources.filter(res => {
     if (res.type === 'JSON') return false; // Filter out JSON completely
-    if (activeType === 'All') return true;
-    if (activeType === 'PDF') return res.type === 'PDF';
-    if (activeType === 'Link') return res.type !== 'PDF';
+    if (activeType === 'All') return !res.isSolution; // Hide solutions in All tab by default
+    if (activeType === 'PDF') return res.type === 'PDF' && !res.isSolution;
+    if (activeType === 'Link') return res.type !== 'PDF' && !res.isSolution;
+    if (activeType === 'Solution') return res.isSolution;
     return true;
   });
 
@@ -77,6 +78,7 @@ const Resources = () => {
             { id: 'All', label: 'All', icon: FiFolder },
             { id: 'PDF', label: 'PDFs', icon: FiFileText, iconColor: 'text-red-400' },
             { id: 'Link', label: 'Links', icon: FiLink, iconColor: 'text-blue-400' },
+            { id: 'Solution', label: 'Solutions', icon: FiCheckCircle, iconColor: 'text-emerald-400' },
           ].map(type => {
             const Icon = type.icon;
             const isActive = activeType === type.id;
@@ -123,6 +125,11 @@ const Resources = () => {
                         <span className="text-[9px] uppercase font-black tracking-wider text-secondary bg-black/[0.04] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] px-2 py-0.5 rounded-md">
                           {res.folder}
                         </span>
+                        {res.isSolution && (
+                          <span className="text-[9px] uppercase font-black tracking-wider text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                            Solution
+                          </span>
+                        )}
                         <span className="text-[9px] uppercase font-black tracking-wider text-tertiary">
                           {res.sizeBytes ? `${(res.sizeBytes / 1024 / 1024).toFixed(2)} MB` : 'LINK'}
                         </span>
