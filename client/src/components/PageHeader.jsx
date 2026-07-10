@@ -14,12 +14,12 @@ const PageHeader = ({ title, subtitle, actions, showBack = false, backUrl }) => 
   };
 
   return (
-    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-black/[0.08] dark:border-white/10 pb-6">
+    <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-subtle pb-6">
       <div className="flex items-start gap-4">
         {showBack && (
           <button
             onClick={handleBack}
-            className="mt-1 flex items-center justify-center p-2 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-secondary hover:text-primary hover:bg-black/[0.05] dark:hover:bg-white/[0.05] active:scale-95 transition-all duration-200"
+            className="mt-1 flex items-center justify-center p-2 rounded-md border border-subtle bg-black/[0.02] dark:bg-white/[0.02] text-secondary hover:text-primary hover:bg-black/[0.05] dark:hover:bg-white/[0.05] active:scale-95 transition-all duration-200"
             title="Go back"
             id="page-header-back-button"
           >

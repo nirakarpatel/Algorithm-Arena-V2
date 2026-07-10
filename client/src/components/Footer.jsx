@@ -56,7 +56,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="WhatsApp Channel"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-whatsapp transition-all duration-300"
+                className="w-10 h-10 rounded-full border border-subtle flex items-center justify-center text-secondary transition-colors hover:text-[#25D366] hover:border-[#25D366] hover:bg-[#25D366]/10"
               >
                 <FaWhatsapp size={16} />
               </a>
@@ -65,7 +65,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="Instagram"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-instagram transition-all duration-300"
+                className="w-10 h-10 rounded-full border border-subtle flex items-center justify-center text-secondary transition-colors hover:text-[#E1306C] hover:border-[#E1306C] hover:bg-[#E1306C]/10"
               >
                 <FiInstagram size={16} />
               </a>
@@ -74,7 +74,7 @@ const Footer = () => {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="LinkedIn"
-                className="w-10 h-10 rounded-full border flex items-center justify-center text-secondary social-icon social-linkedin transition-all duration-300"
+                className="w-10 h-10 rounded-full border border-subtle flex items-center justify-center text-secondary transition-colors hover:text-[#0077B5] hover:border-[#0077B5] hover:bg-[#0077B5]/10"
               >
                 <FiLinkedin size={16} />
               </a>

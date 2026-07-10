@@ -689,28 +689,6 @@ samp,
     border: 1px solid rgba(var(--accent-rgb), 0.2);
 }
 
-/* Footer Social Icons Default and Hover States */
-.social-icon {
-    border-color: rgba(var(--accent-rgb), 0.25) !important;
-}
-
-.social-whatsapp:hover {
-    color: #25D366 !important;
-    border-color: #25D366 !important;
-    background-color: rgba(37, 211, 102, 0.1) !important;
-}
-
-.social-instagram:hover {
-    color: #E1306C !important;
-    border-color: #E1306C !important;
-    background-color: rgba(225, 48, 108, 0.1) !important;
-}
-.social-linkedin:hover {
-    color: #0077B5 !important;
-    border-color: #0077B5 !important;
-    background-color: rgba(0, 119, 181, 0.1) !important;
-}
-
 /* First-Place Podium Golden Glow Animations */
 @keyframes golden-glow {
     0%, 100% {
