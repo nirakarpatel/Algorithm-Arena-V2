@@ -324,6 +324,7 @@ const QuestionSetsTab = () => {
       const tags=(data.topicTags||[]).map(t=>t.name);nq[index].category=tags[0]||'General';nq[index].tags=tags;
       nq[index].codeSnippets=data.codeSnippets||[];nq[index].functionName=data.functionName||'';
       nq[index].params=data.params||[];nq[index].returnType=data.returnType||'';
+      nq[index].orderIndependent=!!data.orderIndependent;
       nq[index].testCases=(data.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}));
       setForm({...form,questions:nq});
     },
@@ -361,11 +362,11 @@ const QuestionSetsTab = () => {
     setIsFetchingLC(true);
     try{
       const r=await api.get(`/api/challenges/fetch-leetcode-details?slug=${slug}`);
-      const{title,content,difficulty,topicTags,codeSnippets,functionName,params,returnType,testCases}=r.data.data;
+      const{title,content,difficulty,topicTags,codeSnippets,functionName,params,returnType,orderIndependent,testCases}=r.data.data;
       const tags=(topicTags||[]).map(t=>t.name);
       setCreateChallengeForm(p=>({...p,title,description:content,difficulty,points:DIFFICULTY_POINTS[difficulty]??100,category:tags[0]||p.category,
         link:`https://leetcode.com/problems/${slug}/`,tags,codeSnippets:codeSnippets||[],
-        functionName:functionName||'',params:params||[],returnType:returnType||'',
+        functionName:functionName||'',params:params||[],returnType:returnType||'',orderIndependent:!!orderIndependent,
         testCases:(testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args),expected:cleanExpected(tc.expected)}))}));
       if(codeSnippets?.length)setSnippetLang(codeSnippets[0].langSlug);
       toast.success('Fetched!');

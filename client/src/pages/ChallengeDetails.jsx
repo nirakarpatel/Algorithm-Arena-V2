@@ -95,7 +95,6 @@ const displayExpected = (val) => {
   return decoded;
 };
 
-/** Parse a value into JSON after the same literal normalization as normalizeOutput. */
 const tryParseJson = (s) => {
   try {
     const decoded = decodeHtmlEntities(s ?? "").trim();
@@ -108,7 +107,33 @@ const tryParseJson = (s) => {
   }
 };
 
-/** Recursively sort arrays (and object keys) so structurally-equal values compare equal regardless of order. */
+const FLOAT_REL_TOL = 1e-5;
+const FLOAT_ABS_TOL = 1e-9;
+
+const floatsClose = (a, b) => {
+  if (a === b) return true;
+  const diff = Math.abs(a - b);
+  return diff <= FLOAT_ABS_TOL || diff <= FLOAT_REL_TOL * Math.max(Math.abs(a), Math.abs(b));
+};
+
+const deepEqualWithTolerance = (a, b) => {
+  if (typeof a === "number" && typeof b === "number") return floatsClose(a, b);
+  if (typeof a !== typeof b) return false;
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((v, i) => deepEqualWithTolerance(v, b[i]));
+  }
+  if (typeof a === "object" && typeof b === "object") {
+    const ka = Object.keys(a).sort();
+    const kb = Object.keys(b).sort();
+    if (ka.length !== kb.length || ka.some((k, i) => k !== kb[i])) return false;
+    return ka.every((k) => deepEqualWithTolerance(a[k], b[k]));
+  }
+  return false;
+};
+
 const canonicalize = (value) => {
   if (Array.isArray(value)) {
     return value
@@ -130,21 +155,19 @@ const canonicalize = (value) => {
   return value;
 };
 
-/**
- * Compare actual vs expected output. When `orderIndependent` is set on the
- * challenge (e.g. Group Anagrams), parse both as JSON and compare them with
- * array order ignored at every nesting level; otherwise fall back to the
- * normalized string comparison used for every other problem.
- */
 const outputsMatch = (stdout, expected, orderIndependent) => {
   if (expected == null) return false;
-  if (orderIndependent) {
-    const a = tryParseJson(stdout);
-    const b = tryParseJson(expected);
-    if (a !== undefined && b !== undefined) {
-      return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
+
+  const a = tryParseJson(stdout);
+  const b = tryParseJson(expected);
+
+  if (a !== undefined && b !== undefined) {
+    if (deepEqualWithTolerance(a, b)) return true;
+    if (orderIndependent) {
+      return deepEqualWithTolerance(canonicalize(a), canonicalize(b));
     }
   }
+
   return normalizeOutput(stdout) === normalizeOutput(expected);
 };
 
