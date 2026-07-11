@@ -16,6 +16,7 @@ import { useAuth } from "../context/useAuth";
 import { api } from "../lib/api";
 import Logo from "../components/Logo";
 import Footer from "../components/Footer";
+import { getDifficultyRGB } from "../constants/difficulty";
 
 
 const MotionBlock = motion.div;
@@ -196,18 +197,7 @@ const StatPill = ({ icon: Icon, value, label, color }) => (
   </div>
 );
 
-const getDifficultyRGB = (diff) => {
-  switch (diff) {
-    case "Easy":
-      return "34, 197, 94";
-    case "Medium":
-      return "234, 179, 8";
-    case "Hard":
-      return "239, 68, 68";
-    default:
-      return "0, 122, 255";
-  }
-};
+
 
 /* ════════════════════════════════════════ */
 const Home = () => {
