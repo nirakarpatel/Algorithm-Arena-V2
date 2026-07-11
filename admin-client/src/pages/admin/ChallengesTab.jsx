@@ -10,7 +10,6 @@ import EmptyState from "../../components/EmptyState";
 import CodeEditor from "../../components/CodeEditor";
 import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../../constants/languages";
 import { api } from "../../lib/api";
-import { USE_MOCK, filterSubmissions } from "../../lib/mockData";
 import { isDrivableSignature } from "../../lib/leetcodeDriver";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -101,9 +100,6 @@ const cleanExpected = (val) => {
   if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) s = s.slice(1, -1);
   return s;
 };
-
-const mockDelay = () => new Promise((r) => setTimeout(r, 400));
-
 // ── component ─────────────────────────────────────────────────────────────────
 
 const ChallengesTab = () => {
@@ -196,7 +192,6 @@ const ChallengesTab = () => {
     queryKey: ["admin-submissions", reviewFilters],
     enabled: activeTab === "review",
     queryFn: async () => {
-      if (USE_MOCK) return filterSubmissions(reviewFilters);
       const params = new URLSearchParams();
       params.set("page", String(reviewFilters.page));
       params.set("limit", String(reviewFilters.limit));
@@ -264,19 +259,14 @@ const ChallengesTab = () => {
     },
   });
 
-  // ── handlers ──────────────────────────────────────────────────────────────
   const onCreateChallenge = async (e) => {
     e.preventDefault();
     try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.post("/api/challenges", {
-          ...createForm,
-          solutions: prepareSolutions(createForm.solutions),
-          testCases: prepareTestCases(createForm.testCases),
-        });
-      }
+      await api.post("/api/challenges", {
+        ...createForm,
+        solutions: prepareSolutions(createForm.solutions),
+        testCases: prepareTestCases(createForm.testCases),
+      });
       toast.success("Challenge created");
       setCreateForm(defaultChallengeForm);
       queryClient.invalidateQueries({ queryKey: ["admin-challenges"] });
@@ -288,23 +278,19 @@ const ChallengesTab = () => {
   const onUpdateChallenge = async () => {
     if (!editingChallenge) return;
     try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.put(`/api/challenges/${editingChallenge._id}`, {
-          title: editingChallenge.title,
-          description: editingChallenge.description,
-          link: editingChallenge.link || "",
-          difficulty: editingChallenge.difficulty,
-          points: Number(editingChallenge.points),
-          category: editingChallenge.category,
-          solutions: prepareSolutions(editingChallenge.solutions || []),
-          functionName: editingChallenge.functionName || "",
-          params: editingChallenge.params || [],
-          returnType: editingChallenge.returnType || "",
-          testCases: prepareTestCases(editingChallenge.testCases || []),
-        });
-      }
+      await api.put(`/api/challenges/${editingChallenge._id}`, {
+        title: editingChallenge.title,
+        description: editingChallenge.description,
+        link: editingChallenge.link || "",
+        difficulty: editingChallenge.difficulty,
+        points: Number(editingChallenge.points),
+        category: editingChallenge.category,
+        solutions: prepareSolutions(editingChallenge.solutions || []),
+        functionName: editingChallenge.functionName || "",
+        params: editingChallenge.params || [],
+        returnType: editingChallenge.returnType || "",
+        testCases: prepareTestCases(editingChallenge.testCases || []),
+      });
       toast.success("Challenge updated");
       setEditingChallenge(null);
       queryClient.invalidateQueries({ queryKey: ["admin-challenges"] });
@@ -316,11 +302,7 @@ const ChallengesTab = () => {
   const onDeleteChallenge = async () => {
     if (!deleteTarget) return;
     try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.delete(`/api/challenges/${deleteTarget._id}`);
-      }
+      await api.delete(`/api/challenges/${deleteTarget._id}`);
       toast.success("Challenge deleted");
       setDeleteTarget(null);
       queryClient.invalidateQueries({ queryKey: ["admin-challenges"] });
@@ -331,11 +313,7 @@ const ChallengesTab = () => {
 
   const onGrade = async (id, status) => {
     try {
-      if (USE_MOCK) {
-        await mockDelay();
-      } else {
-        await api.put(`/api/submissions/${id}`, { status });
-      }
+      await api.put(`/api/submissions/${id}`, { status });
       toast.success(`Submission marked ${status}`);
       queryClient.invalidateQueries({ queryKey: ["admin-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });

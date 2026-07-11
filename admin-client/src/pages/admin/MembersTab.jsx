@@ -9,8 +9,6 @@ import { useAuth } from '../../context/useAuth';
 import { canManageClanGlobally } from '../../lib/permissions';
 import toast from 'react-hot-toast';
 
-import { USE_MOCK } from '../../lib/mockData';
-
 const MembersTab = ({ initialClanFilter }) => {
   const queryClient = useQueryClient();
   const { user, confirmSessionIfNeeded } = useAuth();
@@ -52,7 +50,6 @@ const MembersTab = ({ initialClanFilter }) => {
     queryKey: ['admin-all-users'],
     queryFn: async () => {
       try {
-        if (USE_MOCK) return [];
         const res = await api.get('/api/users?limit=10000');
         return res.data.data || [];
       } catch (err) {
