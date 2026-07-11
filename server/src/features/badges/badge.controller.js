@@ -26,6 +26,26 @@ exports.getBadgesForUser = async (req, res, next) => {
   }
 };
 
+// @desc    Get all badges for a user by username (for public profile view)
+// @route   GET /api/badges/username/:username
+// @access  Public / Private
+exports.getBadgesForUsername = async (req, res, next) => {
+  try {
+    const escapedUsername = req.params.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({
+      username: { $regex: new RegExp(`^${escapedUsername}$`, 'i') }
+    }).select('_id username');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+    const data = await getAllBadgesForUser(user._id);
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 // @desc    Award a chief badge to a clan member
 // @route   POST /api/badges/award/:userId
 // @access  Private (clan-chief or admin)

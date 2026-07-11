@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import PageHeader from '../components/PageHeader';
@@ -47,7 +48,7 @@ const ProgressBar = ({ progress, threshold }) => {
 };
 
 // ── Individual Badge Card ─────────────────────────────────────────────────────
-const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
+const BadgeCard = ({ badge, index, onSetFeatured, isFeatured, isOwnProfile = true }) => {
   const isUnlocked = badge.isUnlocked;
   const isChief = badge.isChiefBadge;
   const r = RARITY[badge.rarity] || RARITY.COMMON;
@@ -142,17 +143,19 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
             <FiCheck size={12} className="text-white drop-shadow-md" />
           </div>
 
-          <button
-            onClick={() => onSetFeatured(badge._id)}
-            title={isFeatured ? "Featured Badge" : "Set as Featured Badge"}
-            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-              isFeatured
-                ? 'bg-amber-500 border border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] bg-gradient-to-br from-amber-400 to-amber-600'
-                : 'bg-black/10 dark:bg-black/40 border border-black/20 dark:border-white/20 hover:bg-amber-500/30 hover:border-amber-500/50 text-secondary hover:text-amber-400 opacity-0 group-hover:opacity-100'
-            }`}
-          >
-            <FiStar size={12} className={isFeatured ? 'text-white drop-shadow-md fill-white' : 'fill-current'} />
-          </button>
+          {isOwnProfile && (
+            <button
+              onClick={() => onSetFeatured(badge._id)}
+              title={isFeatured ? "Featured Badge" : "Set as Featured Badge"}
+              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                isFeatured
+                  ? 'bg-amber-500 border border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] bg-gradient-to-br from-amber-400 to-amber-600'
+                  : 'bg-black/10 dark:bg-black/40 border border-black/20 dark:border-white/20 hover:bg-amber-500/30 hover:border-amber-500/50 text-secondary hover:text-amber-400 opacity-0 group-hover:opacity-100'
+              }`}
+            >
+              <FiStar size={12} className={isFeatured ? 'text-white drop-shadow-md fill-white' : 'fill-current'} />
+            </button>
+          )}
         </div>
       )}
     </motion.div>
@@ -160,7 +163,7 @@ const BadgeCard = ({ badge, index, onSetFeatured, isFeatured }) => {
 };
 
 // ── Category Section ──────────────────────────────────────────────────────────
-const CategorySection = ({ category, badges, index, onSetFeatured, featuredBadgeId }) => {
+const CategorySection = ({ category, badges, index, onSetFeatured, featuredBadgeId, isOwnProfile = true }) => {
 
   const unlocked = badges.filter(b => b.isUnlocked).length;
   const isComplete = unlocked === badges.length;
@@ -206,6 +209,7 @@ const CategorySection = ({ category, badges, index, onSetFeatured, featuredBadge
             index={i}
             onSetFeatured={onSetFeatured}
             isFeatured={featuredBadgeId === badge._id?.toString()}
+            isOwnProfile={isOwnProfile}
           />
         ))}
       </div>
@@ -216,13 +220,20 @@ const CategorySection = ({ category, badges, index, onSetFeatured, featuredBadge
 // ── Main Badges Page ──────────────────────────────────────────────────────────
 const Badges = () => {
   const queryClient = useQueryClient();
+  const { username: paramUsername } = useParams();
+  const [searchParams] = useSearchParams();
+  const targetUsername = paramUsername || searchParams.get('username') || searchParams.get('user');
+
   const [activeCategory, setActiveCategory] = useState('All');
   const [showUnlocked, setShowUnlocked] = useState(null); // null=all, true=unlocked, false=locked
 
   const { data: badges = [], isLoading } = useQuery({
-    queryKey: ['badges'],
+    queryKey: ['badges', targetUsername || 'me'],
     queryFn: async () => {
-      const res = await api.get('/api/badges');
+      const endpoint = targetUsername
+        ? `/api/badges/username/${encodeURIComponent(targetUsername)}`
+        : '/api/badges';
+      const res = await api.get(endpoint);
       return res.data.data;
     },
     staleTime: 60000,
@@ -289,12 +300,14 @@ const Badges = () => {
     return result;
   }, [groupedBadges, activeCategory, showUnlocked]);
 
+  const isOwnProfile = !targetUsername || (authUser && authUser.username?.toLowerCase() === targetUsername?.toLowerCase());
+
   return (
     <div className="min-h-screen pb-24 space-y-8">
       {/* Page Header */}
       <PageHeader
-        title="Achievement Vault"
-        subtitle="Your collection of earned honors and milestones."
+        title={targetUsername && !isOwnProfile ? `${targetUsername}'s Achievement Vault` : "Achievement Vault"}
+        subtitle={targetUsername && !isOwnProfile ? `Collection of earned honors and milestones by ${targetUsername}.` : "Your collection of earned honors and milestones."}
         showBack={true}
       />
 
@@ -308,7 +321,7 @@ const Badges = () => {
               </div>
               <div>
                 <p className="text-2xl font-black text-primary">{totalUnlocked} <span className="text-tertiary text-base font-normal">/ {totalBadges}</span></p>
-                <p className="text-sm text-secondary">Badges unlocked</p>
+                <p className="text-sm text-secondary">{targetUsername && !isOwnProfile ? `${targetUsername}'s unlocked badges` : 'Badges unlocked'}</p>
               </div>
             </div>
             <div className="flex-1 max-w-xs space-y-1.5">
@@ -386,6 +399,7 @@ const Badges = () => {
                 index={idx}
                 onSetFeatured={setFeaturedMutation.mutate}
                 featuredBadgeId={featuredBadgeId}
+                isOwnProfile={isOwnProfile}
               />
             ))}
             {Object.keys(filteredGroups).length === 0 && (

@@ -146,7 +146,8 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
       : "Member");
 
   const { user: authUser } = useAuth();
-  const isOwnProfile = authUser?.username === user?.username;
+  const isOwnProfile = !user?.username || (authUser?.username?.toLowerCase() === user?.username?.toLowerCase());
+  const badgesLink = isOwnProfile ? "/badges" : `/badges/${user.username}`;
 
   const handleShare = () => {
     const url = `${window.location.origin}/profile/${user?.username}`;
@@ -416,7 +417,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
               <FiAward size={12} className="text-yellow-400" /> Achievements
             </h3>
             <Link
-              to="/badges"
+              to={badgesLink}
               className="text-[9px] font-black text-tertiary bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.06] rounded-full px-2 py-0.5 hover:text-accent hover:border-accent/30 transition-colors"
             >
               {sortedBadges.filter(b => b.isUnlocked).length} / {sortedBadges.length}
@@ -535,7 +536,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
           </div>
 
           <Link
-            to="/badges"
+            to={badgesLink}
             className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-accent hover:text-accent/80 transition-colors w-full mt-2"
           >
             View all achievements <FiArrowRight size={11} />

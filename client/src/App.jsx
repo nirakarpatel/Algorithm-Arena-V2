@@ -78,12 +78,14 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/badges" element={<Navigate to="/badges" replace />} />
             <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/profile/:username/badges" element={<Badges />} />
             <Route path="/challenge/:id" element={<ChallengeDetails />} />
             <Route path="/submission/:id" element={<SubmissionDetails />} />
             <Route path="/missions" element={<Missions />} />
             <Route path="/pending-tasks" element={<PendingTasks />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/badges" element={<Badges />} />
+            <Route path="/badges/:username" element={<Badges />} />
 
             <Route path="/chief-panel" element={<ClanChiefRoute><ClanChiefPanel /></ClanChiefRoute>} />
             
