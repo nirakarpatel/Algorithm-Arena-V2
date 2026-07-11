@@ -1044,5 +1044,55 @@ test('getClanLeaderboard window=all aggregates points and solved problems correc
   assert.equal(gammaRank.rank, 2);
 });
 
+test('daily login XP logic awards XP on the first /me call after onboarding is completed today', async () => {
+  const XpLog = require('../src/features/users/XpLog.model.js');
+  const { signAccessToken } = require('../utils/tokens');
+
+  // Create a brand new Google user with usernameSet = false
+  const user = await User.create({
+    email: 'daily_xp_test@example.com',
+    authProvider: 'google',
+    usernameSet: false,
+    points: 0,
+  });
+
+  const token = signAccessToken(user._id);
+
+  // 1. First call to /api/auth/me when usernameSet = false
+  // It should NOT award daily XP, but user's lastLoginDate should be updated to now.
+  const res1 = await request(app)
+    .get('/api/auth/me')
+    .set('Authorization', `Bearer ${token}`);
+
+  assert.equal(res1.status, 200);
+  assert.equal(res1.body.data.points, 0);
+  assert.equal(res1.body.data.dailyXpAwarded, false);
+
+  const userAfterFirstMe = await User.findById(user._id);
+  assert.ok(userAfterFirstMe.lastLoginDate);
+
+  const logsCount1 = await XpLog.countDocuments({ userId: user._id, reason: 'Daily Login' });
+  assert.equal(logsCount1, 0);
+
+  // 2. Simulate user completing onboarding (updating usernameSet to true)
+  userAfterFirstMe.username = 'daily_xp_tester';
+  userAfterFirstMe.usernameSet = true;
+  await userAfterFirstMe.save();
+
+  // 3. Second call to /api/auth/me on the same day (lastLoginDate is already updated to today)
+  // Under old logic, this fails to award XP. Under new logic, it should correctly award XP!
+  const res2 = await request(app)
+    .get('/api/auth/me')
+    .set('Authorization', `Bearer ${token}`);
+
+  assert.equal(res2.status, 200);
+  assert.equal(res2.body.data.points, 50);
+  assert.equal(res2.body.data.dailyXpAwarded, true);
+
+  const logsCount2 = await XpLog.countDocuments({ userId: user._id, reason: 'Daily Login' });
+  assert.equal(logsCount2, 1);
+});
+
+
 
 
