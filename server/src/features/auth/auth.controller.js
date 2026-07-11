@@ -1,5 +1,6 @@
 const User = require('../users/User.model');
 const XpLog = require('../users/XpLog.model');
+const { awardDailyLoginXp } = require('../../../utils/dailyLoginXp');
 const RefreshToken = require('./RefreshToken.model');
 const { sendSuccess } = require('../../../utils/response');
 const { verifyGoogleToken } = require('./googleAuth');
@@ -193,27 +194,10 @@ const googleAuth = async (req, res, next) => {
     }
 
     // Daily Login XP: award 50 XP if first login of the day
-    let dailyXpAwarded = false;
+    const { dailyXpAwarded, points: updatedPoints } = await awardDailyLoginXp(user);
+    user.points = updatedPoints;
+
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-    const XpLog = require('../users/XpLog.model');
-    const existingDailyLog = await XpLog.exists({
-      userId: user._id,
-      reason: 'Daily Login',
-      createdAt: { $gte: today }
-    });
-
-    if (!existingDailyLog && user.usernameSet) {
-      user.points = (user.points || 0) + 50;
-      dailyXpAwarded = true;
-      await XpLog.create({
-        userId: user._id,
-        amount: 50,
-        reason: 'Daily Login',
-      });
-    }
-
     user.lastLoginDate = now;
     user.lastConfirmedAt = now;
     await user.save({ validateBeforeSave: false });
@@ -397,27 +381,10 @@ const googleLogin = async (req, res, next) => {
     }
 
     // Daily Login XP: award 50 XP if first login of the day
-    let dailyXpAwarded = false;
+    const { dailyXpAwarded, points: updatedPoints } = await awardDailyLoginXp(user);
+    user.points = updatedPoints;
+
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-    const XpLog = require('../users/XpLog.model');
-    const existingDailyLog = await XpLog.exists({
-      userId: user._id,
-      reason: 'Daily Login',
-      createdAt: { $gte: today }
-    });
-
-    if (!existingDailyLog && user.usernameSet) {
-      user.points = (user.points || 0) + 50;
-      dailyXpAwarded = true;
-      await XpLog.create({
-        userId: user._id,
-        amount: 50,
-        reason: 'Daily Login',
-      });
-    }
-
     user.lastLoginDate = now;
     user.lastConfirmedAt = now;
     await user.save({ validateBeforeSave: false });
@@ -564,34 +531,19 @@ const getMe = async (req, res, next) => {
     }
 
     // Daily Login XP check
-    let dailyXpAwarded = false;
+    const { dailyXpAwarded, points } = await awardDailyLoginXp(user);
+
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
     const isFirstLoginToday = !lastLogin || lastLogin < today;
 
-    const XpLog = require('../users/XpLog.model');
-    const existingDailyLog = await XpLog.exists({
-      userId: user._id,
-      reason: 'Daily Login',
-      createdAt: { $gte: today }
-    });
-
-    let needsUpdate = false;
-    let points = user.points || 0;
+    let needsUpdate = dailyXpAwarded;
     let lastLoginDate = user.lastLoginDate;
     let lastConfirmedAt = user.lastConfirmedAt;
 
-    if (!existingDailyLog && user.usernameSet) {
-      points += 50;
-      dailyXpAwarded = true;
-      await XpLog.create({
-        userId: user._id,
-        amount: 50,
-        reason: 'Daily Login',
-      });
+    if (dailyXpAwarded) {
       lastLoginDate = now;
-      needsUpdate = true;
     }
 
     if (isFirstLoginToday) {
