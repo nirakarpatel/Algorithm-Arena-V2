@@ -9,7 +9,7 @@ const { canActorManageUser } = require('../clans/clanScope.service');
 const getUsers = async (req, res, next) => {
   try {
     const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
-    const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 100));
     const skip  = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
@@ -179,10 +179,22 @@ const clearWarningUser = async (req, res, next) => {
     }
 
     user.warningMessage = null;
+    const previousStatus = user.status;
     if (user.status === 'Warned') {
       user.status = 'Active';
     }
     await user.save();
+
+    // Create immutable Audit Log entry
+    const AuditLog = require('../audit/AuditLog.model');
+    await AuditLog.create({
+      action: 'CLEAR_WARNING',
+      targetUserId: user._id,
+      performedBy: req.user._id,
+      previousValue: previousStatus,
+      newValue: user.status,
+      ip: req.ip || '',
+    });
 
     return sendSuccess(res, { data: { userId: user._id, status: user.status }, message: 'Warning cleared successfully' });
   } catch (err) {
