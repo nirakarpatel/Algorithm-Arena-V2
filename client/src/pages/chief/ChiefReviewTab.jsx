@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -7,6 +7,7 @@ import BaseCard from '../../components/BaseCard';
 import { useAuth } from '../../context/useAuth';
 import { api } from '../../lib/api';
 import { canManageOwnClan, isClanArchived } from '../../lib/permissions';
+import { encodeReviewQueue, buildReviewUrl } from '../../lib/reviewQueue';
 
 const ChiefReviewTab = ({ clan }) => {
   const { user: currentUser } = useAuth();
@@ -37,7 +38,10 @@ const ChiefReviewTab = ({ clan }) => {
     enabled: !!clan
   });
 
-
+  const queueParam = useMemo(
+    () => encodeReviewQueue((submissionsQuery.data || []).map(sub => ({ submissionId: sub._id, challengeId: sub.challengeId?._id }))),
+    [submissionsQuery.data]
+  );
 
   if (!clan) return null;
 
@@ -87,8 +91,8 @@ const ChiefReviewTab = ({ clan }) => {
             <BaseCard className="p-5 flex flex-col gap-4 group hover:border-purple-500/30 transition-colors h-full">
               <div className="flex justify-between items-start">
                 <div className="min-w-0 flex-1">
-                  <Link 
-                    to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                  <Link
+                    to={buildReviewUrl({ submissionId: sub._id, challengeId: sub.challengeId?._id }, queueParam)}
                     className="font-bold text-primary truncate block hover:text-accent transition-colors"
                   >
                     {sub.challengeId?.title || 'Unknown Challenge'}
@@ -113,8 +117,8 @@ const ChiefReviewTab = ({ clan }) => {
 
               <div className="flex justify-between items-center mt-auto pt-2">
                 <span className="text-xs font-mono text-tertiary">{new Date(sub.submittedAt).toLocaleString()}</span>
-                <Link 
-                  to={`/challenge/${sub.challengeId?._id}?review=${sub._id}`}
+                <Link
+                  to={buildReviewUrl({ submissionId: sub._id, challengeId: sub.challengeId?._id }, queueParam)}
                   className="px-4 py-2 rounded-lg bg-white/5 text-primary text-xs font-bold hover:bg-white/10 transition-colors flex items-center gap-2"
                 >
                   <FiEye /> Review Code
