@@ -103,6 +103,7 @@ const ChallengeDetails = () => {
   // Review mode state
   const [reviewComment, setReviewComment] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   const [grading, setGrading] = useState(false);
 
   // Manual state
@@ -1028,6 +1029,38 @@ const ChallengeDetails = () => {
                   </div>
                 )}
               </div>
+
+              {reviewQuery.data?.status === "Accepted" && (
+                <div className="flex gap-2 pt-1 border-t border-black/10 dark:border-white/10">
+                  {!showRevokeConfirm ? (
+                    <button
+                      onClick={() => setShowRevokeConfirm(true)}
+                      disabled={grading}
+                      className="w-full py-2 flex items-center justify-center gap-2 rounded-xl bg-orange-500/10 text-orange-400 text-xs font-bold hover:bg-orange-500/20 transition-all disabled:opacity-50 border border-orange-500/20"
+                    >
+                      <FiRefreshCw size={13} />
+                      Revoke Acceptance
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { handleGrade("Pending"); setShowRevokeConfirm(false); }}
+                        disabled={grading}
+                        className="flex-1 py-2 flex items-center justify-center gap-2 rounded-xl bg-orange-500/15 text-orange-400 text-xs font-bold hover:bg-orange-500/25 transition-all disabled:opacity-50 border border-orange-500/30"
+                      >
+                        <FiRefreshCw size={13} />
+                        {grading ? "Processing..." : "Confirm Revoke"}
+                      </button>
+                      <button
+                        onClick={() => setShowRevokeConfirm(false)}
+                        className="px-3 py-2 rounded-xl text-xs font-semibold text-secondary hover:text-primary bg-black/5 dark:bg-white/5 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ) : null}
         </div>
