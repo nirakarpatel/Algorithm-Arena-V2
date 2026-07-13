@@ -21,6 +21,7 @@ import {
   FiTrash2,
   FiCode,
   FiChevronLeft,
+  FiChevronRight,
   FiSend,
   FiExternalLink,
   FiCheck,
@@ -45,6 +46,7 @@ import ProblemPanel from "../components/challenge/ProblemPanel";
 import TestResultPanel from "../components/challenge/TestResultPanel";
 import { api } from "../lib/api";
 import { argsToJsonStdin, wrapWithDriver, isDrivableSignature } from "../lib/leetcodeDriver";
+import { decodeReviewQueue, getQueueNav, buildReviewUrl } from "../lib/reviewQueue";
 import FeedbackDialog from "../components/FeedbackDialog";
 import { getDifficultyRGB } from "../constants/difficulty";
 
@@ -70,6 +72,12 @@ const ChallengeDetails = () => {
     user?.role,
   );
   const isReviewMode = Boolean(reviewSubmissionId) && isReviewer;
+  const queueParam = searchParams.get("queue") || "";
+  const reviewQueueList = useMemo(() => decodeReviewQueue(queueParam), [queueParam]);
+  const queueNav = useMemo(
+    () => getQueueNav(reviewQueueList, reviewSubmissionId),
+    [reviewQueueList, reviewSubmissionId],
+  );
 
   const [repoUrl, setRepoUrl] = useState("");
   const [codeByLang, setCodeByLang] = useState({});
@@ -329,7 +337,9 @@ const ChallengeDetails = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["chief-submissions"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-      navigate(-1);
+      // Return to the Review Submissions tab (not history back — the chief panel
+      // switches tabs via local state, so navigate(-1) lands on the default tab).
+      navigate("/chief-panel?tab=review");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to grade submission");
     } finally {
@@ -682,6 +692,34 @@ const ChallengeDetails = () => {
           <span className="hidden sm:inline">{isReviewMode ? "Code Reviews" : "Missions"}</span>
         </Link>
         <div className="w-px h-4 bg-black/10 dark:bg-white/10" />
+        {isReviewMode && queueNav.index !== -1 && (
+          <>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => queueNav.prev && navigate(buildReviewUrl(queueNav.prev, queueParam))}
+                disabled={!queueNav.prev}
+                title="Previous submission"
+                className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <FiChevronLeft size={14} />
+              </button>
+              <span className="text-[10px] font-bold text-tertiary tabular-nums px-0.5">
+                {queueNav.index + 1}/{queueNav.total}
+              </span>
+              <button
+                type="button"
+                onClick={() => queueNav.next && navigate(buildReviewUrl(queueNav.next, queueParam))}
+                disabled={!queueNav.next}
+                title="Next submission"
+                className="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-white/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <FiChevronRight size={14} />
+              </button>
+            </div>
+            <div className="w-px h-4 bg-black/10 dark:bg-white/10" />
+          </>
+        )}
         <a
           href={challenge.link || `https://leetcode.com/problems/${challenge.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}/`}
           target="_blank"
