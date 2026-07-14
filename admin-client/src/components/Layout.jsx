@@ -21,9 +21,10 @@ const Layout = ({ onLogout }) => {
 
       {/* 3. Main Content Area */}
       {(() => {
-        const isFullWidth = location.pathname.startsWith("/challenge/") || location.pathname.startsWith("/submission/");
+        const isFullBleed = location.pathname.startsWith("/challenge/") || location.pathname.startsWith("/submission/");
+        const isFullWidth = isFullBleed || location.pathname === "/";
         return (
-          <main className={`mx-auto flex-1 w-full ${isFullWidth ? "max-w-none px-0 py-0" : "max-w-7xl px-4 sm:px-6 lg:px-8 py-8"}`}>
+          <main className={`mx-auto flex-1 w-full ${isFullBleed ? "max-w-none px-0 py-0" : isFullWidth ? "max-w-none px-4 sm:px-6 lg:px-8 py-8" : "max-w-7xl px-4 sm:px-6 lg:px-8 py-8"}`}>
             <AnimatePresence mode="wait" initial={false}>
               <MotionContainer
                 key={location.pathname}

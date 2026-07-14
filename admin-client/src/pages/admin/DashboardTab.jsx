@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { 
-  FiUsers, FiShield, FiActivity, FiCode, FiPercent, FiClock, 
+import {
+  FiUsers, FiShield, FiActivity, FiCode, FiPercent, FiClock,
   FiPlus, FiAlertCircle, FiTrendingUp, FiAward, FiSearch, FiCalendar, FiStar
 } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
@@ -45,7 +45,7 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
       );
     }
 
-    const paddingX = 40;
+    const paddingX = 10;
     const paddingY = 30;
     const width = 500;
     const height = 200;
@@ -61,7 +61,7 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
       return i === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
     }, "");
 
-    const areaD = points.length > 0 
+    const areaD = points.length > 0
       ? `${pathD} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`
       : "";
 
@@ -70,8 +70,8 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
           <defs>
             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(99, 102, 241, 0.4)" />
-              <stop offset="100%" stopColor="rgba(99, 102, 241, 0)" />
+              <stop offset="0%" stopColor="var(--accent-primary)" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="var(--accent-primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -80,9 +80,9 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
             const y = paddingY + r * (height - 2 * paddingY);
             const val = Math.round(maxVal - r * maxVal);
             return (
-              <g key={i} className="opacity-20">
+              <g key={i} className="opacity-50">
                 <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="var(--fg-tertiary)" strokeDasharray="3,3" />
-                <text x={paddingX - 10} y={y + 4} textAnchor="end" className="fill-current text-[9px] font-mono font-bold text-tertiary">{val}</text>
+                <text x={paddingX - 10} y={y + 4} textAnchor="end" className="fill-current text-[9px] font-mono font-bold dark:text-white">{val}</text>
               </g>
             );
           })}
@@ -92,12 +92,12 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
 
           {/* Main line */}
           {pathD && (
-            <path 
-              d={pathD} 
-              fill="none" 
-              stroke="var(--accent-primary)" 
-              strokeWidth="2.5" 
-              className="drop-shadow-[0_0_6px_rgba(99,102,241,0.6)]"
+            <path
+              d={pathD}
+              fill="none"
+              stroke="var(--accent-primary)"
+              strokeWidth="2.5"
+              style={{ filter: 'drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.5))' }}
             />
           )}
 
@@ -106,12 +106,12 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
             const isHovered = hoveredPoint?.index === i;
             return (
               <g key={i}>
-                <circle 
-                  cx={p.x} 
-                  cy={p.y} 
-                  r={isHovered ? 6 : 4} 
-                  fill={isHovered ? "var(--fg-primary)" : "var(--accent-primary)"} 
-                  stroke="var(--bg-app)" 
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={isHovered ? 6 : 4}
+                  fill={isHovered ? "var(--fg-primary)" : "var(--accent-primary)"}
+                  stroke="var(--bg-app)"
                   strokeWidth="1.5"
                   className="cursor-pointer transition-all duration-150"
                   onMouseEnter={() => setHoveredPoint({ ...p, index: i })}
@@ -123,7 +123,7 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
 
           {/* Date Axis Label (only first, middle, last to prevent overlap) */}
           {points.length > 0 && (
-            <g className="text-[9px] font-mono text-tertiary opacity-60">
+            <g className="fill-current text-[9px] font-mono text-tertiary opacity-100">
               <text x={points[0].x} y={height - 10} textAnchor="start">
                 {new Date(points[0].date).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
               </text>
@@ -139,12 +139,14 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
 
         {/* Hover Tooltip */}
         {hoveredPoint && (
-          <div 
-            className="absolute z-30 p-2 bg-[#121218] border border-white/10 rounded-lg shadow-xl text-[10px] pointer-events-none transition-all duration-150"
-            style={{ 
-              left: `${(hoveredPoint.x / width) * 100}%`, 
+          <div
+            className="absolute z-30 p-2 border border-black/10 dark:border-white/10 rounded-lg shadow-xl text-[10px] pointer-events-none transition-all duration-150"
+            style={{
+              left: `${(hoveredPoint.x / width) * 100}%`,
               top: `${(hoveredPoint.y / height) * 100 - 15}%`,
-              transform: 'translate(-50%, -100%)'
+              transform: 'translate(-50%, -100%)',
+              background: 'var(--glass-surface)',
+              backdropFilter: 'blur(8px)'
             }}
           >
             <div className="font-bold text-primary">{hoveredPoint.count} Submissions</div>
@@ -169,7 +171,7 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
     <div className="space-y-6">
       {/* Unassigned Members Alert */}
       {data.pendingAssignments > 0 && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between p-4 rounded-xl border border-orange-500/30 bg-orange-500/10"
         >
@@ -271,20 +273,20 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
               <FiShield className="text-purple-400" /> Relative Clan Performance
             </h2>
             <div className="segmented">
-              <button 
-                onClick={() => setMetricTab('points')} 
+              <button
+                onClick={() => setMetricTab('points')}
                 className={`segmented-btn text-[10px] ${metricTab === 'points' ? 'active' : ''}`}
               >
                 Total XP
               </button>
-              <button 
-                onClick={() => setMetricTab('average')} 
+              <button
+                onClick={() => setMetricTab('average')}
                 className={`segmented-btn text-[10px] ${metricTab === 'average' ? 'active' : ''}`}
               >
                 Avg XP/Member
               </button>
-              <button 
-                onClick={() => setMetricTab('solved')} 
+              <button
+                onClick={() => setMetricTab('solved')}
                 className={`segmented-btn text-[10px] ${metricTab === 'solved' ? 'active' : ''}`}
               >
                 Solved Count
@@ -298,13 +300,18 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
                 <div className="h-[120px] animate-pulse bg-white/5 rounded-lg" />
               ) : (
                 <div className="space-y-4">
-                  {(data.clansComparative || []).map((clan, i) => {
-                    const maxVal = Math.max(...(data.clansComparative || []).map(c => 
+                  {[...(data.clansComparative || [])]
+                    .sort((a, b) => {
+                      const metricVal = (c) => metricTab === 'points' ? c.totalPoints : metricTab === 'average' ? c.averagePoints : c.solvedCount;
+                      return metricVal(b) - metricVal(a);
+                    })
+                    .map((clan, i) => {
+                    const maxVal = Math.max(...(data.clansComparative || []).map(c =>
                       metricTab === 'points' ? c.totalPoints : metricTab === 'average' ? c.averagePoints : c.solvedCount
                     ), 1);
                     const val = metricTab === 'points' ? clan.totalPoints : metricTab === 'average' ? clan.averagePoints : clan.solvedCount;
                     const pct = Math.round((val / maxVal) * 100);
-                    
+
                     const barColors = [
                       'bg-gradient-to-r from-purple-500 to-indigo-500',
                       'bg-gradient-to-r from-blue-500 to-cyan-500',
@@ -399,9 +406,9 @@ const DashboardTab = ({ setActiveTab, setInitialClanFilter }) => {
           </h2>
           <div className="relative w-full md:w-64">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary" />
-            <input 
-              type="text" 
-              placeholder="Search top performers..." 
+            <input
+              type="text"
+              placeholder="Search top performers..."
               value={memberSearch}
               onChange={(e) => setMemberSearch(e.target.value)}
               className="w-full bg-white/[0.03] border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-primary focus:outline-none focus:border-accent/40"

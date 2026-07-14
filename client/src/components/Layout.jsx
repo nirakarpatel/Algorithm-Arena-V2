@@ -29,7 +29,8 @@ useIdleTimeout(() => {
     onLogout();
   }, 20 * 60 * 1000);
 
-  const isFullWidth = location.pathname.startsWith("/challenge/") || location.pathname.startsWith("/submission/");
+  const isFullBleed = location.pathname.startsWith("/challenge/") || location.pathname.startsWith("/submission/");
+  const isFullWidth = isFullBleed || location.pathname.startsWith("/chief-panel");
 
   return (
     <div className="min-h-screen flex flex-col bg-app text-primary transition-colors duration-300">
@@ -44,7 +45,7 @@ useIdleTimeout(() => {
       {user?.usernameSet !== false && <BottomTabBar />}
 
       {/* 3. Main Content Area */}
-      <main className={`mx-auto flex-1 w-full ${isFullWidth ? "max-w-none px-0 pt-0 pb-16 md:pb-0" : "max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8"}`}>
+      <main className={`mx-auto flex-1 w-full ${isFullBleed ? "max-w-none px-0 pt-0 pb-16 md:pb-0" : isFullWidth ? "max-w-none px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8" : "max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 pb-24 md:pb-8"}`}>
         <AnimatePresence mode="wait" initial={false}>
           <MotionContainer
             key={location.pathname}
@@ -57,7 +58,7 @@ useIdleTimeout(() => {
       </main>
 
       {/* Footer */}
-      {!isFullWidth && (
+      {!isFullBleed && (
         <div className={user?.usernameSet !== false ? "pb-24 md:pb-0" : undefined}>
           <Footer />
         </div>
