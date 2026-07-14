@@ -39,16 +39,21 @@ const isSupportedType = (raw) => {
   return SUPPORTED_BASES.has(base) && depth <= 2;
 };
 
+// In-place problems (reverseString, moveZeroes, …) declare a void return; the
+// judge convention (matching LeetCode) is to print the mutated first argument.
+const isVoidReturn = (returnType) => parseType(returnType).base === "void";
+
 /**
  * Whether a Java/C++ driver can be generated for this signature. Requires at
- * least one argument and every param + the return type to be within Tier 1+2.
- * void / ListNode / TreeNode / unknown types fall back to raw (manual stdin).
+ * least one argument and every param within Tier 1+2, and a return type that
+ * is either Tier 1+2 or void (in-place: the first argument is printed).
+ * ListNode / TreeNode / unknown types fall back to raw (manual stdin).
  */
 export const isDrivableSignature = (language, params, returnType) => {
   if (language !== "java" && language !== "cpp") return false;
   if (!Array.isArray(params) || params.length === 0) return false;
   if (!params.every((p) => isSupportedType(p?.type))) return false;
-  return isSupportedType(returnType);
+  return isSupportedType(returnType) || isVoidReturn(returnType);
 };
 
 // --- C++ codegen helpers ----------------------------------------------------
@@ -240,7 +245,13 @@ const buildJavaDriver = (code, functionName) => {
             Object[] callArgs = new Object[parsed.size()];
             for (int i = 0; i < parsed.size(); i++) callArgs[i] = convert(parsed.get(i), ptypes[i]);
             Object result = target.invoke(sol, callArgs);
-            System.out.println(toJson(result));
+            // In-place (void) methods: print the mutated first argument, matching
+            // the LeetCode judge convention for problems like reverseString.
+            if (target.getReturnType() == void.class) {
+                System.out.println(toJson(callArgs.length > 0 ? callArgs[0] : null));
+            } else {
+                System.out.println(toJson(result));
+            }
         } catch (Throwable e) {
             Throwable cause = (e instanceof InvocationTargetException && e.getCause() != null) ? e.getCause() : e;
             cause.printStackTrace();
@@ -253,7 +264,7 @@ const buildJavaDriver = (code, functionName) => {
   return `${imports}${code}\n\n// --- DRIVER CODE ---\n${main}`;
 };
 
-const buildCppDriver = (code, functionName, params) => {
+const buildCppDriver = (code, functionName, params, returnType) => {
   const descriptors = params.map((p) => parseType(p.type));
   const argDecls = descriptors
     .map(
@@ -357,8 +368,14 @@ int main() {
         }
 ${argDecls}
         Solution _sol;
-        auto _result = _sol.${functionName}(${callArgs});
-        cout << toJson(_result) << "\\n";
+${
+  isVoidReturn(returnType)
+    ? `        // In-place (void) method: print the mutated first argument.
+        _sol.${functionName}(${callArgs});
+        cout << toJson(arg0) << "\\n";`
+    : `        auto _result = _sol.${functionName}(${callArgs});
+        cout << toJson(_result) << "\\n";`
+}
     } catch (const exception& e) {
         cerr << e.what() << "\\n";
         return 1;
@@ -370,6 +387,9 @@ ${argDecls}
 
 export const wrapWithDriver = (code, language, functionName, params, returnType) => {
   if (!functionName) return code;
+
+  // In-place (void) problems: the driver prints the mutated first argument.
+  const voidReturn = isVoidReturn(returnType);
 
   if (language === "python") {
     return `from typing import *
@@ -398,7 +418,10 @@ def _run_driver():
             fn = globals()[${JSON.stringify(functionName)}]
 
         result = fn(*args)
-        print(json.dumps(result))
+        if ${voidReturn ? "True" : "False"} and args:
+            print(json.dumps(args[0]))
+        else:
+            print(json.dumps(result))
     except Exception as e:
         import traceback
         traceback.print_exc(file=sys.stderr)
@@ -421,7 +444,8 @@ if __name__ == "__main__":
     const args = lines.map(l => JSON.parse(l));
     const fn = eval(${JSON.stringify(functionName)});
     const result = fn(...args);
-    console.log(JSON.stringify(result === undefined ? null : result));
+    const out = ${voidReturn ? "(args.length > 0 ? args[0] : null)" : "(result === undefined ? null : result)"};
+    console.log(JSON.stringify(out));
   } catch (err) {
     console.error(err.stack || err);
     process.exit(1);
@@ -437,7 +461,7 @@ if __name__ == "__main__":
   }
 
   if (language === "cpp" && isDrivableSignature(language, params, returnType)) {
-    return buildCppDriver(code, functionName, params);
+    return buildCppDriver(code, functionName, params, returnType);
   }
 
   return code;
