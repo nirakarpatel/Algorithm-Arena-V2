@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Clan = require('./Clan.model');
 const User = require('../users/User.model');
 const Submission = require('../submissions/Submission.model');
+const Challenge = require('../challenges/Challenge.model');
 const ChatMessage = require('../chat/ChatMessage.model');
 const { sendSuccess } = require('../../../utils/response');
 const { escapeHtml } = require('../../../utils/escapeHtml');
@@ -10,6 +11,7 @@ const {
   reconcileChiefRoleForUser,
   toIdString,
 } = require('./clanScope.service');
+const { computeSetAnalytics, deriveDisplayStatus } = require('./setAnalytics.service');
 
 const withSession = (query, session) => {
   if (!session) return query;
@@ -156,6 +158,105 @@ const getMyClan = async (req, res, next) => {
     }
 
     return sendSuccess(res, { data: clan });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// GET /api/clans/mine/set-analytics — per-question-set completion for the caller's clan
+const getMySetAnalytics = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Resolve the caller's clan (chief or member), mirroring getMyClan.
+    const clan = await Clan.findOne({
+      $or: [{ chief: userId }, { members: userId }]
+    })
+      .select('_id chief members')
+      .lean();
+
+    if (!clan) {
+      return res.status(404).json({ success: false, message: 'You are not assigned to any clan' });
+    }
+
+    // Last 4 question sets, newest first.
+    const sets = await mongoose.model('QuestionSet')
+      .find({})
+      .sort({ weekNumber: -1, deadline: -1 })
+      .limit(4)
+      .select('_id title weekNumber deadline status')
+      .lean();
+
+    const setIds = sets.map(s => s._id);
+
+    // Challenges in those sets → challenge→set map, per-set totals, and ordered lists.
+    const challenges = await Challenge.find({ questionSetId: { $in: setIds } })
+      .select('_id questionSetId title')
+      .lean();
+
+    const challengeSetMap = {};
+    const setTotals = {};
+    const challengesBySet = {};
+    for (const s of sets) {
+      setTotals[s._id.toString()] = 0;
+      challengesBySet[s._id.toString()] = [];
+    }
+    for (const ch of challenges) {
+      const sid = ch.questionSetId?.toString();
+      if (!sid || !(sid in setTotals)) continue;
+      challengeSetMap[ch._id.toString()] = sid;
+      setTotals[sid] += 1;
+      challengesBySet[sid].push({ _id: ch._id, title: ch.title });
+    }
+
+    // Non-chief member ids.
+    const chiefId = clan.chief?.toString();
+    const memberIds = (clan.members || [])
+      .map(m => m.toString())
+      .filter(id => id !== chiefId);
+
+    // Per (member, challenge) derived status across the tracked challenges.
+    const challengeObjectIds = Object.keys(challengeSetMap).map(id => new mongoose.Types.ObjectId(id));
+    let statusPairs = [];
+    if (memberIds.length > 0 && challengeObjectIds.length > 0) {
+      const rows = await Submission.aggregate([
+        {
+          $match: {
+            userId: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) },
+            challengeId: { $in: challengeObjectIds }
+          }
+        },
+        { $group: { _id: { userId: '$userId', challengeId: '$challengeId' }, statuses: { $addToSet: '$status' } } }
+      ]);
+      statusPairs = rows
+        .map(r => {
+          const status = deriveDisplayStatus(r.statuses);
+          if (!status) return null;
+          const challengeId = r._id.challengeId.toString();
+          return { userId: r._id.userId.toString(), challengeId, setId: challengeSetMap[challengeId], status };
+        })
+        .filter(Boolean);
+    }
+
+    const perSet = computeSetAnalytics({ memberIds, sets, setTotals, challengesBySet, statusPairs });
+
+    // Closest active set = Published & not past deadline, nearest deadline.
+    const now = new Date();
+    const activeSets = sets
+      .filter(s => s.status === 'Published' && new Date(s.deadline) > now)
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+    const closestActiveSetId = activeSets.length > 0 ? activeSets[0]._id.toString() : null;
+
+    const setsOut = sets.map(s => ({
+      _id: s._id,
+      title: s.title,
+      weekNumber: s.weekNumber,
+      deadline: s.deadline,
+      challengeCount: setTotals[s._id.toString()] || 0,
+      isActive: s.status === 'Published' && new Date(s.deadline) > now
+    }));
+
+    return sendSuccess(res, { data: { sets: setsOut, closestActiveSetId, perSet } });
   } catch (err) {
     return next(err);
   }
@@ -1226,6 +1327,7 @@ module.exports = {
   getClans,
   getClan,
   getMyClan,
+  getMySetAnalytics,
   getClanLeaderboard,
   createClan,
   updateClan,

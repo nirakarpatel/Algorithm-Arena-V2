@@ -676,4 +676,3 @@ const Clans = () => {
 };
 
 export default Clans;
-

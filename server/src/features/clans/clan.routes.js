@@ -6,6 +6,7 @@ const {
   getClans,
   getClan,
   getMyClan,
+  getMySetAnalytics,
   getClanLeaderboard,
   createClan,
   updateClan,
@@ -40,6 +41,7 @@ const {
 router.get('/', protect, getClans);
 router.get('/leaderboard', protect, validate(clanLeaderboardQuerySchema), getClanLeaderboard);
 router.get('/mine', protect, getMyClan); // MUST be before /:id
+router.get('/mine/set-analytics', protect, getMySetAnalytics); // MUST be before /:id
 router.get('/:id', protect, validate(clanIdParamsSchema), getClan);
 
 // User actions

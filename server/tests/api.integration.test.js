@@ -964,6 +964,109 @@ test('getAdminDashboardSummary calculates live completions and avgCompletion', a
   assert.equal(avgCompletion, 10);
 });
 
+test('getMySetAnalytics returns per-set completion, excludes the chief, and picks the closest active set', async () => {
+  const Challenge = require('../src/features/challenges/Challenge.model.js');
+  const QuestionSet = require('../src/features/challenges/QuestionSet.model.js');
+
+  const admin = await registerUser({ username: 'admin_setan', email: 'admin_setan@example.com' });
+  await User.findByIdAndUpdate(admin.id, { role: 'admin' });
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'admin_setan@example.com',
+    password: 'strong-password',
+  });
+  const adminToken = adminLogin.body.data.token;
+
+  const clanRes = await request(app)
+    .post('/api/clans')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({ name: 'Set Analytics Clan', tag: 'SAC' });
+  assert.equal(clanRes.status, 201);
+  const clanId = clanRes.body.data._id;
+
+  const chief = await registerUser({ username: 'sac_chief', email: 'sac_chief@example.com' });
+  const memberA = await registerUser({ username: 'sac_member_a', email: 'sac_member_a@example.com' });
+  const memberB = await registerUser({ username: 'sac_member_b', email: 'sac_member_b@example.com' });
+
+  for (const u of [chief, memberA, memberB]) {
+    assert.equal(
+      (await request(app)
+        .post(`/api/clans/${clanId}/members`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ userId: u.id })).status,
+      200
+    );
+  }
+  assert.equal(
+    (await request(app)
+      .put(`/api/clans/${clanId}/chief`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ userId: chief.id })).status,
+    200
+  );
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const setNear = await QuestionSet.create({
+    title: 'Week 2 Set', weekNumber: 2, deadline: new Date(Date.now() + 2 * dayMs), status: 'Published',
+  });
+  const setFar = await QuestionSet.create({
+    title: 'Week 1 Set', weekNumber: 1, deadline: new Date(Date.now() + 10 * dayMs), status: 'Published',
+  });
+
+  // setNear: 2 challenges; setFar: 1 challenge.
+  const nearC1 = await Challenge.create({ title: 'N1', description: 'x', category: 'Logic', questionSetId: setNear._id });
+  const nearC2 = await Challenge.create({ title: 'N2', description: 'x', category: 'Logic', questionSetId: setNear._id });
+  await Challenge.create({ title: 'F1', description: 'x', category: 'Logic', questionSetId: setFar._id });
+
+  // memberA solves both near challenges (2/2), memberB solves one (1/2),
+  // chief solves one (must be excluded from analytics).
+  const submit = (userId, challengeId, status) => Submission.create({
+    userId, challengeId, code: '// solution', language: 'javascript', status, submittedAt: new Date(),
+  });
+  await submit(memberA.id, nearC1._id, 'Accepted');
+  await submit(memberA.id, nearC2._id, 'Accepted');
+  await submit(memberB.id, nearC1._id, 'Accepted');
+  // memberB on nearC2: rejected then a newer pending resubmission → precedence yields 'pending'.
+  await submit(memberB.id, nearC2._id, 'Rejected');
+  await submit(memberB.id, nearC2._id, 'Pending');
+  await submit(chief.id, nearC1._id, 'Accepted');
+
+  const res = await request(app)
+    .get('/api/clans/mine/set-analytics')
+    .set('Authorization', `Bearer ${chief.token}`);
+
+  assert.equal(res.status, 200);
+  const { sets, closestActiveSetId, perSet } = res.body.data;
+
+  // Sets are newest-first by weekNumber; closest active = nearest deadline.
+  assert.equal(closestActiveSetId, setNear._id.toString());
+  const nearOut = sets.find(s => s._id === setNear._id.toString());
+  assert.equal(nearOut.challengeCount, 2);
+  assert.equal(nearOut.isActive, true);
+
+  const near = perSet[setNear._id.toString()];
+  // 2 non-chief members, totalSolved = 2 + 1 = 3, possible = 2*2 = 4 => 75%.
+  assert.equal(near.clanCompletionPct, 75);
+  assert.equal(near.members[memberA.id].solved, 2);
+  assert.equal(near.members[memberA.id].total, 2);
+  assert.equal(near.members[memberB.id].solved, 1);
+  assert.equal(near.members[memberB.id].total, 2);
+  // Chief excluded from the member map and the aggregate.
+  assert.equal(near.members[chief.id], undefined);
+
+  // Per-question statuses (for the hover tooltip).
+  assert.equal(near.challenges.length, 2);
+  assert.ok(near.challenges.some(c => c.title === 'N1'));
+  assert.equal(near.members[memberA.id].statuses[nearC1._id.toString()], 'accepted');
+  assert.equal(near.members[memberB.id].statuses[nearC1._id.toString()], 'accepted');
+  // Rejected + newer Pending on the same challenge resolves to 'pending'.
+  assert.equal(near.members[memberB.id].statuses[nearC2._id.toString()], 'pending');
+  // memberA never touched nearC2? They accepted it — so it's accepted; unsolved would be absent.
+  assert.equal(near.members[memberA.id].statuses[nearC2._id.toString()], 'accepted');
+
+  // setFar has no solves.
+  assert.equal(perSet[setFar._id.toString()].clanCompletionPct, 0);
+});
+
 test('getClanLeaderboard window=all aggregates points and solved problems correctly using aggregation pipeline', async () => {
   const admin = await registerUser({ username: 'admin_leaderboard_test', email: 'admin_leaderboard@example.com' });
   await User.findByIdAndUpdate(admin.id, { role: 'admin' });

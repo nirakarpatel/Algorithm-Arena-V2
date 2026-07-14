@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiActivity, FiCheck, FiX, FiAward, FiAlertTriangle, FiFileText, FiShield, FiRefreshCw } from 'react-icons/fi';
+import { FiUsers, FiActivity, FiCheck, FiX, FiAward, FiAlertTriangle, FiFileText, FiShield, FiRefreshCw, FiTrendingUp } from 'react-icons/fi';
 import BaseCard from '../../components/BaseCard';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
@@ -47,6 +47,8 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [warningModal, setWarningModal] = useState({ open: false, user: null, message: '' });
+  const [selectedSetId, setSelectedSetId] = useState(null);
+  const [hoveredMember, setHoveredMember] = useState(null); // { memberId, name, x, y }
   const isArchived = isClanArchived(clan);
   const canManageClan = canManageOwnClan(user, clan);
   const canArchive = canArchiveClan(user, clan);
@@ -103,22 +105,74 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
     }
   });
 
+  const pendingSubmissionsQuery = useQuery({
+    queryKey: ['chief-submissions', clan?._id, 'Pending'],
+    queryFn: async () => {
+      const res = await api.get('/api/submissions?page=1&limit=50&status=Pending');
+      const allSubs = res.data.data || [];
+      // Filter to only submissions from clan members
+      return allSubs.filter(sub =>
+        clan.members.some(m => {
+          const memberId = typeof m === 'object' ? m._id : m;
+          const subUserId = typeof sub.userId === 'object' ? sub.userId._id : sub.userId;
+          return memberId?.toString() === subUserId?.toString();
+        })
+      );
+    },
+    enabled: !!clan
+  });
+
+  const setAnalyticsQuery = useQuery({
+    queryKey: ['chief-set-analytics', clan?._id],
+    queryFn: async () => {
+      const res = await api.get('/api/clans/mine/set-analytics');
+      return res.data.data;
+    },
+    enabled: !!clan
+  });
+
   if (!clan) return (
     <div className="flex items-center justify-center py-20">
       <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
     </div>
   );
 
-  const members = clan.members || [];
+  const chiefId = clan.chief?._id?.toString() ?? clan.chief?.toString();
+  const members = (clan.members || []).filter(m => m._id?.toString() !== chiefId);
   const activeCount = members.filter(m => m.status !== 'Warned' && m.status !== 'Inactive').length;
   const warnedCount = members.filter(m => m.status === 'Warned').length;
-  const pendingReviews = clan.requests?.length ?? 0;
+  const pendingReviews = pendingSubmissionsQuery.data?.length ?? 0;
 
-  // Compute real completion rate: cap each member's contribution at TARGET_PROBLEMS
-  const TARGET_PROBLEMS = 5;
-  const totalSolved = members.reduce((sum, m) => sum + Math.min(m.weeklySolved || 0, TARGET_PROBLEMS), 0);
-  const totalPossible = members.length * TARGET_PROBLEMS;
-  const completionRate = totalPossible > 0 ? Math.round((totalSolved / totalPossible) * 100) : 0;
+  // --- Per-question-set analytics ---
+  const analytics = setAnalyticsQuery.data;
+  const sets = analytics?.sets ?? [];
+  const perSet = analytics?.perSet ?? {};
+  const closestActiveSetId = analytics?.closestActiveSetId ?? null;
+
+  // Selected set for the member list / deltas (falls back to closest active, else newest).
+  const effectiveSetId =
+    (selectedSetId && sets.some(s => s._id === selectedSetId) && selectedSetId) ||
+    closestActiveSetId ||
+    sets[0]?._id ||
+    null;
+  const selectedIdx = sets.findIndex(s => s._id === effectiveSetId);
+  const selectedSet = selectedIdx >= 0 ? sets[selectedIdx] : null;
+  // sets are newest-first, so the previous set is the next index.
+  const previousSet = selectedIdx >= 0 && selectedIdx < sets.length - 1 ? sets[selectedIdx + 1] : null;
+  const selectedMembers = effectiveSetId ? perSet[effectiveSetId]?.members ?? {} : {};
+  const previousMembers = previousSet ? perSet[previousSet._id]?.members ?? {} : {};
+  const selectedChallenges = effectiveSetId ? perSet[effectiveSetId]?.challenges ?? [] : [];
+
+  // Ring shows the closest active set's clan completion.
+  const closestSet = closestActiveSetId ? sets.find(s => s._id === closestActiveSetId) : null;
+  const completionRate = closestActiveSetId ? (perSet[closestActiveSetId]?.clanCompletionPct ?? 0) : 0;
+
+  // Clan solve-rate trend across the sets, chronological (oldest → newest).
+  const clanTrend = [...sets].reverse().map(s => ({
+    _id: s._id,
+    label: `W${s.weekNumber ?? '?'}`,
+    pct: perSet[s._id]?.clanCompletionPct ?? 0,
+  }));
 
   const circleRadius = 76;
   const circleCircumference = 2 * Math.PI * circleRadius;
@@ -151,7 +205,10 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
         <div className="space-y-6">
           <BaseCard className="p-6 flex flex-col items-center justify-center relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl group-hover:bg-accent/20 transition-colors" />
-            <h2 className="text-xs font-black text-secondary uppercase tracking-[0.2em] self-start mb-6 w-full">Clan Weekly Completion</h2>
+            <h2 className="text-xs font-black text-secondary uppercase tracking-[0.2em] self-start mb-1 w-full">Closest Set Completion</h2>
+            <p className="text-[10px] text-tertiary self-start mb-5 w-full truncate" title={closestSet?.title || ''}>
+              {closestSet ? closestSet.title : 'No active set'}
+            </p>
 
             <div className="relative flex items-center justify-center w-48 h-48">
               <svg className="transform -rotate-90 w-48 h-48">
@@ -183,9 +240,9 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
               </svg>
               <div className="absolute flex flex-col items-center justify-center">
                 <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-accent to-cyan-400 font-h1">
-                  {completionRate}%
+                  {closestActiveSetId ? `${completionRate}%` : '—'}
                 </span>
-                <span className="text-[9px] text-tertiary uppercase font-black tracking-widest mt-1">Average</span>
+                <span className="text-[9px] text-tertiary uppercase font-black tracking-widest mt-1">Clan Avg</span>
               </div>
             </div>
 
@@ -239,20 +296,51 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
 
         {/* Right Col: Member Progress List */}
         <BaseCard className="p-6 xl:col-span-2 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
               <FiActivity className="text-accent" /> Member Progress Overview
             </h2>
-            <button className="text-xs text-accent hover:text-accent-light transition-colors font-bold uppercase tracking-widest">View All</button>
           </div>
 
+          {/* Set selector */}
+          {sets.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-4">
+              {sets.map((s) => {
+                const isSelected = s._id === effectiveSetId;
+                return (
+                  <button
+                    key={s._id}
+                    onClick={() => setSelectedSetId(s._id)}
+                    title={s.title}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
+                      isSelected
+                        ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                        : 'bg-white/[0.02] text-secondary border-white/5 hover:text-primary hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    W{s.weekNumber ?? '?'}{s.isActive ? '' : ' ·'}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {members.slice(0, 6).map((member) => {
+            {setAnalyticsQuery.isLoading && (
+              <p className="text-tertiary text-sm py-4">Loading set analytics…</p>
+            )}
+            {!setAnalyticsQuery.isLoading && sets.length === 0 && (
+              <p className="text-tertiary text-sm py-4">No question sets published yet.</p>
+            )}
+            {sets.length > 0 && members.map((member) => {
               const { text: timeText, isOnline } = getRelativeTime(member.lastLoginDate || member.createdAt);
               const isWarned = member.status === 'Warned';
-              const solved = Math.min(member.weeklySolved || 0, TARGET_PROBLEMS);
-              const total = TARGET_PROBLEMS;
+              const setData = selectedMembers[member._id];
+              const solved = setData?.solved ?? 0;
+              const total = setData?.total ?? (selectedSet?.challengeCount ?? 0);
               const progressPct = total > 0 ? Math.min(100, (solved / total) * 100) : 0;
+              const prevData = previousMembers[member._id];
+              const delta = previousSet && prevData ? solved - prevData.solved : null;
               const canWarnMember = canIssueWarning(user, member, clan);
 
               const displayName = member.name
@@ -278,15 +366,30 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                       <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0f1115] ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-primary truncate max-w-[180px] select-none" title={displayName}>{displayName}</p>
+                      <p
+                        className="text-sm font-bold text-primary truncate max-w-[180px] select-none cursor-help hover:text-accent transition-colors"
+                        onMouseEnter={(e) => setHoveredMember({ memberId: member._id, name: displayName, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHoveredMember((h) => (h && h.memberId === member._id ? { ...h, x: e.clientX, y: e.clientY } : h))}
+                        onMouseLeave={() => setHoveredMember((h) => (h && h.memberId === member._id ? null : h))}
+                      >
+                        {displayName}
+                      </p>
                       <p className="text-[10px] uppercase font-bold text-tertiary footer-page">Active {timeText}</p>
                     </div>
                   </div>
 
                   <div className="flex-1 px-4 hidden md:block">
-                    <div className="flex justify-between text-[10px] font-bold text-secondary mb-1 select-none">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-secondary mb-1 select-none">
                       <span>Set Progress</span>
-                      <span>{solved}/{total}</span>
+                      <span className="flex items-center gap-1.5">
+                        {delta != null && delta !== 0 && (
+                          <span className={delta > 0 ? 'text-green-400' : 'text-rose-400'}>
+                            {delta > 0 ? `▲ +${delta}` : `▼ ${delta}`}
+                          </span>
+                        )}
+                        {delta === 0 && <span className="text-tertiary">—</span>}
+                        <span>{solved}/{total}</span>
+                      </span>
                     </div>
                     <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden">
                       <motion.div
@@ -301,17 +404,15 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
                       <p className="text-xs font-black text-primary">{member.codingLevel || 'Beginner'}</p>
                       <p className="text-[10px] text-yellow-400 flex items-center justify-end gap-1"><FiAward/> {(member.points || 0)} XP</p>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (!canWarnMember) return;
-                        setWarningModal({ open: true, user: member, message: '' });
-                      }}
-                      disabled={!canWarnMember}
-                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                      title="Issue Warning"
-                    >
-                      <FiAlertTriangle size={14} />
-                    </button>
+                    {solved === 0 && canWarnMember && (
+                      <button
+                        onClick={() => setWarningModal({ open: true, user: member, message: '' })}
+                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 transition-colors text-xs font-bold flex items-center gap-1"
+                        title="Warn — no submissions this set"
+                      >
+                        <FiAlertTriangle size={12} /> Warn
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -319,6 +420,36 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
           </div>
         </BaseCard>
       </div>
+
+      {/* Clan Solve-Rate Trend */}
+      <BaseCard className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-sm font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
+            <FiTrendingUp className="text-accent" /> Clan Solve Rate by Set
+          </h2>
+          <span className="text-[10px] text-tertiary uppercase font-bold tracking-widest">Chief excluded</span>
+        </div>
+        {clanTrend.length === 0 ? (
+          <p className="text-tertiary text-sm py-4">No question sets to chart yet.</p>
+        ) : (
+          <div className="h-52 flex items-end justify-around gap-4">
+            {clanTrend.map((t) => (
+              <div key={t._id} className="flex-1 flex flex-col items-center h-full">
+                <span className="text-xs font-black text-primary mb-1">{t.pct}%</span>
+                <div className="flex-1 w-full flex items-end justify-center min-h-0">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${t.pct}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="w-full max-w-[56px] bg-gradient-to-t from-accent to-cyan-400 rounded-t-lg min-h-[2px]"
+                  />
+                </div>
+                <span className="text-[10px] text-tertiary font-bold mt-2">{t.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </BaseCard>
 
       {/* Join Requests */}
       <BaseCard className="p-6 space-y-4">
@@ -389,6 +520,45 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Per-question status tooltip (hover a member name) */}
+      {hoveredMember && selectedChallenges.length > 0 && (() => {
+        const statuses = selectedMembers[hoveredMember.memberId]?.statuses ?? {};
+        const dotFor = (st) =>
+          st === 'accepted' ? 'bg-green-500'
+          : st === 'pending' ? 'bg-yellow-400'
+          : st === 'rejected' ? 'bg-red-500'
+          : 'bg-gray-500/40';
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+        const left = Math.min(hoveredMember.x + 16, vw - 300);
+        const top = Math.min(hoveredMember.y + 16, Math.max(16, vh - 120 - selectedChallenges.length * 22));
+        return (
+          <div
+            style={{ position: 'fixed', left, top, zIndex: 60 }}
+            className="pointer-events-none w-72 p-3 rounded-xl bg-[#0f1115] border border-white/10 shadow-2xl"
+          >
+            <p className="text-[11px] font-black text-primary mb-2 truncate">
+              {hoveredMember.name}
+              <span className="text-tertiary font-bold"> · {selectedSet?.title}</span>
+            </p>
+            <ul className="space-y-1.5">
+              {selectedChallenges.map((ch) => (
+                <li key={ch._id} className="flex items-center gap-2 text-[11px]">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${dotFor(statuses[ch._id])}`} />
+                  <span className="text-secondary truncate">{ch.title}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-white/5 text-[9px] text-tertiary font-bold">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" />Solved</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-400" />Pending</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />Rejected</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-500/40" />Unsolved</span>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

@@ -294,13 +294,13 @@ const MemberHoverCard = ({ userId, username, children, className = "" }) => {
     <>
       <span
         ref={triggerRef}
-        className={`relative inline-block cursor-pointer hover:text-accent transition-colors ${className}`}
+        className={`group/mhc relative inline-block cursor-pointer hover:text-accent transition-colors ${className}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
       >
         {children}
-        <span className="absolute left-0 bottom-0 w-0 h-[1px] bg-accent transition-all duration-300 group-hover:w-full opacity-0 group-hover:opacity-100" />
+        <span className="absolute left-0 bottom-0 w-0 h-[1px] bg-accent transition-all duration-300 group-hover/mhc:w-full opacity-0 group-hover/mhc:opacity-100" />
       </span>
 
       {createPortal(
