@@ -1093,7 +1093,7 @@ const Dashboard = () => {
                     ? "bg-yellow-500/15 border-yellow-500/40 text-yellow-400"
                     : v === "Hard"
                       ? "bg-red-500/15 border-red-500/40 text-red-400"
-                      : "bg-accent/15 dark:border-white/40 text-accent"
+                      : "bg-accent/15 border-accent/40 text-accent"
                 : "bg-white/[0.03] border-black/[0.12] dark:border-white/[0.07] text-tertiary hover:text-secondary hover:border-white/20";
               return (
                 <button

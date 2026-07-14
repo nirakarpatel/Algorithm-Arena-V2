@@ -174,7 +174,7 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                 <FiUsers className="text-accent" />
                 Roster
                 <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black">{members.length}</span>
-                <div className="ml-auto flex bg-black/[0.04] dark:bg-white/5 border border-black/[0.08] dark:border-white/20 rounded-xl p-1">
+                <div className="ml-auto flex bg-black/[0.04] dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.08] rounded-xl p-1">
                   <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-accent text-white shadow-sm' : 'text-secondary hover:text-primary'}`}><FiGrid size={14}/></button>
                   <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-accent text-white shadow-sm' : 'text-secondary hover:text-primary'}`}><FiList size={14}/></button>
                 </div>
@@ -213,7 +213,7 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                             {isMemberChief ? (
                               <span className="text-[9px] bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 px-1.5 py-0.5 rounded font-bold shrink-0">CHIEF</span>
                             ) : (
-                              <span className="text-[9px] bg-white/5 border border-white/10 text-secondary px-1.5 py-0.5 rounded font-medium shrink-0">MEMBER</span>
+                              <span className="text-[9px] bg-black/[0.03] dark:bg-white/5 border border-black/[0.08] dark:border-white/[0.08] text-secondary px-1.5 py-0.5 rounded font-medium shrink-0">MEMBER</span>
                             )}
                           </div>
                           {isMemberChief && (
@@ -226,7 +226,7 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
 
                       <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto sm:max-w-[60%] shrink-0">
                         <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 w-full">
-                          <span className="text-[10px] text-accent/90 font-bold flex items-center gap-1 bg-accent/10 border border-accent/20 px-2 py-1 rounded-lg">
+                          <span className="text-[10px] text-accent/90 font-bold flex items-center gap-1 bg-accent/10 border dark:border-white/20 px-2 py-1 rounded-lg">
                             <FiStar size={10} /> {(member.points || 0).toLocaleString()} XP
                           </span>
                           <span className="text-[10px] text-orange-400 font-bold flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-lg" title={`${member.streak || 0} Day Streak`}>

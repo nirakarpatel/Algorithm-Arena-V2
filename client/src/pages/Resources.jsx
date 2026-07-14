@@ -63,7 +63,7 @@ const Resources = () => {
               key={folder}
               onClick={() => setActiveFolder(folder === 'All' ? '' : folder)}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all whitespace-nowrap border ${(activeFolder === folder || (folder === 'All' && !activeFolder))
-                  ? 'bg-accent/10 text-accent dark:border-white/20 shadow-sm'
+                  ? 'bg-accent/10 text-accent dark:border-white/25 shadow-sm'
                   : 'bg-black/[0.02] dark:bg-white/5 text-secondary border-transparent hover:bg-black/[0.04] dark:hover:bg-white/10'
                 }`}
             >
@@ -142,7 +142,7 @@ const Resources = () => {
                   href={resolveFileUrl(res.url)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-accent/10 hover:bg-accent/20 text-accent rounded-xl text-xs font-bold transition-all duration-200 border dark:border-white/15 shadow-sm active:scale-[0.98]"
+                  className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 bg-accent/10 hover:bg-accent/20 text-accent rounded-xl text-xs font-bold transition-all duration-200 border dark:border-white/10 border-black/20 shadow-sm active:scale-[0.98]"
                 >
                   <FiDownload size={13} /> Access File
                 </a>

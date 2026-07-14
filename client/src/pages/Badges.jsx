@@ -316,7 +316,7 @@ const Badges = () => {
         <div className="rounded-2xl border border-black/[0.08] dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.03] backdrop-blur-sm p-5">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex items-center gap-4 flex-1">
-              <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-black/[0.08] dark:border-white/20 flex items-center justify-center shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
                 <FiAward size={22} className="text-accent" />
               </div>
               <div>

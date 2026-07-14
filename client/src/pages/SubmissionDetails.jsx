@@ -327,7 +327,7 @@ const SubmissionDetails = () => {
               </div>
               <Link
                 to={`/challenge/${submission.challengeId?._id || ''}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-accent bg-accent/5 border border-black/20 dark:border-white/20 hover:bg-accent/10 transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-accent bg-accent/5 border border-accent/20 hover:bg-accent/10 transition-colors"
               >
                 View Challenge <FiExternalLink size={12} />
               </Link>

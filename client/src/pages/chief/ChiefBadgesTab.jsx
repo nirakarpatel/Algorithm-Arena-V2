@@ -211,7 +211,7 @@ const ChiefBadgesTab = ({ clan }) => {
       {/* Member list */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <div className="w-7 h-7 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+          <div className="w-7 h-7 border-2 rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-2">
@@ -220,11 +220,11 @@ const ChiefBadgesTab = ({ clan }) => {
             return (
               <div
                 key={member._id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-white/50 border border-gray-200 hover:bg-white/80 dark:bg-white/[0.03] dark:border-white/8 dark:hover:bg-white/[0.05] transition-colors shadow-sm dark:shadow-none"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-white/50 border border-gray-200 hover:bg-white/80 dark:bg-white/[0.03] dark:border-white/10 dark:hover:bg-white/[0.05] transition-colors shadow-sm dark:shadow-none"
               >
                 {/* Avatar */}
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 overflow-hidden">
+                  <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center shrink-0 overflow-hidden">
                     {member.profilePicture
                       ? <img src={member.profilePicture} alt={member.username} className="w-full h-full object-cover" />
                       : <FiUser size={14} className="text-accent" />

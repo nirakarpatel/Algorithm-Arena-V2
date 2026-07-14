@@ -125,7 +125,7 @@ const Profile = () => {
       <div className="flex-1 min-w-0 space-y-4">
         <motion.div {...fd(0.1)} className="relative overflow-hidden rounded-2xl p-6 border border-black/[0.08] dark:border-white/[0.08] bg-gradient-to-br from-[var(--bg-sidebar)] to-[var(--glass-surface)] shadow-md shrink-0">
           <div className="absolute top-0 right-0 p-4 text-right z-10">
-            <div className="px-3 py-1.5 rounded-full bg-accent/20 border dark:border-white/20 flex items-center gap-2">
+            <div className="px-3 py-1.5 rounded-full bg-accent/20 border border-accent/20 flex items-center gap-2">
               <FiZap className="text-accent text-sm" />
               <span className="text-xs font-black text-primary">{profile?.stats?.totalPoints ?? profile?.totalPoints ?? 0} XP</span>
             </div>
