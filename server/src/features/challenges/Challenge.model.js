@@ -37,6 +37,7 @@ const challengeSchema = new mongoose.Schema({
   // When true, test-case comparison ignores array/element order (e.g. Group Anagrams,
   // where groups and their contents may be returned in any order).
   orderIndependent: { type: Boolean, default: false },
+  hints: [{ type: String }],
   testCases: [{
     label: { type: String },
     args: { type: mongoose.Schema.Types.Mixed },

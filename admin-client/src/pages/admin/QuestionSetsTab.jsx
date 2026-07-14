@@ -38,7 +38,7 @@ const initialQuestionState = {
   hints:[''],leetcodeSlug:'',tags:[],codeSnippets:[],solutions:[],functionName:'',params:[],returnType:'',testCases:[]
 };
 const defaultChallengeForm = {
-  title:'',description:'',link:'',difficulty:'Easy',points:100,orderIndependent:false,
+  title:'',description:'',link:'',difficulty:'Easy',points:100,orderIndependent:false,hints:[''],
   category:'Logic',tags:[],codeSnippets:[],solutions:[],functionName:'',params:[],returnType:'',testCases:[]
 };
 const prepareTestCases = (raw) => raw.filter(tc=>tc.label.trim()).map(tc=>{
@@ -377,7 +377,6 @@ const QuestionSetsTab = () => {
   const handleAddQuestion=()=>{if(form.questions.length>=5)return toast.error('Max 5');setForm(p=>({...p,questions:[...p.questions,{...initialQuestionState}]}))};
   const handleRemoveQuestion=(i)=>{if(form.questions.length===1)return;setForm(p=>({...p,questions:p.questions.filter((_,j)=>j!==i)}))};
   const updateQuestion=(i,f,v)=>{const nq=[...form.questions];nq[i][f]=v;if(f==='difficulty')nq[i].points=DIFFICULTY_POINTS[v]??nq[i].points;setForm({...form,questions:nq})};
-  const updateHint=(qi,hi,v)=>{const nq=[...form.questions];nq[qi].hints[hi]=v;setForm({...form,questions:nq})};
   const handleStartCreate=()=>{setEditingSetId(null);setForm(blankForm());setView('create')};
   const handleEditSet=(set)=>{
     setEditingSetId(set._id);
@@ -459,8 +458,8 @@ const QuestionSetsTab = () => {
     executePublish();
   };
 
-  const handleCreateChallengeSubmit=(e)=>{e.preventDefault();createChallengeMutation.mutate({...createChallengeForm,solutions:prepareSolutions(createChallengeForm.solutions),testCases:prepareTestCases(createChallengeForm.testCases)})};
-  const handleUpdateChallengeSubmit=(e)=>{e.preventDefault();if(!editingChallenge)return;updateChallengeMutation.mutate({id:editingChallenge._id,body:{title:editingChallenge.title,description:editingChallenge.description,link:editingChallenge.link||'',difficulty:editingChallenge.difficulty,points:Number(editingChallenge.points),category:editingChallenge.category,solutions:prepareSolutions(editingChallenge.solutions||[]),functionName:editingChallenge.functionName||'',params:editingChallenge.params||[],returnType:editingChallenge.returnType||'',testCases:prepareTestCases(editingChallenge.testCases||[])}})};
+  const handleCreateChallengeSubmit=(e)=>{e.preventDefault();createChallengeMutation.mutate({...createChallengeForm,hints:(createChallengeForm.hints||[]).filter(h=>h.trim()),solutions:prepareSolutions(createChallengeForm.solutions),testCases:prepareTestCases(createChallengeForm.testCases)})};
+  const handleUpdateChallengeSubmit=(e)=>{e.preventDefault();if(!editingChallenge)return;updateChallengeMutation.mutate({id:editingChallenge._id,body:{title:editingChallenge.title,description:editingChallenge.description,link:editingChallenge.link||'',difficulty:editingChallenge.difficulty,points:Number(editingChallenge.points),category:editingChallenge.category,orderIndependent:!!editingChallenge.orderIndependent,hints:(editingChallenge.hints||[]).filter(h=>h.trim()),solutions:prepareSolutions(editingChallenge.solutions||[]),functionName:editingChallenge.functionName||'',params:editingChallenge.params||[],returnType:editingChallenge.returnType||'',testCases:prepareTestCases(editingChallenge.testCases||[])}})};
 
   const renderSolutionEditor = ({ editorKey, solutions = [], onChange }) => {
     const selectedLang = solutionLangByKey[editorKey] || solutions.find((s) => s.code?.trim())?.langSlug || 'javascript';
@@ -490,6 +489,24 @@ const QuestionSetsTab = () => {
           />
         </div>
         <p className="text-[11px] text-secondary">Paste the optimal solution for the selected language. Blank languages are ignored when saved.</p>
+      </div>
+    );
+  };
+
+  const HintsEditor = ({hints,onChange}) => {
+    const list = hints && hints.length ? hints : [''];
+    return (
+      <div className="md:col-span-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="field-label text-[10px] mb-0">Hints (optional)</label>
+          <button type="button" className="text-xs text-accent hover:underline font-bold" onClick={()=>onChange([...list,''])}>+ Add Hint</button>
+        </div>
+        {list.map((hint,hi)=>(
+          <div key={hi} className="flex items-center gap-2">
+            <input className="field-input text-sm" placeholder="Hint..." value={hint} onChange={e=>{const nh=[...list];nh[hi]=e.target.value;onChange(nh)}}/>
+            {list.length>1&&<button type="button" className="text-secondary hover:text-red-400 transition-colors" onClick={()=>onChange(list.filter((_,j)=>j!==hi))}><FiTrash2 size={14}/></button>}
+          </div>
+        ))}
       </div>
     );
   };
@@ -585,7 +602,7 @@ const QuestionSetsTab = () => {
                         <div><label className="field-label text-[10px]">Tags/Category</label><input className="field-input text-sm" placeholder="e.g. Arrays, Sorting" value={q.category} onChange={e=>updateQuestion(i,'category',e.target.value)}/></div>
                         <div className="md:col-span-3 flex items-center gap-2"><input type="checkbox" id={`order-independent-${i}`} checked={!!q.orderIndependent} onChange={e=>updateQuestion(i,'orderIndependent',e.target.checked)}/><label htmlFor={`order-independent-${i}`} className="text-xs text-secondary cursor-pointer">Order doesn't matter (e.g. Group Anagrams) — ignore array/element order when checking output</label></div>
                         <div className="md:col-span-3"><label className="field-label text-[10px]">Problem Description</label><textarea required rows="3" className="field-textarea text-sm" value={q.description} onChange={e=>updateQuestion(i,'description',e.target.value)}/></div>
-                        <div className="md:col-span-3"><label className="field-label text-[10px]">Hints (optional)</label>{q.hints.map((hint,hi)=>(<input key={hi} className="field-input text-sm mb-2" placeholder="Hint..." value={hint} onChange={e=>updateHint(i,hi,e.target.value)}/>))}</div>
+                        <HintsEditor hints={q.hints} onChange={v=>updateQuestion(i,'hints',v)}/>
                         {renderSolutionEditor({ editorKey: `set-question-${i}`, solutions: q.solutions||[], onChange: v=>updateQuestion(i,'solutions',v) })}
                         <div className="md:col-span-3"><label className="field-label text-[10px]">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={q.functionName||''} onChange={e=>updateQuestion(i,'functionName',e.target.value.trim())}/><SignatureInfo functionName={q.functionName} params={q.params} returnType={q.returnType}/></div>
                         <TestCaseEditor cases={q.testCases||[]} onChange={v=>updateQuestion(i,'testCases',v)}/>
@@ -651,7 +668,8 @@ const QuestionSetsTab = () => {
             <div key={ch._id} className="border border-glass-border rounded-xl p-4 flex flex-wrap gap-3 justify-between items-start hover:border-accent/20 transition-all duration-300 bg-black/[0.01] dark:bg-white/[0.01]">
               <div><h3 className="font-semibold text-primary">{ch.title}</h3><p className="text-secondary text-sm">{ch.difficulty} - {ch.points} XP - {ch.category}</p></div>
               <div className="flex gap-2">
-                <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-accent/10 hover:text-accent transition-colors" onClick={()=>setEditingChallenge({...ch,solutions:ch.solutions||[],testCases:(ch.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args??[]),expected:cleanExpected(tc.expected)}))})}>Edit</button>
+                <button className="flex items-center gap-1.5 btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-accent/10 hover:text-accent transition-colors" onClick={()=>setPreviewQuestion(ch)}><FiEye size={13}/> Preview</button>
+                <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-accent/10 hover:text-accent transition-colors" onClick={()=>setEditingChallenge({...ch,hints:(ch.hints&&ch.hints.length)?ch.hints:[''],solutions:ch.solutions||[],testCases:(ch.testCases||[]).map(tc=>({...tc,args:JSON.stringify(tc.args??[]),expected:cleanExpected(tc.expected)}))})}>Edit</button>
                 <button className="btn-secondary py-1.5 px-4 text-xs font-bold hover:bg-red-500/10 hover:text-red-400 transition-colors" onClick={()=>setDeleteTarget(ch)}>Delete</button>
               </div>
             </div>
@@ -679,6 +697,7 @@ const QuestionSetsTab = () => {
             <div className="flex items-center gap-2"><input type="checkbox" id="create-order-independent" checked={!!createChallengeForm.orderIndependent} onChange={e=>setCreateChallengeForm(p=>({...p,orderIndependent:e.target.checked}))}/><label htmlFor="create-order-independent" className="text-xs text-secondary cursor-pointer">Order doesn't matter (e.g. Group Anagrams) — ignore array/element order when checking output</label></div>
             {createChallengeForm.tags.length>0&&(<div><label className="field-label">Topic Tags</label><div className="flex flex-wrap gap-2">{createChallengeForm.tags.map(tag=>(<span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-accent/10 text-accent border border-accent/20">{tag}<button type="button" className="ml-0.5 hover:text-red-400 transition-colors" onClick={()=>setCreateChallengeForm(p=>({...p,tags:p.tags.filter(t=>t!==tag)}))}><FiX size={12}/></button></span>))}</div></div>)}
             {createChallengeForm.codeSnippets.length>0&&(<div><label className="field-label">Starter Code ({createChallengeForm.codeSnippets.length} languages)</label><div className="flex gap-2 mb-2 flex-wrap">{createChallengeForm.codeSnippets.map(s=>(<button key={s.langSlug} type="button" className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${snippetLang===s.langSlug?'bg-accent text-white':'bg-white/5 text-secondary hover:text-primary'}`} onClick={()=>setSnippetLang(s.langSlug)}>{s.lang}</button>))}</div><pre className="bg-white/5 border border-white/10 rounded-xl p-4 text-xs overflow-x-auto max-h-48 overflow-y-auto font-mono"><code>{createChallengeForm.codeSnippets.find(s=>s.langSlug===snippetLang)?.code||'Select a language above'}</code></pre></div>)}
+            <HintsEditor hints={createChallengeForm.hints} onChange={v=>setCreateChallengeForm(p=>({...p,hints:v}))}/>
             {renderSolutionEditor({ editorKey: "create-challenge", solutions: createChallengeForm.solutions||[], onChange: v=>setCreateChallengeForm(p=>({...p,solutions:v})) })}
             <div><label className="field-label">Solution Function Name</label><input className="field-input font-mono" placeholder="e.g. twoSum" value={createChallengeForm.functionName} onChange={e=>setCreateChallengeForm(p=>({...p,functionName:e.target.value.trim()}))}/><SignatureInfo functionName={createChallengeForm.functionName} params={createChallengeForm.params} returnType={createChallengeForm.returnType}/></div>
             <TestCaseEditor cases={createChallengeForm.testCases} onChange={v=>setCreateChallengeForm(p=>({...p,testCases:v}))}/>
@@ -691,7 +710,13 @@ const QuestionSetsTab = () => {
       {editingChallenge&&(
         <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 animate-fadeIn">
           <motion.div initial={{opacity:0,scale:0.95}} animate={{opacity:1,scale:1}} className="macos-glass w-full max-w-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-glass-border pb-2"><h3 className="text-section-title font-bold text-primary">Edit Challenge</h3><button onClick={()=>setEditingChallenge(null)} className="text-tertiary hover:text-primary"><FiX size={20}/></button></div>
+            <div className="flex justify-between items-center border-b border-glass-border pb-2">
+              <h3 className="text-section-title font-bold text-primary">Edit Challenge</h3>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={()=>setPreviewQuestion(editingChallenge)} className="flex items-center gap-1.5 text-xs text-secondary hover:text-accent bg-black/5 dark:bg-white/5 hover:bg-accent/10 border border-glass-border hover:border-accent/30 px-2.5 py-1 rounded-lg transition-colors font-semibold"><FiEye size={13}/> Preview</button>
+                <button onClick={()=>setEditingChallenge(null)} className="text-tertiary hover:text-primary"><FiX size={20}/></button>
+              </div>
+            </div>
             <form onSubmit={handleUpdateChallengeSubmit} className="space-y-4">
               <div><label className="field-label text-xs">Title</label><input className="field-input text-sm" required value={editingChallenge.title} onChange={e=>setEditingChallenge(p=>({...p,title:e.target.value}))}/></div>
               <div><label className="field-label text-xs">Description</label><textarea className="field-textarea text-sm" required rows="4" value={editingChallenge.description} onChange={e=>setEditingChallenge(p=>({...p,description:e.target.value}))}/></div>
@@ -702,6 +727,7 @@ const QuestionSetsTab = () => {
                 <div><label className="field-label text-xs">Category</label><input className="field-input text-sm" required value={editingChallenge.category} onChange={e=>setEditingChallenge(p=>({...p,category:e.target.value}))}/></div>
               </div>
               <div className="flex items-center gap-2"><input type="checkbox" id="edit-order-independent" checked={!!editingChallenge.orderIndependent} onChange={e=>setEditingChallenge(p=>({...p,orderIndependent:e.target.checked}))}/><label htmlFor="edit-order-independent" className="text-xs text-secondary cursor-pointer">Order doesn't matter (e.g. Group Anagrams) — ignore array/element order when checking output</label></div>
+              <HintsEditor hints={editingChallenge.hints} onChange={v=>setEditingChallenge(p=>({...p,hints:v}))}/>
               {renderSolutionEditor({ editorKey: "edit-challenge", solutions: editingChallenge.solutions||[], onChange: v=>setEditingChallenge(p=>({...p,solutions:v})) })}
               <div><label className="field-label text-xs">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={editingChallenge.functionName||''} onChange={e=>setEditingChallenge(p=>({...p,functionName:e.target.value.trim()}))}/><SignatureInfo functionName={editingChallenge.functionName} params={editingChallenge.params} returnType={editingChallenge.returnType}/></div>
               <TestCaseEditor cases={editingChallenge.testCases||[]} onChange={v=>setEditingChallenge(p=>({...p,testCases:v}))}/>
