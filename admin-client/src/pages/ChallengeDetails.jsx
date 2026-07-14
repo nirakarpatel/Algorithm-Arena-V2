@@ -204,6 +204,22 @@ const ChallengeDetails = () => {
     }
   }, [isReviewMode, reviewQuery.data]);
 
+  const isLanguageRunnable = (langKey) => {
+    const ch = challengeQuery.data;
+    if (!ch?.functionName) return true;
+    if (langKey === "python" || langKey === "javascript") return true;
+    return isDrivableSignature(langKey, ch.params, ch.returnType);
+  };
+
+  useEffect(() => {
+    if (!challengeQuery.data || isReviewMode) return;
+    if (!isLanguageRunnable(language)) {
+      const firstRunnable = LANGUAGE_OPTIONS.find((o) => isLanguageRunnable(o.key));
+      if (firstRunnable) setLanguage(firstRunnable.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challengeQuery.data, language, isReviewMode]);
+
   const solutionEntries = useMemo(
     () => (challengeQuery.data?.solutions || []).filter((s) => s.code?.trim()),
     [challengeQuery.data],
@@ -639,11 +655,19 @@ const ChallengeDetails = () => {
                 onChange={(e) => setLanguage(e.target.value)}
                 disabled={isReviewMode}
               >
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <option key={opt.key} value={opt.key} className="bg-white dark:bg-[#1a1a24] text-black dark:text-white">
-                    {opt.label}{opt.version && ` (${opt.version})`}
-                  </option>
-                ))}
+                {LANGUAGE_OPTIONS.map((opt) => {
+                  const runnable = isLanguageRunnable(opt.key);
+                  return (
+                    <option
+                      key={opt.key}
+                      value={opt.key}
+                      disabled={!runnable}
+                      className="bg-white dark:bg-[#1a1a24] text-black dark:text-white"
+                    >
+                      {opt.label}{opt.version && ` (${opt.version})`}{!runnable && " — no runner"}
+                    </option>
+                  );
+                })}
               </select>
               {isReviewMode && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">

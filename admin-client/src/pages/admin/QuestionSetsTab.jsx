@@ -19,6 +19,7 @@ const SignatureInfo = ({ functionName, params, returnType }) => {
   const paramsStr = hasParams ? params.map(p=>`${p.name}: ${p.type}`).join(', ') : '(none)';
   const javaOk = isDrivableSignature('java', params, returnType);
   const cppOk = isDrivableSignature('cpp', params, returnType);
+  const cOk = isDrivableSignature('c', params, returnType);
   return (
     <div className="text-[11px] font-mono bg-black/5 dark:bg-white/5 rounded px-2 py-1.5 mt-1 text-secondary">
       <div>{functionName||'?'}({paramsStr}) → {returnType||'?'}</div>
@@ -26,6 +27,8 @@ const SignatureInfo = ({ functionName, params, returnType }) => {
         Java driver: <span className={javaOk?'text-green-500':'text-red-500'}>{javaOk?'supported':'not supported'}</span>
         {'  ·  '}
         C++ driver: <span className={cppOk?'text-green-500':'text-red-500'}>{cppOk?'supported':'not supported'}</span>
+        {'  ·  '}
+        C driver: <span className={cOk?'text-green-500':'text-red-500'}>{cOk?'supported':'not supported'}</span>
       </div>
     </div>
   );
