@@ -58,6 +58,7 @@ import {
   outputsMatch,
   defaultStarterByLanguage,
   computeExecStats,
+  formatExecStats,
 } from "../lib/challengeOutput";
 
 const ChallengeDetails = () => {
@@ -800,6 +801,14 @@ const ChallengeDetails = () => {
               {statusChip}
             </span>
           )}
+          {isReviewMode && reviewQuery.data && (() => {
+            const execStats = formatExecStats(reviewQuery.data.execTimeSec, reviewQuery.data.execMemoryKb);
+            return execStats ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono text-secondary bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                ⏱ {execStats.time} · 💾 {execStats.memory}
+              </span>
+            ) : null;
+          })()}
           {renderSubmitButton("hidden lg:inline-flex")}
         </div>
       </div>
