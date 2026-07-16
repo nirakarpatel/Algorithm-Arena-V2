@@ -658,6 +658,96 @@ test('submission with userFeedback validation and storage', async () => {
   assert.equal(submissionWithFeedbackRes.body.data.userFeedback, 'I had some issues with environment timeouts.');
 });
 
+test('submission execTimeSec/execMemoryKb round-trip and language=c is accepted', async () => {
+  const admin = await registerUser({ username: 'exec_admin', email: 'exec_admin@example.com' });
+  await User.findOneAndUpdate({ email: 'exec_admin@example.com' }, { role: 'admin' });
+  const adminLogin = await request(app).post('/api/auth/login').send({
+    email: 'exec_admin@example.com',
+    password: 'strong-password',
+  });
+  const adminToken = adminLogin.body.data.token;
+
+  const student = await registerUser({ username: 'exec_student', email: 'exec_student@example.com' });
+
+  const challengeRes = await request(app)
+    .post('/api/challenges')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      title: 'Exec Stats Challenge',
+      description: 'Test exec stats',
+      difficulty: 'Easy',
+      points: 100,
+      category: 'Logic',
+    });
+  assert.equal(challengeRes.status, 201);
+  const challengeId = challengeRes.body.data._id;
+
+  const challenge2Res = await request(app)
+    .post('/api/challenges')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      title: 'Exec Stats Challenge 2',
+      description: 'Test exec stats 2',
+      difficulty: 'Easy',
+      points: 100,
+      category: 'Logic',
+    });
+  assert.equal(challenge2Res.status, 201);
+  const challenge2Id = challenge2Res.body.data._id;
+
+  const challenge3Res = await request(app)
+    .post('/api/challenges')
+    .set('Authorization', `Bearer ${adminToken}`)
+    .send({
+      title: 'Exec Stats Challenge 3',
+      description: 'Test exec stats 3',
+      difficulty: 'Easy',
+      points: 100,
+      category: 'Logic',
+    });
+  assert.equal(challenge3Res.status, 201);
+  const challenge3Id = challenge3Res.body.data._id;
+
+  // language 'c' + exec stats round-trip
+  const submitRes = await request(app)
+    .post('/api/submissions')
+    .set('Authorization', `Bearer ${student.token}`)
+    .send({
+      challengeId,
+      code: 'int main(){return 0;}',
+      language: 'c',
+      execTimeSec: 0.024,
+      execMemoryKb: 15564,
+    });
+  assert.equal(submitRes.status, 201);
+  assert.equal(submitRes.body.data.language, 'c');
+  assert.equal(submitRes.body.data.execTimeSec, 0.024);
+  assert.equal(submitRes.body.data.execMemoryKb, 15564);
+
+  const fetchRes = await request(app)
+    .get(`/api/submissions/${submitRes.body.data._id}`)
+    .set('Authorization', `Bearer ${student.token}`);
+  assert.equal(fetchRes.status, 200);
+  assert.equal(fetchRes.body.data.execTimeSec, 0.024);
+  assert.equal(fetchRes.body.data.execMemoryKb, 15564);
+
+  // omitting exec stats still works (repo-link-style submission)
+  const noStatsRes = await request(app)
+    .post('/api/submissions')
+    .set('Authorization', `Bearer ${student.token}`)
+    .send({ challengeId: challenge2Id, code: 'int main(){return 1;}', language: 'c' });
+  assert.equal(noStatsRes.status, 201);
+  assert.equal(noStatsRes.body.data.execTimeSec, undefined);
+  assert.equal(noStatsRes.body.data.execMemoryKb, undefined);
+
+  // negative value rejected
+  const badRes = await request(app)
+    .post('/api/submissions')
+    .set('Authorization', `Bearer ${student.token}`)
+    .send({ challengeId: challenge3Id, code: 'int main(){return 1;}', language: 'c', execTimeSec: -1 });
+  assert.equal(badRes.status, 400);
+});
+
 test('leaderboard window=all pagination, tie-breaking, and topThree calculation works correctly', async () => {
   // Clear any existing users to prevent noise
   await User.deleteMany({});

@@ -14,6 +14,8 @@ import {
   argsToStdin,
   outputsMatch,
   displayExpected,
+  computeExecStats,
+  formatExecStats,
 } from "../../lib/challengeOutput";
 
 /**
@@ -151,7 +153,7 @@ const TestResultPanel = ({
                           <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">
                             Input
                           </p>
-                          <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded-md px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
+                          <pre className="text-xs font-mono font-light bg-black/10 dark:bg-white/10 rounded-md px-2 py-1.5 text-secondary whitespace-pre-wrap break-all">
                             {inputStr || "(empty)"}
                           </pre>
                         </div>
@@ -160,7 +162,7 @@ const TestResultPanel = ({
                             <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">
                               Expected
                             </p>
-                            <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded-md px-2 py-1.5 text-primary whitespace-pre-wrap break-all">
+                            <pre className="text-xs font-mono font-light bg-black/10 dark:bg-white/10 rounded-md px-2 py-1.5 text-secondary whitespace-pre-wrap break-all">
                               {displayExpected(tc.expected)}
                             </pre>
                           </div>
@@ -175,7 +177,7 @@ const TestResultPanel = ({
                       Custom stdin
                     </p>
                     <textarea
-                      className="w-full resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                      className="w-full resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono font-light text-secondary placeholder:text-secondary/40 focus:outline-none"
                       rows={2}
                       placeholder="Override stdin for a custom run…"
                       value={stdin}
@@ -205,7 +207,7 @@ const TestResultPanel = ({
                 </>
               ) : (
                 <textarea
-                  className="flex-1 resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                  className="flex-1 resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono font-light text-secondary placeholder:text-secondary/40 focus:outline-none"
                   placeholder="Enter stdin input here…"
                   value={stdin}
                   onChange={(e) => setStdin(e.target.value)}
@@ -221,11 +223,20 @@ const TestResultPanel = ({
                   Press Run to see output here…
                 </p>
               ) : runOutput.error ? (
-                <pre className="text-red-400 text-xs font-mono whitespace-pre-wrap">
+                <pre className="text-red-400 text-xs font-mono font-light whitespace-pre-wrap">
                   {runOutput.error}
                 </pre>
               ) : (
                 <div className="space-y-3">
+                  {(() => {
+                    const stats = computeExecStats(runOutput.cases);
+                    const formatted = stats ? formatExecStats(stats.execTimeSec, stats.execMemoryKb) : null;
+                    return formatted ? (
+                      <p className="text-[11px] font-mono font-light text-secondary bg-black/5 dark:bg-white/5 rounded-md px-2.5 py-1.5 inline-block">
+                        Max: {formatted.time} · {formatted.memory}
+                      </p>
+                    ) : null;
+                  })()}
                   {runOutput.cases.map((c, i) => {
                     const hasError = c.compile_output || c.stderr;
                     const matches =
@@ -271,7 +282,7 @@ const TestResultPanel = ({
 
                         {/* Error body */}
                         {hasError && (
-                          <pre className="text-[11px] font-mono text-red-400 whitespace-pre-wrap break-all">
+                          <pre className="text-[11px] font-mono font-light text-red-400 whitespace-pre-wrap break-all">
                             {c.compile_output || c.stderr}
                           </pre>
                         )}
@@ -284,7 +295,7 @@ const TestResultPanel = ({
                                 <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">
                                   Input (stdin)
                                 </p>
-                                <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                                <pre className="text-xs font-mono font-light bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-secondary whitespace-pre-wrap break-all">
                                   {c.stdinValue || "(empty)"}
                                 </pre>
                               </div>
@@ -293,7 +304,7 @@ const TestResultPanel = ({
                               <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">
                                 Output
                               </p>
-                              <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                              <pre className="text-xs font-mono font-light bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-secondary whitespace-pre-wrap break-all">
                                 {c.stdout || "(no output)"}
                               </pre>
                             </div>
@@ -302,13 +313,13 @@ const TestResultPanel = ({
                                 <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">
                                   Expected
                                 </p>
-                                <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                                <pre className="text-xs font-mono font-light bg-black/10 dark:bg-white/10 rounded-md px-2 py-1 text-secondary whitespace-pre-wrap break-all">
                                   {displayExpected(c.expected)}
                                 </pre>
                               </div>
                             )}
                             {c.time && (
-                              <p className="text-[10px] text-secondary font-mono">
+                              <p className="text-[10px] text-secondary font-mono font-light">
                                 {c.time}s · {c.memory} KB
                               </p>
                             )}

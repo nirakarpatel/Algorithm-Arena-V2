@@ -181,3 +181,38 @@ export const defaultStarterByLanguage = {
   cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    \n    return 0;\n}\n`,
   c: `#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    \n    return 0;\n}\n`,
 };
+
+/**
+ * Aggregates per-test-case Judge0 results (as produced by runTestCases()) into
+ * a single submission-level stat: the worst-case (max) time and memory across
+ * every test case that actually executed. Cases with a compile error, a
+ * runtime stderr, or a missing time value contribute nothing. Returns null if
+ * no case qualifies (e.g. every case errored).
+ */
+export const computeExecStats = (results) => {
+  const usable = (results || []).filter(
+    (c) => !c?.compile_output && !c?.stderr && c?.time != null && c?.memory != null,
+  );
+  if (usable.length === 0) return null;
+  return {
+    execTimeSec: Math.max(...usable.map((c) => Number(c.time))),
+    execMemoryKb: Math.max(...usable.map((c) => Number(c.memory))),
+  };
+};
+
+/**
+ * Formats stored (Judge0-native-unit) exec stats into human-readable strings.
+ * Time: milliseconds under 1s, otherwise seconds to 2 decimals.
+ * Memory: kilobytes under 1024, otherwise megabytes to 1 decimal.
+ * Returns null if either value is missing (nothing to show).
+ */
+export const formatExecStats = (execTimeSec, execMemoryKb) => {
+  if (execTimeSec == null || execMemoryKb == null) return null;
+  const time = execTimeSec < 1
+    ? `${Math.round(execTimeSec * 1000)} ms`
+    : `${execTimeSec.toFixed(2)} s`;
+  const memory = execMemoryKb < 1024
+    ? `${Math.round(execMemoryKb)} KB`
+    : `${(execMemoryKb / 1024).toFixed(1)} MB`;
+  return { time, memory };
+};

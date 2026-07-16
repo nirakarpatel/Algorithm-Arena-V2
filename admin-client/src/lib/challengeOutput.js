@@ -15,4 +15,6 @@ export {
   b64Encode,
   b64Decode,
   defaultStarterByLanguage,
+  computeExecStats,
+  formatExecStats,
 } from '../../../shared/lib/challengeOutput';

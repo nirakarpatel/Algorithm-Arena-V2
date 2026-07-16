@@ -38,6 +38,7 @@ import {
   b64Decode,
   defaultStarterByLanguage,
   outputsMatch,
+  formatExecStats,
 } from "../lib/challengeOutput";
 
 
@@ -965,6 +966,14 @@ const ChallengeDetails = () => {
                         Submitted {new Date(reviewQuery.data.submittedAt).toLocaleString()}
                       </p>
                     </div>
+                    {(() => {
+                      const execStats = formatExecStats(reviewQuery.data.execTimeSec, reviewQuery.data.execMemoryKb);
+                      return execStats ? (
+                        <span className="text-[10px] font-mono text-secondary bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          ⏱ {execStats.time} · 💾 {execStats.memory}
+                        </span>
+                      ) : null;
+                    })()}
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         reviewQuery.data.status === "Pending"

@@ -14,7 +14,7 @@ const VALID_STATUSES = ['Pending', 'Accepted', 'Rejected'];
 
 const submitCode = async (req, res, next) => {
   try {
-    const { challengeId, repositoryUrl, code, language, userFeedback } = req.body;
+    const { challengeId, repositoryUrl, code, language, userFeedback, execTimeSec, execMemoryKb } = req.body;
 
     const challenge = await Challenge.findById(challengeId);
     if (!challenge) {
@@ -42,6 +42,8 @@ const submitCode = async (req, res, next) => {
       code: code || undefined,
       language: language || 'javascript',
       userFeedback: userFeedback || undefined,
+      execTimeSec: execTimeSec ?? undefined,
+      execMemoryKb: execMemoryKb ?? undefined,
     });
 
     const { emitEvent } = require('../../../config/socket');

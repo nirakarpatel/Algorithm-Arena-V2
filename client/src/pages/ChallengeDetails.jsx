@@ -57,6 +57,8 @@ import {
   b64Decode,
   outputsMatch,
   defaultStarterByLanguage,
+  computeExecStats,
+  formatExecStats,
 } from "../lib/challengeOutput";
 
 const ChallengeDetails = () => {
@@ -541,7 +543,7 @@ const ChallengeDetails = () => {
     }
   };
 
-  const submitToServer = async (userFeedbackVal) => {
+  const submitToServer = async (userFeedbackVal, stats) => {
     setSubmitting(true);
     try {
       await api.post("/api/submissions", {
@@ -550,6 +552,7 @@ const ChallengeDetails = () => {
         code: codeSnippet.trim() || undefined,
         language,
         userFeedback: userFeedbackVal || undefined,
+        ...(stats || {}),
       });
       toast.success("Solution submitted.");
       setRepoUrl("");
@@ -590,10 +593,11 @@ const ChallengeDetails = () => {
         results.every(
           (c) => c.expected != null && outputsMatch(c.stdout, c.expected, orderIndependent),
         );
+      const stats = computeExecStats(results);
 
       if (allPassed) {
         toast.success("All test cases passed! Submitting solution...");
-        await submitToServer();
+        await submitToServer(undefined, stats);
       } else {
         setShowSubmitAnyway(true);
         toast.error("Some test cases failed. You can choose to Submit Anyway.");
@@ -797,6 +801,14 @@ const ChallengeDetails = () => {
               {statusChip}
             </span>
           )}
+          {isReviewMode && reviewQuery.data && (() => {
+            const execStats = formatExecStats(reviewQuery.data.execTimeSec, reviewQuery.data.execMemoryKb);
+            return execStats ? (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono text-secondary bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                ⏱ {execStats.time} · 💾 {execStats.memory}
+              </span>
+            ) : null;
+          })()}
           {renderSubmitButton("hidden lg:inline-flex")}
         </div>
       </div>
