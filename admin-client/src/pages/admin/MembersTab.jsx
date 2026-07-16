@@ -17,6 +17,9 @@ const MembersTab = ({ initialClanFilter }) => {
   const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [clanFilter, setClanFilter] = useState(initialClanFilter || '');
+  const [minSolved, setMinSolved] = useState('');
+  const [maxSolved, setMaxSolved] = useState('');
+  const [sortBy, setSortBy] = useState('Default');
   const [menuOpen, setMenuOpen] = useState(null);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const canManageUsers = canManageClanGlobally(user);
@@ -169,8 +172,54 @@ const MembersTab = ({ initialClanFilter }) => {
     } else if (clanFilter) {
       matchClan = u.clan?._id === clanFilter || u.clan === clanFilter;
     }
-    return matchSearch && matchLevel && matchClan;
+
+    const solved = u.solvedProblems || 0;
+    const matchesMin = minSolved === '' || solved >= parseInt(minSolved);
+    const matchesMax = maxSolved === '' || solved <= parseInt(maxSolved);
+
+    return matchSearch && matchLevel && matchClan && matchesMin && matchesMax;
   });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const aSolved = a.solvedProblems || 0;
+    const bSolved = b.solvedProblems || 0;
+    if (sortBy === 'Solved (Low to High)') return aSolved - bSolved;
+    if (sortBy === 'Solved (High to Low)') return bSolved - aSolved;
+    return 0; // Default
+  });
+
+  const handleDownloadCSV = () => {
+    const headers = ['Name', 'Username', 'Email', 'Reg No', 'Clan', 'Level', 'Solved', 'XP', 'Streak', 'Status'];
+    const rows = sortedUsers.map(u => {
+      const activeClan = u.clan ? (clansQuery.data || []).find(c => c._id === u.clan || c._id === u.clan?._id) : null;
+      const clanName = activeClan ? activeClan.name : 'Unassigned';
+      let status = 'Not Started';
+      if ((u.solvedProblems || 0) > 0) status = 'In Progress'; // Can't easily determine 'Completed all' globally without total question count
+      
+      return [
+        `"${u.name || ''}"`,
+        `"${u.username || ''}"`,
+        `"${u.email || ''}"`,
+        `"${u.regNo || 'N/A'}"`,
+        `"${clanName}"`,
+        `"${u.codingLevel || 'Beginner'}"`,
+        u.solvedProblems || 0,
+        u.points || 0,
+        u.streak || 0,
+        `"${u.status || 'Active'}"`
+      ].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Admin_Directory_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getStatusDot = (status) => {
     switch(status) {
@@ -235,6 +284,44 @@ const MembersTab = ({ initialClanFilter }) => {
               ))}
             </select>
           </div>
+
+          <div className="flex items-center gap-2 px-2 py-1 bg-white dark:bg-black/20 rounded-lg border border-black/10 dark:border-white/10 h-9">
+            <span className="text-xs text-slate-500 dark:text-tertiary font-bold uppercase">Solved:</span>
+            <input 
+              type="number" 
+              placeholder="Min" 
+              value={minSolved}
+              onChange={e => setMinSolved(e.target.value)}
+              className="w-12 bg-transparent text-sm text-black dark:text-white text-center focus:outline-none border-b border-transparent focus:border-blue-500/50"
+            />
+            <span className="text-slate-500 dark:text-tertiary">-</span>
+            <input 
+              type="number" 
+              placeholder="Max" 
+              value={maxSolved}
+              onChange={e => setMaxSolved(e.target.value)}
+              className="w-12 bg-transparent text-sm text-black dark:text-white text-center focus:outline-none border-b border-transparent focus:border-blue-500/50"
+            />
+          </div>
+
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-white dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-black dark:text-white appearance-none focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="Default">Sort: Default</option>
+              <option value="Solved (Low to High)">Solved (Low to High)</option>
+              <option value="Solved (High to Low)">Solved (High to Low)</option>
+            </select>
+          </div>
+          
+          <button 
+            onClick={handleDownloadCSV}
+            className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors text-sm font-bold border border-blue-500/20 whitespace-nowrap h-9 flex items-center"
+          >
+            Export CSV
+          </button>
         </div>
       </div>
       </div>
@@ -337,7 +424,7 @@ const MembersTab = ({ initialClanFilter }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user, i) => (
+              {sortedUsers.map((user, i) => (
                 <motion.tr key={user._id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors group">
                   <td className="p-4 pl-6 font-bold text-sm text-primary">
                     <MemberHoverCard userId={user._id} username={user.username}>
@@ -392,14 +479,14 @@ const MembersTab = ({ initialClanFilter }) => {
                   </td>
                 </motion.tr>
               ))}
-              {filteredUsers.length === 0 && (
+              {sortedUsers.length === 0 && (
                 <tr><td colSpan="7" className="p-10 text-center text-tertiary">No members found matching the criteria.</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <div className="p-3 border-t border-white/[0.05] bg-white/[0.01] text-xs text-tertiary flex justify-between items-center px-6">
-          <span>Showing {filteredUsers.length} members</span>
+          <span>Showing {sortedUsers.length} members</span>
         </div>
       </BaseCard>
 

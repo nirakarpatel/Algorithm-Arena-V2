@@ -47,6 +47,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [warningModal, setWarningModal] = useState({ open: false, user: null, message: '' });
+  const [filterType, setFilterType] = useState('All'); // Filter state
   const isArchived = isClanArchived(clan);
   const canManageClan = canManageOwnClan(user, clan);
   const canArchive = canArchiveClan(user, clan);
@@ -123,6 +124,48 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
   const circleRadius = 40;
   const circleCircumference = 2 * Math.PI * circleRadius;
   const strokeDashoffset = circleCircumference - (completionRate / 100) * circleCircumference;
+
+  const filteredMembers = members.filter(member => {
+    if (filterType === 'All') return true;
+    const solved = Math.min(member.weeklySolved || 0, TARGET_PROBLEMS);
+    const total = TARGET_PROBLEMS;
+    if (filterType === 'Completed') return total > 0 && solved === total;
+    if (filterType === 'In Progress') return solved > 0 && solved < total;
+    if (filterType === 'Not Started') return solved === 0;
+    return true;
+  });
+
+  const handleDownloadCSV = () => {
+    const headers = ['Name', 'Username', 'Email', 'Level', 'XP', 'Solved', 'Total', 'Status'];
+    const rows = filteredMembers.map(member => {
+      const solved = Math.min(member.weeklySolved || 0, TARGET_PROBLEMS);
+      const total = TARGET_PROBLEMS;
+      let status = 'Not Started';
+      if (total > 0 && solved === total) status = 'Completed';
+      else if (solved > 0) status = 'In Progress';
+      
+      return [
+        `"${member.name || ''}"`,
+        `"${member.username || ''}"`,
+        `"${member.email || ''}"`,
+        `"${member.codingLevel || 'Beginner'}"`,
+        member.points || 0,
+        solved,
+        total,
+        `"${status}"`
+      ].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Clan_Progress_${clan.name?.replace(/\s+/g, '_')}_Overview.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6">
@@ -229,15 +272,33 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
 
         {/* Right Col: Member Progress List */}
         <BaseCard className="p-6 xl:col-span-2 flex flex-col h-full">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
             <h2 className="text-sm font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
               <FiActivity className="text-accent" /> Member Progress Overview
             </h2>
-            <button className="text-xs text-accent hover:text-accent-light transition-colors font-bold uppercase tracking-widest">View All</button>
+            <div className="flex items-center gap-2">
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-black/20 border border-white/10 text-primary text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-accent"
+              >
+                <option value="All">All Members</option>
+                <option value="Completed">Completed</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Not Started">Not Started</option>
+              </select>
+              <button 
+                onClick={handleDownloadCSV}
+                className="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors text-xs font-bold border border-blue-500/20"
+                title="Download as Excel/CSV"
+              >
+                Export CSV
+              </button>
+            </div>
           </div>
           
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {members.slice(0, 6).map((member) => {
+            {filteredMembers.map((member) => {
               const { text: timeText, isOnline } = getRelativeTime(member.lastLoginDate || member.createdAt);
               const isWarned = member.status === 'Warned';
               const solved = Math.min(member.weeklySolved || 0, TARGET_PROBLEMS);
