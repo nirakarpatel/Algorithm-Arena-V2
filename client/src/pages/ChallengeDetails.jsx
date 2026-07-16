@@ -57,6 +57,7 @@ import {
   b64Decode,
   outputsMatch,
   defaultStarterByLanguage,
+  computeExecStats,
 } from "../lib/challengeOutput";
 
 const ChallengeDetails = () => {
@@ -541,7 +542,7 @@ const ChallengeDetails = () => {
     }
   };
 
-  const submitToServer = async (userFeedbackVal) => {
+  const submitToServer = async (userFeedbackVal, stats) => {
     setSubmitting(true);
     try {
       await api.post("/api/submissions", {
@@ -550,6 +551,7 @@ const ChallengeDetails = () => {
         code: codeSnippet.trim() || undefined,
         language,
         userFeedback: userFeedbackVal || undefined,
+        ...(stats || {}),
       });
       toast.success("Solution submitted.");
       setRepoUrl("");
@@ -590,10 +592,11 @@ const ChallengeDetails = () => {
         results.every(
           (c) => c.expected != null && outputsMatch(c.stdout, c.expected, orderIndependent),
         );
+      const stats = computeExecStats(results);
 
       if (allPassed) {
         toast.success("All test cases passed! Submitting solution...");
-        await submitToServer();
+        await submitToServer(undefined, stats);
       } else {
         setShowSubmitAnyway(true);
         toast.error("Some test cases failed. You can choose to Submit Anyway.");
