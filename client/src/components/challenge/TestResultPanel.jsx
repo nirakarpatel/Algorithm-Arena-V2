@@ -14,6 +14,8 @@ import {
   argsToStdin,
   outputsMatch,
   displayExpected,
+  computeExecStats,
+  formatExecStats,
 } from "../../lib/challengeOutput";
 
 /**
@@ -226,6 +228,15 @@ const TestResultPanel = ({
                 </pre>
               ) : (
                 <div className="space-y-3">
+                  {(() => {
+                    const stats = computeExecStats(runOutput.cases);
+                    const formatted = stats ? formatExecStats(stats.execTimeSec, stats.execMemoryKb) : null;
+                    return formatted ? (
+                      <p className="text-[11px] font-mono text-secondary bg-black/5 dark:bg-white/5 rounded-md px-2.5 py-1.5 inline-block">
+                        Max: {formatted.time} · {formatted.memory}
+                      </p>
+                    ) : null;
+                  })()}
                   {runOutput.cases.map((c, i) => {
                     const hasError = c.compile_output || c.stderr;
                     const matches =
