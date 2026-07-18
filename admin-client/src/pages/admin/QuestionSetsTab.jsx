@@ -291,6 +291,9 @@ const QuestionSetsTab = () => {
   const [solutionLangByKey, setSolutionLangByKey] = useState({});
   const [previewQuestion, setPreviewQuestion] = useState(null);
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isPastDeadline = editingSetId && form.deadline && form.deadline < todayStr;
+
   const blankForm = ()=>({title:'',weekNumber:1,deadline:'',targetLevel:'Both',questions:[{...initialQuestionState}]});
 
   const setsQuery = useQuery({queryKey:['admin-question-sets'],queryFn:async()=>{try{const r=await api.get('/api/sets');return r.data.data||[]}catch{return[]}}});
@@ -303,7 +306,7 @@ const QuestionSetsTab = () => {
 
   const updateSetMutation = useMutation({
     mutationFn:async({id,body})=>(await api.put(`/api/sets/${id}`,body)).data,
-    onSuccess:(res)=>{toast.success(res.message||'Question Set updated!');qc.invalidateQueries({ queryKey: ['admin-question-sets'] });qc.invalidateQueries({ queryKey: ['admin-manage-challenges'] });setView('list');setEditingSetId(null);setForm(blankForm())},
+    onSuccess:()=>{toast.success('Question Set updated!');qc.invalidateQueries({ queryKey: ['admin-question-sets'] });qc.invalidateQueries({ queryKey: ['admin-manage-challenges'] });setView('list');setEditingSetId(null);setForm(blankForm())},
     onError:(e)=>toast.error(e.response?.data?.message||'Failed')
   });
 
@@ -496,38 +499,38 @@ const QuestionSetsTab = () => {
     );
   };
 
-  const HintsEditor = ({hints,onChange}) => {
+  const HintsEditor = ({hints,onChange,disabled}) => {
     const list = hints && hints.length ? hints : [''];
     return (
       <div className="md:col-span-3 space-y-2">
         <div className="flex items-center justify-between">
           <label className="field-label text-[10px] mb-0">Hints (optional)</label>
-          <button type="button" className="text-xs text-accent hover:underline font-bold" onClick={()=>onChange([...list,''])}>+ Add Hint</button>
+          {!disabled && <button type="button" className="text-xs text-accent hover:underline font-bold" onClick={()=>onChange([...list,''])}>+ Add Hint</button>}
         </div>
         {list.map((hint,hi)=>(
           <div key={hi} className="flex items-center gap-2">
-            <input className="field-input text-sm" placeholder="Hint..." value={hint} onChange={e=>{const nh=[...list];nh[hi]=e.target.value;onChange(nh)}}/>
-            {list.length>1&&<button type="button" className="text-secondary hover:text-red-400 transition-colors" onClick={()=>onChange(list.filter((_,j)=>j!==hi))}><FiTrash2 size={14}/></button>}
+            <input disabled={disabled} className="field-input text-sm" placeholder="Hint..." value={hint} onChange={e=>{const nh=[...list];nh[hi]=e.target.value;onChange(nh)}}/>
+            {list.length>1&&!disabled&&<button type="button" className="text-secondary hover:text-red-400 transition-colors" onClick={()=>onChange(list.filter((_,j)=>j!==hi))}><FiTrash2 size={14}/></button>}
           </div>
         ))}
       </div>
     );
   };
 
-  const TestCaseEditor = ({cases,onChange}) => (
+  const TestCaseEditor = ({cases,onChange,disabled}) => (
     <div className="md:col-span-3 space-y-2">
       <div className="flex items-center justify-between">
         <label className="field-label text-[10px] mb-0">Test Cases</label>
-        <button type="button" className="text-xs text-accent hover:underline font-bold" onClick={()=>onChange([...(cases||[]),emptyTestCase()])}>+ Add Case</button>
+        {!disabled && <button type="button" className="text-xs text-accent hover:underline font-bold" onClick={()=>onChange([...(cases||[]),emptyTestCase()])}>+ Add Case</button>}
       </div>
       {(!cases||cases.length===0)?<p className="text-xs text-tertiary">No test cases — click Add Case.</p>:(
         <div className="space-y-3 max-h-60 overflow-y-auto">
           {cases.map((tc,i)=>(
-            <div key={i} className="grid grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-glass-border">
-              <div><p className="text-[10px] text-tertiary mb-1">Label</p><input className="field-input text-xs py-1" placeholder="Example 1" value={tc.label} onChange={e=>{const t=[...cases];t[i]={...t[i],label:e.target.value};onChange(t)}}/></div>
-              <div><p className="text-[10px] text-tertiary mb-1">Args (JSON array)</p><input className="field-input text-xs py-1 font-mono" placeholder='[[2,7,11,15], 9]' value={tc.args} onChange={e=>{const t=[...cases];t[i]={...t[i],args:e.target.value};onChange(t)}}/></div>
-              <div><p className="text-[10px] text-tertiary mb-1">Expected</p><input className="field-input text-xs py-1 font-mono" placeholder='[0,1]' value={tc.expected} onChange={e=>{const t=[...cases];t[i]={...t[i],expected:e.target.value};onChange(t)}}/></div>
-              <button type="button" className="mt-5 text-secondary hover:text-red-400 transition-colors" onClick={()=>onChange(cases.filter((_,j)=>j!==i))}><FiTrash2 size={14}/></button>
+            <div key={i} className={`grid grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-glass-border ${disabled ? 'opacity-70' : ''}`}>
+              <div><p className="text-[10px] text-tertiary mb-1">Label</p><input disabled={disabled} className="field-input text-xs py-1" placeholder="Example 1" value={tc.label} onChange={e=>{const t=[...cases];t[i]={...t[i],label:e.target.value};onChange(t)}}/></div>
+              <div><p className="text-[10px] text-tertiary mb-1">Args (JSON array)</p><input disabled={disabled} className="field-input text-xs py-1 font-mono" placeholder='[[2,7,11,15], 9]' value={tc.args} onChange={e=>{const t=[...cases];t[i]={...t[i],args:e.target.value};onChange(t)}}/></div>
+              <div><p className="text-[10px] text-tertiary mb-1">Expected</p><input disabled={disabled} className="field-input text-xs py-1 font-mono" placeholder='[0,1]' value={tc.expected} onChange={e=>{const t=[...cases];t[i]={...t[i],expected:e.target.value};onChange(t)}}/></div>
+              {!disabled && <button type="button" className="mt-5 text-secondary hover:text-red-400 transition-colors" onClick={()=>onChange(cases.filter((_,j)=>j!==i))}><FiTrash2 size={14}/></button>}
             </div>
           ))}
         </div>
@@ -559,25 +562,28 @@ const QuestionSetsTab = () => {
         <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} className="space-y-6">
           <form onSubmit={handlePublish} className="space-y-6">
             <BaseCard>
-              <h2 className="text-xl font-black text-primary">Set Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className="field-label">Set Title</label><input required className="field-input" placeholder="e.g. Dynamic Programming Basics" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></div>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-black text-primary">Set Details</h2>
+                {isPastDeadline && <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-3 py-1 rounded-lg">Past Deadline - Only solutions can be updated</span>}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div><label className="field-label">Set Title</label><input disabled={isPastDeadline} required className="field-input" placeholder="e.g. Dynamic Programming Basics" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></div>
                 <div><label className="field-label">Target Level</label>
                   <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
-                    {['Beginner','Intermediate','Both'].map(lvl=>(<button type="button" key={lvl} onClick={()=>setForm({...form,targetLevel:lvl})} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${form.targetLevel===lvl?'bg-black/10 dark:bg-white/10 text-primary shadow':'text-tertiary hover:text-secondary'}`}>{lvl}</button>))}
+                    {['Beginner','Intermediate','Both'].map(lvl=>(<button disabled={isPastDeadline} type="button" key={lvl} onClick={()=>setForm({...form,targetLevel:lvl})} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${form.targetLevel===lvl?'bg-black/10 dark:bg-white/10 text-primary shadow':'text-tertiary hover:text-secondary disabled:opacity-50'}`}>{lvl}</button>))}
                   </div>
                 </div>
                 <div><label className="field-label">Week Number</label>
-                  <div className="relative"><FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary"/><input required type="number" min="1" className="field-input pl-9" value={form.weekNumber} onChange={e=>setForm({...form,weekNumber:Number(e.target.value)})}/></div>
+                  <div className="relative"><FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary"/><input disabled={isPastDeadline} required type="number" min="1" className="field-input pl-9" value={form.weekNumber} onChange={e=>setForm({...form,weekNumber:Number(e.target.value)})}/></div>
                 </div>
-                <div><label className="field-label">Deadline</label><input required type="date" min={editingSetId ? undefined : new Date().toISOString().split('T')[0]} className="field-input" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/></div>
+                <div><label className="field-label">Deadline</label><input disabled={isPastDeadline} required type="date" min={editingSetId ? undefined : new Date().toISOString().split('T')[0]} className="field-input" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/></div>
               </div>
             </BaseCard>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-black text-primary">Questions ({form.questions.length}/5)</h2>
-                {form.questions.length<5&&(<button type="button" onClick={handleAddQuestion} className="text-xs font-bold text-accent bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent/20 transition-colors flex items-center gap-1"><FiPlus /> Add Question</button>)}
+                {form.questions.length<5&&!isPastDeadline&&(<button type="button" onClick={handleAddQuestion} className="text-xs font-bold text-accent bg-accent/10 px-3 py-1.5 rounded-lg hover:bg-accent/20 transition-colors flex items-center gap-1"><FiPlus /> Add Question</button>)}
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
               <AnimatePresence>
@@ -589,26 +595,26 @@ const QuestionSetsTab = () => {
                         <h3 className="font-bold text-primary flex items-center gap-2"><span className="w-6 h-6 rounded bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-secondary">{i+1}</span> Question Config</h3>
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={()=>setPreviewQuestion(q)} className="flex items-center gap-1.5 text-xs text-secondary hover:text-accent bg-black/5 dark:bg-white/5 hover:bg-accent/10 border border-glass-border hover:border-accent/30 px-2.5 py-1 rounded-lg transition-colors font-semibold"><FiEye size={13}/> Preview</button>
-                          {form.questions.length>1&&(<button type="button" onClick={()=>handleRemoveQuestion(i)} className="text-red-400 hover:text-red-300 p-1 ml-1"><FiTrash2 size={16}/></button>)}
+                          {form.questions.length>1&&!isPastDeadline&&(<button type="button" onClick={()=>handleRemoveQuestion(i)} className="text-red-400 hover:text-red-300 p-1 ml-1"><FiTrash2 size={16}/></button>)}
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className="md:col-span-3 bg-purple-500/5 border border-purple-500/20 p-3 rounded-lg flex flex-col md:flex-row gap-3 items-end">
-                          <div className="flex-1 w-full"><label className="field-label text-[10px] text-purple-400">Fetch from LeetCode (Slug or URL)</label><input className="field-input text-sm border-purple-500/30 focus:border-purple-500/60" placeholder="e.g. two-sum" value={q.leetcodeSlug||''} onChange={e=>updateQuestion(i,'leetcodeSlug',e.target.value)}/></div>
-                          <button type="button" disabled={fetchLeetCodeMutation.isLoading&&fetchLeetCodeMutation.variables?.index===i} onClick={()=>{let slug=q.leetcodeSlug.trim();if(slug.includes('leetcode.com/problems/'))slug=slug.split('leetcode.com/problems/')[1].split('/')[0];if(!slug)return toast.error('Enter a LeetCode slug or URL');fetchLeetCodeMutation.mutate({slug,index:i})}} className="bg-purple-500/20 text-purple-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-purple-500/30 transition-colors whitespace-nowrap">
+                          <div className="flex-1 w-full"><label className="field-label text-[10px] text-purple-400">Fetch from LeetCode (Slug or URL)</label><input disabled={isPastDeadline} className="field-input text-sm border-purple-500/30 focus:border-purple-500/60 disabled:opacity-50" placeholder="e.g. two-sum" value={q.leetcodeSlug||''} onChange={e=>updateQuestion(i,'leetcodeSlug',e.target.value)}/></div>
+                          <button type="button" disabled={isPastDeadline||(fetchLeetCodeMutation.isLoading&&fetchLeetCodeMutation.variables?.index===i)} onClick={()=>{let slug=q.leetcodeSlug.trim();if(slug.includes('leetcode.com/problems/'))slug=slug.split('leetcode.com/problems/')[1].split('/')[0];if(!slug)return toast.error('Enter a LeetCode slug or URL');fetchLeetCodeMutation.mutate({slug,index:i})}} className="bg-purple-500/20 text-purple-400 font-bold px-4 py-2 rounded-lg text-sm hover:bg-purple-500/30 transition-colors whitespace-nowrap disabled:opacity-50">
                             {fetchLeetCodeMutation.isLoading&&fetchLeetCodeMutation.variables?.index===i?'Fetching...':'Fetch Details'}
                           </button>
                         </div>
-                        <div className="md:col-span-2"><label className="field-label text-[10px]">Title</label><input required className="field-input text-sm" value={q.title} onChange={e=>updateQuestion(i,'title',e.target.value)}/></div>
-                        <div><label className="field-label text-[10px]">Difficulty</label><select className="field-select text-sm" value={q.difficulty} onChange={e=>updateQuestion(i,'difficulty',e.target.value)}><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
-                        <div><label className="field-label text-[10px]">Points</label><input type="number" min="1" className="field-input text-sm" value={q.points} onChange={e=>updateQuestion(i,'points',Number(e.target.value))}/></div>
-                        <div><label className="field-label text-[10px]">Tags/Category</label><input className="field-input text-sm" placeholder="e.g. Arrays, Sorting" value={q.category} onChange={e=>updateQuestion(i,'category',e.target.value)}/></div>
-                        <div className="md:col-span-3 flex items-center gap-2"><input type="checkbox" id={`order-independent-${i}`} checked={!!q.orderIndependent} onChange={e=>updateQuestion(i,'orderIndependent',e.target.checked)}/><label htmlFor={`order-independent-${i}`} className="text-xs text-secondary cursor-pointer">Order doesn't matter (e.g. Group Anagrams) — ignore array/element order when checking output</label></div>
-                        <div className="md:col-span-3"><label className="field-label text-[10px]">Problem Description</label><textarea required rows="3" className="field-textarea text-sm" value={q.description} onChange={e=>updateQuestion(i,'description',e.target.value)}/></div>
-                        <HintsEditor hints={q.hints} onChange={v=>updateQuestion(i,'hints',v)}/>
+                        <div className="md:col-span-2"><label className="field-label text-[10px]">Title</label><input disabled={isPastDeadline} required className="field-input text-sm" value={q.title} onChange={e=>updateQuestion(i,'title',e.target.value)}/></div>
+                        <div><label className="field-label text-[10px]">Difficulty</label><select disabled={isPastDeadline} className="field-select text-sm disabled:opacity-70" value={q.difficulty} onChange={e=>updateQuestion(i,'difficulty',e.target.value)}><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
+                        <div><label className="field-label text-[10px]">Points</label><input disabled={isPastDeadline} type="number" min="1" className="field-input text-sm" value={q.points} onChange={e=>updateQuestion(i,'points',Number(e.target.value))}/></div>
+                        <div><label className="field-label text-[10px]">Tags/Category</label><input disabled={isPastDeadline} className="field-input text-sm" placeholder="e.g. Arrays, Sorting" value={q.category} onChange={e=>updateQuestion(i,'category',e.target.value)}/></div>
+                        <div className="md:col-span-3 flex items-center gap-2"><input disabled={isPastDeadline} type="checkbox" id={`order-independent-${i}`} checked={!!q.orderIndependent} onChange={e=>updateQuestion(i,'orderIndependent',e.target.checked)}/><label htmlFor={`order-independent-${i}`} className={`text-xs text-secondary cursor-pointer ${isPastDeadline ? 'opacity-70' : ''}`}>Order doesn't matter (e.g. Group Anagrams) — ignore array/element order when checking output</label></div>
+                        <div className="md:col-span-3"><label className="field-label text-[10px]">Problem Description</label><textarea disabled={isPastDeadline} required rows="3" className="field-textarea text-sm disabled:opacity-70" value={q.description} onChange={e=>updateQuestion(i,'description',e.target.value)}/></div>
+                        <HintsEditor disabled={isPastDeadline} hints={q.hints} onChange={v=>updateQuestion(i,'hints',v)}/>
                         {renderSolutionEditor({ editorKey: `set-question-${i}`, solutions: q.solutions||[], onChange: v=>updateQuestion(i,'solutions',v) })}
-                        <div className="md:col-span-3"><label className="field-label text-[10px]">Solution Function Name</label><input className="field-input text-sm font-mono" placeholder="e.g. twoSum" value={q.functionName||''} onChange={e=>updateQuestion(i,'functionName',e.target.value.trim())}/><SignatureInfo functionName={q.functionName} params={q.params} returnType={q.returnType}/></div>
-                        <TestCaseEditor cases={q.testCases||[]} onChange={v=>updateQuestion(i,'testCases',v)}/>
+                        <div className="md:col-span-3"><label className="field-label text-[10px]">Solution Function Name</label><input disabled={isPastDeadline} className="field-input text-sm font-mono disabled:opacity-70" placeholder="e.g. twoSum" value={q.functionName||''} onChange={e=>updateQuestion(i,'functionName',e.target.value.trim())}/><SignatureInfo functionName={q.functionName} params={q.params} returnType={q.returnType}/></div>
+                        <TestCaseEditor disabled={isPastDeadline} cases={q.testCases||[]} onChange={v=>updateQuestion(i,'testCases',v)}/>
                       </div>
                     </BaseCard>
                   </motion.div>

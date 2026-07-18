@@ -136,47 +136,6 @@ const updateQuestionSet = async (req, res, next) => {
       throw new Error('Question Set not found');
     }
 
-    const now = new Date();
-    const currentDeadline = new Date(set.deadline);
-    currentDeadline.setUTCHours(23, 59, 59, 999);
-    const isPastDeadline = currentDeadline < now;
-
-    if (isPastDeadline) {
-      // Only allow updating solutions
-      if (Array.isArray(req.body.questions)) {
-        const existingQs = set.questions;
-        for (const incomingQ of req.body.questions) {
-          if (!incomingQ.title) continue;
-          const match = existingQs.find(q => q.title.toLowerCase() === incomingQ.title.toLowerCase());
-          if (match) {
-            match.solutions = incomingQ.solutions || match.solutions;
-          }
-        }
-        set.markModified('questions');
-        await set.save();
-
-        // Update standalone challenges for solutions ONLY
-        const existingChallenges = await Challenge.find({ questionSetId: set._id });
-        for (const existingC of existingChallenges) {
-          const match = req.body.questions.find(q => q.title && q.title.toLowerCase() === existingC.title.toLowerCase());
-          if (match) {
-            existingC.solutions = match.solutions || existingC.solutions;
-            await existingC.save();
-          }
-        }
-      }
-
-      await logAudit({
-        action: 'questionset.update_solutions_only',
-        actorId: req.user.id,
-        targetType: 'questionset',
-        targetId: set._id,
-        metadata: { title: set.title, note: 'Past deadline, only solutions updated' },
-      });
-
-      return sendSuccess(res, { data: set, message: 'Solutions saved! Other changes ignored (past deadline).' });
-    }
-
     if (req.body.title) {
       req.body.title = capitalizeTitle(req.body.title);
     }
