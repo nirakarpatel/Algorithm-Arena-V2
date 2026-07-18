@@ -110,7 +110,7 @@ const getMyClan = async (req, res, next) => {
       $or: [{ chief: userId }, { members: userId }]
     })
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points solvedProblems regNo clan profilePicture streak')
+      .populate('members', 'name username email status codingLevel points solvedProblems regNo clan profilePicture streak')
       .populate('requests', 'username email regNo')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -195,7 +195,7 @@ const getClans = async (req, res, next) => {
   try {
     const clansDocs = await Clan.find(getClanStatusFilter(req.query.status))
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture streak')
+      .populate('members', 'name username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -259,7 +259,7 @@ const getClan = async (req, res, next) => {
   try {
     const clanDoc = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points profilePicture streak')
+      .populate('members', 'name username email status codingLevel points profilePicture streak')
       .populate('requests', 'username email')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -429,7 +429,7 @@ const getClanAdminStats = async (req, res, next) => {
   try {
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email status codingLevel points regNo branch year profilePicture streak')
+      .populate('members', 'name username email status codingLevel points regNo branch year profilePicture streak')
       .populate('requests', 'username email regNo branch year')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
@@ -543,7 +543,7 @@ const updateClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak')
+      .populate('members', 'name username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -600,7 +600,7 @@ const archiveClan = async (req, res, next) => {
 
     const clan = await Clan.findById(req.params.id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak')
+      .populate('members', 'name username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -632,7 +632,7 @@ const restoreClan = async (req, res, next) => {
 
     const populated = await Clan.findById(clan._id)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak')
+      .populate('members', 'name username email profilePicture points streak')
       .populate('createdBy', 'username email')
       .populate('archivedBy', 'username email')
       .populate('restoredBy', 'username email');
@@ -833,7 +833,7 @@ const assignChief = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak');
+      .populate('members', 'name username email profilePicture points streak');
 
     sendSuccess(res, { data: populated, message: 'Clan chief assigned' });
 
@@ -901,7 +901,7 @@ const removeChief = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email');
+      .populate('members', 'name username email');
 
     return sendSuccess(res, { data: populated, message: 'Clan chief removed' });
   } catch (err) {
@@ -969,7 +969,7 @@ const addMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak');
+      .populate('members', 'name username email profilePicture points streak');
 
     sendSuccess(res, { data: populated, message: 'Member added' });
 
@@ -1050,7 +1050,7 @@ const removeMember = async (req, res, next) => {
 
     const populated = await Clan.findById(clanId)
       .populate('chief', 'username email')
-      .populate('members', 'username email profilePicture points streak');
+      .populate('members', 'name username email profilePicture points streak');
 
     return sendSuccess(res, { data: populated, message: 'Member removed' });
   } catch (err) {

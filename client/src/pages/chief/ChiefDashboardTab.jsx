@@ -145,7 +145,7 @@ const ChiefDashboardTab = ({ clan, onTabChange }) => {
       else if (solved > 0) status = 'In Progress';
       
       return [
-        `"${member.name || ''}"`,
+        `"${member.name || member.username || ''}"`,
         `"${member.username || ''}"`,
         `"${member.email || ''}"`,
         `"${member.codingLevel || 'Beginner'}"`,
