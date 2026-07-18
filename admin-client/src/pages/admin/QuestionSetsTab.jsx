@@ -570,7 +570,7 @@ const QuestionSetsTab = () => {
                 <div><label className="field-label">Week Number</label>
                   <div className="relative"><FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-tertiary"/><input required type="number" min="1" className="field-input pl-9" value={form.weekNumber} onChange={e=>setForm({...form,weekNumber:Number(e.target.value)})}/></div>
                 </div>
-                <div><label className="field-label">Deadline</label><input required type="date" min={new Date().toISOString().split('T')[0]} className="field-input" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/></div>
+                <div><label className="field-label">Deadline</label><input required type="date" min={editingSetId ? undefined : new Date().toISOString().split('T')[0]} className="field-input" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/></div>
               </div>
             </BaseCard>
 
