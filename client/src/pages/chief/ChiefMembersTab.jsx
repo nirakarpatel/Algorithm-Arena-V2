@@ -181,6 +181,8 @@ const ChiefMembersTab = ({ clan }) => {
               Export CSV
             </button>
           </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3 bg-black/20 p-3 rounded-xl border border-white/5">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="field-select h-10 text-sm w-[135px] flex items-center justify-between">
