@@ -303,7 +303,7 @@ const QuestionSetsTab = () => {
 
   const updateSetMutation = useMutation({
     mutationFn:async({id,body})=>(await api.put(`/api/sets/${id}`,body)).data,
-    onSuccess:()=>{toast.success('Question Set updated!');qc.invalidateQueries({ queryKey: ['admin-question-sets'] });qc.invalidateQueries({ queryKey: ['admin-manage-challenges'] });setView('list');setEditingSetId(null);setForm(blankForm())},
+    onSuccess:(res)=>{toast.success(res.message||'Question Set updated!');qc.invalidateQueries({ queryKey: ['admin-question-sets'] });qc.invalidateQueries({ queryKey: ['admin-manage-challenges'] });setView('list');setEditingSetId(null);setForm(blankForm())},
     onError:(e)=>toast.error(e.response?.data?.message||'Failed')
   });
 
